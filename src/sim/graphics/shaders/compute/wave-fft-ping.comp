@@ -1,0 +1,42 @@
+#version 460
+#extension GL_GOOGLE_include_directive : require
+
+#include "wave-fft-common.h"
+
+const float g = 9.8;
+const float w_0 = 2 * PI / 10.0f;
+
+float dispersion(vec2 k) { return sqrt(g * length(k)); }
+
+void main() {
+  int column = int(gl_GlobalInvocationID.x);
+  int row = int(gl_GlobalInvocationID.y);
+  int category = int(gl_GlobalInvocationID.z) + 1;
+  if(row >= N || column >= N) return;
+  int id = column;
+  int revId = rev[id];
+  int idx = row * N + revId;
+  int invIdx = (N - 1 - row) * N + (N - 1 - revId);
+  vec2 _h0 = datum[idx].data[h0Idx];
+  vec2 _invH0 = datum[invIdx].data[h0Idx];
+  vec2 k = {(-N / 2.f + revId) * 2 * PI / patchSize,
+            (-N / 2.f + row) * 2 * PI / patchSize};
+  float omegat = dispersion(k) * time * timeScale;
+  vec2 _ht = mul(_h0, polar(1, omegat)) + mul(_invH0, polar(1, -omegat));
+  float len = length(k);
+  switch(category) {
+    case htIdx: sharedData[id] = _ht; break;
+    case hDxIdx:
+      sharedData[id] = len < 1e-6 ? vec2(0, 0) : mul(_ht, vec2(0, -k.x / len));
+      break;
+    case hDzIdx:
+      sharedData[id] = len < 1e-6 ? vec2(0, 0) : mul(_ht, vec2(0, -k.y / len));
+      break;
+    case slopeXIdx: sharedData[id] = mul(_ht, vec2(0, k.x)); break;
+    case slopeZIdx: sharedData[id] = mul(_ht, vec2(0, k.y)); break;
+  }
+  memoryBarrier();
+  barrier();
+  fft1D(id, category);
+  datum[row * N + id].data[category] = sharedData[id];
+}

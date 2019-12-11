@@ -1,0 +1,52 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "wave-fft-common.h"
+
+struct Vertex {
+  float px, py, pz;
+  float nx, ny, nz;
+  float u, v;
+};
+layout(set = 0, binding = 3) buffer Vertices {
+  Vertex vertices[];
+};
+layout(set = 0, binding = 4) uniform ViewProjection {
+  mat4 proj;
+  mat4 view;
+};
+
+void main() {
+  int column = int(gl_GlobalInvocationID.y);
+  int row = int(gl_GlobalInvocationID.x);
+  int category = int(gl_GlobalInvocationID.z) + 1;
+  if(row >= N || column >= N)
+    return;
+  int id = row;
+  int revId = rev[id];
+  sharedData[id] = datum[revId * N + column].data[category];
+  memoryBarrier();
+  barrier();
+  fft1D(id, category);
+  int idx = id * N + column;
+  int vIdx = meshOffset + idx;
+  float signs[] = {1.f, -1.f};
+  float sign = signs[(row + column) & 1];
+  float value = sharedData[id].x * sign;
+  switch(category) {
+    case htIdx:
+      vertices[vIdx].py = value;
+      break;
+    case hDxIdx:
+      vertices[vIdx].px = column - N / 2.f + value * choppyScale;
+      break;
+    case hDzIdx:
+      vertices[vIdx].pz = row - N / 2.f + value * choppyScale;
+      break;
+    case slopeXIdx:
+      vertices[vIdx].nx = -value;
+      break;
+    case slopeZIdx:
+      vertices[vIdx].nz = -value;
+      break;
+  }
+}

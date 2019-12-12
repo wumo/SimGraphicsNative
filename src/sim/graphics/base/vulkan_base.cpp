@@ -40,11 +40,9 @@ static auto key_callback(GLFWwindow *window, int key, int, int action, int) -> v
 
   if(input->gui && ImGui::GetIO().WantCaptureKeyboard) return;
 
-  if(action == GLFW_PRESS) {
-    input->keyPressed[key] = true;
-  } else if(action == GLFW_RELEASE) {
+  if(action == GLFW_PRESS) input->keyPressed[key] = true;
+  else if(action == GLFW_RELEASE)
     input->keyPressed[key] = false;
-  }
 }
 
 static auto resize_callback(GLFWwindow *window, int w, int h) -> void {

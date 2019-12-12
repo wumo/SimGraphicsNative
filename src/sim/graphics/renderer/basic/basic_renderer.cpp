@@ -143,7 +143,13 @@ void BasicRenderer::createDirectPipeline() {
       pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
     debugMarker.name(*opaqueTri.pipeline, "opaque triangle pipeline");
 
+    pipelineMaker.polygonMode(vk::PolygonMode::eLine);
+
+    opaqueTriWireframe.pipeline =
+      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+
     pipelineMaker.topology(vk::PrimitiveTopology::eLineList)
+      .polygonMode(vk::PolygonMode::eFill)
       .cullMode(vk::CullModeFlagBits::eNone)
       .lineWidth(1.f);
     opaqueLine.pipeline =

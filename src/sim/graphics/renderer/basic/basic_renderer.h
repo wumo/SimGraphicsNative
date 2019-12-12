@@ -44,6 +44,7 @@ protected:
     vk::UniquePipeline pipeline;
     uint32_t subpass;
   } opaqueTri, opaqueLine, deferred, deferredIBL, transTri, transLine;
+  Pipe opaqueTriWireframe;
 
   struct {
     uPtr<StorageAttachmentImage> offscreenImage;

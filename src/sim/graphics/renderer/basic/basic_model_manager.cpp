@@ -406,7 +406,10 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.bindIndexBuffer(Buffer.primitives->indexBuffer(), zero, vk::IndexType::eUint32);
 
   debugMarker.begin(cb, "Subpass opaque tri");
-  cb.bindPipeline(bindpoint::eGraphics, *renderer.opaqueTri.pipeline);
+  if(RenderPass.wireframe)
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.opaqueTriWireframe.pipeline);
+  else
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.opaqueTri.pipeline);
   cb.drawIndexedIndirect(
     Buffer.drawQueue[0]->buffer(), 0, Scene.drawQueues[0].size(), stride);
   debugMarker.end(cb);
@@ -499,4 +502,7 @@ Ptr<ModelInstance> BasicModelManager::modelInstance(uint32_t index) {
   assert(index < Scene.instances.size());
   return Ptr<ModelInstance>{&Scene.instances, index};
 }
+
+void BasicModelManager::setWireframe(bool wireframe) { RenderPass.wireframe = wireframe; }
+bool BasicModelManager::wireframe() { return RenderPass.wireframe; }
 }

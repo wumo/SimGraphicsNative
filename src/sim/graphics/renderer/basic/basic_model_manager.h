@@ -76,6 +76,8 @@ public:
   Ptr<Model> model(uint32_t index);
   Ptr<ModelInstance> modelInstance(uint32_t index);
 
+  void setWireframe(bool wireframe);
+  bool wireframe();
   void debugInfo();
 
 private:
@@ -161,8 +163,9 @@ private:
   } Sets;
 
   struct {
+    bool wireframe{false};
     std::vector<vk::UniquePipeline> computePipes;
-  } renderPass;
+  } RenderPass;
 
   struct BasicSetDef: DescriptorSetDef {
     __uniform__(cam, shader::eVertex | shader::eFragment);

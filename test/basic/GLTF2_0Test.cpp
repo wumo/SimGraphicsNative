@@ -55,6 +55,7 @@ auto main(int argc, const char **argv) -> int {
   mm.debugInfo();
 
   PanningCamera panningCamera(camera);
+  bool pressed{false};
   sim::graphics::FPSMeter mFPSMeter;
   app.run([&](uint32_t imageIndex, float elapsedDuration) {
     mFPSMeter.update(elapsedDuration);
@@ -67,5 +68,10 @@ auto main(int argc, const char **argv) -> int {
       t.rotation * angleAxis(pi<float>() * elapsedDuration * 0.2f, vec3{0.f, 1.f, 0.f});
     box->setTransform(t);
     instance->setTransform(t);
+    if(app.input.keyPressed[KeyW]) pressed = true;
+    else if(pressed) {
+      mm.setWireframe(!mm.wireframe());
+      pressed = false;
+    }
   });
 }

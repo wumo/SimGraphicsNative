@@ -1,0 +1,38 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+
+struct CameraUBO {
+  mat4 view;
+  mat4 proj;
+  mat4 projView;
+  // mat4 viewInv;
+  // mat4 projInv;
+  vec4 eye;
+  // vec4 r, v;
+  // float w, h, fov;
+  // float zNear, zFar;
+};
+
+struct Vertex {
+  float px, py, pz;
+  float nx, ny, nz;
+  float u, v;
+};
+
+layout(set = 0, binding = 0) uniform Camera { CameraUBO cam; };
+layout(set = 0, binding = 1) buffer Indices { uint indices[]; };
+layout(set = 0, binding = 2) buffer Vertices { Vertex vertices[]; };
+layout(push_constant) uniform ComputeUniform {
+  int indexOffset;
+  int indexCount;
+  int vertexOffset;
+  int vertexCount;
+  float time;
+};
+
+layout(constant_id = 0) const uint lx = 128;
+layout(constant_id = 1) const uint ly = 1;
+layout(constant_id = 2) const uint lz = 1;
+layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
+
+void main() {}

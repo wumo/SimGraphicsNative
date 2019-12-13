@@ -2,11 +2,13 @@
 #include "sim/graphics/renderer/basic/basic_renderer.h"
 #include "sim/graphics/renderer/basic/util/panning_camera.h"
 #include "sim/graphics/util/fps_meter.h"
+#include "sim/graphics/util/materials.h"
 
 using namespace sim;
 using namespace sim::graphics;
 using namespace sim::graphics::renderer::basic;
 using namespace glm;
+using namespace sim::graphics::material;
 
 auto main(int argc, const char **argv) -> int {
   Config config{};
@@ -20,9 +22,9 @@ auto main(int argc, const char **argv) -> int {
   camera.setLocation({2.f, 2.f, 2.f});
   mm.addLight(LightType ::Directional, {-1, -1, -1});
 
-//  std::string name = "MetalRoughSpheres";
-//  auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
-    std::string path = "assets/private/models/DamagedHelmet.glb";
+  //  std::string name = "MetalRoughSpheres";
+  //  auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
+  std::string path = "assets/private/models/DamagedHelmet.glb";
   auto model = mm.loadModel(path);
   auto aabb = model->aabb();
   println(aabb);
@@ -37,7 +39,9 @@ auto main(int argc, const char **argv) -> int {
   auto primitives = mm.newPrimitives(
     PrimitiveBuilder()
       .boxLine(center, {halfRange.x, 0.f, 0.f}, {0.f, halfRange.y, 0.f}, halfRange.z)
-      .newPrimitive(PrimitiveTopology::Lines));
+      .newPrimitive(PrimitiveTopology::Lines)
+      .axis({}, 2.f, 0.01f, 0.05f, 50)
+      .newPrimitive());
 
   sim::println(primitives[0]->aabb());
 
@@ -48,6 +52,27 @@ auto main(int argc, const char **argv) -> int {
   Node::addMesh(boxNode, boxMesh);
   auto boxModel = mm.newModel({boxNode});
   auto box = mm.newModelInstance(boxModel, t);
+
+  auto yellowMat = mm.newMaterial();
+  yellowMat->setColorFactor({Yellow, 1.f});
+  auto redMat = mm.newMaterial();
+  redMat->setColorFactor({Red, 1.f});
+  auto greenMat = mm.newMaterial();
+  greenMat->setColorFactor({Green, 1.f});
+  auto blueMat = mm.newMaterial();
+  blueMat->setColorFactor({Blue, 1.f});
+
+  auto originMesh = mm.newMesh(primitives[1], yellowMat);
+  auto xMesh = mm.newMesh(primitives[2], redMat);
+  auto yMesh = mm.newMesh(primitives[3], greenMat);
+  auto zMesh = mm.newMesh(primitives[4], blueMat);
+  auto axisNode = mm.newNode();
+  Node::addMesh(axisNode, originMesh);
+  Node::addMesh(axisNode, xMesh);
+  Node::addMesh(axisNode, yMesh);
+  Node::addMesh(axisNode, zMesh);
+  auto axisModel = mm.newModel({axisNode});
+  auto axis = mm.newModelInstance(axisModel);
 
   auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   mm.useEnvironmentMap(envCube);

@@ -19,6 +19,7 @@ public:
   BasicModelManager &modelManager() const;
 
 protected:
+  void createQueryPool();
   void createModelManager();
 
   void createRenderPass();
@@ -45,7 +46,10 @@ protected:
 
   uPtr<BasicModelManager> mm{};
   vk::UniquePipelineCache pipelineCache;
-
+  vk::UniqueQueryPool queryPool;
+  std::vector<uint64_t> pipelineStats;
+  std::vector<std::string> pipelineStatNames;
+  
   vk::UniqueRenderPass renderPass;
 
   std::vector<vk::UniqueFramebuffer> framebuffers{};

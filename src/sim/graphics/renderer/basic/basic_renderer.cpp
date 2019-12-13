@@ -20,11 +20,36 @@ BasicRenderer::BasicRenderer(
   createModelManager();
   createRenderPass();
   recreateResources();
+
+  createQueryPool();
 }
 
 BasicModelManager &BasicRenderer::modelManager() const { return *mm; }
 
 void BasicRenderer::createModelManager() { mm = u<BasicModelManager>(*this); }
+
+void BasicRenderer::createQueryPool() {
+  using flag = vk::QueryPipelineStatisticFlagBits;
+
+  vk::QueryPoolCreateInfo info{};
+  info.pipelineStatistics =
+    flag::eInputAssemblyPrimitives | flag::eInputAssemblyVertices |
+    flag::eVertexShaderInvocations | flag::eFragmentShaderInvocations |
+    flag::eClippingInvocations | flag::eClippingPrimitives |
+    flag::eTessellationControlShaderPatches |
+    flag::eTessellationEvaluationShaderInvocations | flag::eComputeShaderInvocations;
+  info.queryType = vk::QueryType ::ePipelineStatistics;
+  info.queryCount = 9;
+  queryPool = vkDevice.createQueryPoolUnique(info);
+
+  pipelineStatNames = {
+    "Input assembly vertex count",     "Input assembly primitives count",
+    "Vertex shader invocations",       "Clipping stage primitives processed",
+    "Clipping stage primtives output", "Fragment shader invocations",
+    "Tess. control shader patches",    "Tess. eval. shader invocations",
+    "Compute shader invocations"};
+  pipelineStats.resize(pipelineStatNames.size());
+}
 
 void BasicRenderer::createRenderPass() {
   RenderPassMaker maker;
@@ -173,6 +198,8 @@ void BasicRenderer::updateFrame(
 
   mm->updateScene(transfeCB, imageIndex);
 
+  cb.resetQueryPool(*queryPool, 0, pipelineStats.size());
+
   std::array<vk::ClearValue, 8> clearValues{
     vk::ClearColorValue{std::array{0.0f, 0.0f, 0.0f, 0.0f}},
     vk::ClearColorValue{std::array{0.0f, 0.0f, 0.0f, 0.0f}},
@@ -193,6 +220,8 @@ void BasicRenderer::updateFrame(
   vk::Rect2D scissor{{0, 0}, {extent.width, extent.height}};
   cb.setScissor(0, scissor);
 
+  cb.beginQuery(*queryPool, 0, {});
+
   debugMarker.begin(cb, "subpass direct shading");
 
   mm->drawScene(cb, imageIndex);
@@ -200,8 +229,18 @@ void BasicRenderer::updateFrame(
   debugMarker.end(cb);
   cb.endRenderPass();
 
+  cb.endQuery(*queryPool, 0);
+
   ImageBase::setLayout(
     cb, swapchain->getImage(imageIndex), layout::eUndefined, layout::ePresentSrcKHR, {},
     {});
+
+  vkDevice.getQueryPoolResults(
+    *queryPool, 0, 1, pipelineStats.size() * sizeof(uint64_t), pipelineStats.data(),
+    sizeof(uint64_t), vk::QueryResultFlagBits::e64);
+
+  //  for(int i = 0; i < pipelineStats.size(); ++i) {
+  //    println(pipelineStatNames[i], pipelineStats[i]);
+  //  }
 }
 }

@@ -37,11 +37,11 @@ void BasicRenderer::createRenderPass() {
                         .initialLayout(layout::eUndefined)
                         .finalLayout(layout::eColorAttachmentOptimal)
                         .index();
-  auto color = maker.attachment(swapchain->getImageFormat()).samples(sampleCount).index();
-  auto position = maker.attachment(vk::Format::eR32G32B32A32Sfloat)
-                    .storeOp(vk::AttachmentStoreOp::eDontCare)
-                    .finalLayout(layout::eColorAttachmentOptimal)
-                    .index();
+  auto color = maker.attachment(swapchain->getImageFormat())
+                 .samples(sampleCount)
+                 .storeOp(vk::AttachmentStoreOp::eDontCare)
+                 .index();
+  auto position = maker.attachment(vk::Format::eR32G32B32A32Sfloat).index();
   auto normal = maker.attachment(vk::Format::eR32G32B32A32Sfloat).index();
   auto albedo = maker.attachment(vk::Format::eR8G8B8A8Unorm).index();
   auto pbr = maker.attachment(vk::Format::eR8G8B8A8Unorm).index();

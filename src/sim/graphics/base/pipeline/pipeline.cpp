@@ -101,6 +101,12 @@ auto GraphicsPipelineMaker::createUnique(
   return device.createGraphicsPipelineUnique(pipelineCache, pipelineInfo);
 }
 
+auto GraphicsPipelineMaker::clearShaders() -> GraphicsPipelineMaker & {
+  shaders.clear();
+  _modules.clear();
+  return *this;
+}
+
 auto GraphicsPipelineMaker::shader(
   const vk::ShaderStageFlagBits &stageFlagBits, const std::string &filename,
   const vk::SpecializationInfo *pSpecializationInfo) -> GraphicsPipelineMaker & {
@@ -467,11 +473,6 @@ auto GraphicsPipelineMaker::clearColorBlendAttachments() -> GraphicsPipelineMake
 
 auto GraphicsPipelineMaker::clearDynamicStates() -> GraphicsPipelineMaker & {
   _dynamicState.clear();
-  return *this;
-}
-
-auto GraphicsPipelineMaker::clearShaders() -> GraphicsPipelineMaker & {
-  _modules.clear();
   return *this;
 }
 

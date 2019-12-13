@@ -407,15 +407,15 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
 
   debugMarker.begin(cb, "Subpass opaque tri");
   if(RenderPass.wireframe)
-    cb.bindPipeline(bindpoint::eGraphics, *renderer.opaqueTriWireframe.pipeline);
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueTriWireframe);
   else
-    cb.bindPipeline(bindpoint::eGraphics, *renderer.opaqueTri.pipeline);
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueTri);
   cb.drawIndexedIndirect(
     Buffer.drawQueue[0]->buffer(), 0, Scene.drawQueues[0].size(), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass opaque line");
-  cb.bindPipeline(bindpoint::eGraphics, *renderer.opaqueLine.pipeline);
+  cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueLine);
   cb.drawIndexedIndirect(
     Buffer.drawQueue[1]->buffer(), 0, Scene.drawQueues[1].size(), stride);
   debugMarker.end(cb);
@@ -423,21 +423,21 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   debugMarker.begin(cb, "Subpass deferred shading");
   cb.nextSubpass(vk::SubpassContents::eInline);
   if(Image.useEnvironmentMap)
-    cb.bindPipeline(bindpoint::eGraphics, *renderer.deferredIBL.pipeline);
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredIBL);
   else
-    cb.bindPipeline(bindpoint::eGraphics, *renderer.deferred.pipeline);
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferred);
   cb.draw(3, 1, 0, 0);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass translucent tri");
   cb.nextSubpass(vk::SubpassContents::eInline);
-  cb.bindPipeline(bindpoint::eGraphics, *renderer.transTri.pipeline);
+  cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transTri);
   cb.drawIndexedIndirect(
     Buffer.drawQueue[2]->buffer(), 0, Scene.drawQueues[2].size(), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass translucent line");
-  cb.bindPipeline(bindpoint::eGraphics, *renderer.transLine.pipeline);
+  cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transLine);
   cb.drawIndexedIndirect(
     Buffer.drawQueue[3]->buffer(), 0, Scene.drawQueues[3].size(), stride);
   debugMarker.end(cb);

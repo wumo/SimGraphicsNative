@@ -1,14 +1,6 @@
 #include "basic_renderer.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
-#include "sim/graphics/compiledShaders/basic/basic_vert.h"
-#include "sim/graphics/compiledShaders/basic/gbuffer_frag.h"
-#include "sim/graphics/compiledShaders/basic/quad_vert.h"
-#include "sim/graphics/compiledShaders/basic/deferred_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_ms_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_ibl_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_ibl_ms_frag.h"
-#include "sim/graphics/compiledShaders/basic/translucent_frag.h"
 
 namespace sim::graphics::renderer::basic {
 using layout = vk::ImageLayout;
@@ -26,7 +18,7 @@ BasicRenderer::BasicRenderer(
   sampleCount = static_cast<vk::SampleCountFlagBits>(config.sampleCount);
 
   createModelManager();
-  createDirectPipeline();
+  createRenderPass();
   recreateResources();
 }
 
@@ -34,7 +26,7 @@ BasicModelManager &BasicRenderer::modelManager() const { return *mm; }
 
 void BasicRenderer::createModelManager() { mm = u<BasicModelManager>(*this); }
 
-void BasicRenderer::createDirectPipeline() {
+void BasicRenderer::createRenderPass() {
   RenderPassMaker maker;
   auto presentImage = maker.attachment(swapchain->getImageFormat())
                         .samples(vk::SampleCountFlagBits::e1)
@@ -58,8 +50,7 @@ void BasicRenderer::createDirectPipeline() {
                  .storeOp(vk::AttachmentStoreOp::eDontCare)
                  .finalLayout(layout::eDepthStencilAttachmentOptimal)
                  .index();
-  auto shadingOutput = config.sampleCount > 1 ? color : presentImage;
-  opaqueTri.subpass = maker.subpass(bindpoint::eGraphics)
+  Subpasses.gBuffer = maker.subpass(bindpoint::eGraphics)
                         .color(position)
                         .color(normal)
                         .color(albedo)
@@ -67,40 +58,39 @@ void BasicRenderer::createDirectPipeline() {
                         .color(emissive)
                         .depthStencil(depth)
                         .index();
-  deferred.subpass = maker.subpass(bindpoint::eGraphics)
-                       .color(shadingOutput)
-                       .input(position)
-                       .input(normal)
-                       .input(albedo)
-                       .input(pbr)
-                       .input(emissive)
-                       .preserve(depth)
-                       .index();
-  auto &spMaker =
-    maker.subpass(bindpoint::eGraphics).color(shadingOutput).depthStencil(depth);
+  Subpasses.deferred = maker.subpass(bindpoint::eGraphics)
+                         .color(color)
+                         .input(position)
+                         .input(normal)
+                         .input(albedo)
+                         .input(pbr)
+                         .input(emissive)
+                         .preserve(depth)
+                         .index();
+  auto &spMaker = maker.subpass(bindpoint::eGraphics).color(color).depthStencil(depth);
   if(config.sampleCount > 1)
     spMaker.resolve(presentImage); //resolve using tiled on chip memory.
-  transTri.subpass = spMaker.index();
+  Subpasses.translucent = spMaker.index();
 
-  maker.dependency(VK_SUBPASS_EXTERNAL, opaqueTri.subpass)
+  maker.dependency(VK_SUBPASS_EXTERNAL, Subpasses.gBuffer)
     .srcStageMask(stage::eBottomOfPipe)
     .dstStageMask(stage::eColorAttachmentOutput)
     .srcAccessMask(access::eMemoryRead)
     .dstAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  maker.dependency(opaqueTri.subpass, deferred.subpass)
+  maker.dependency(Subpasses.gBuffer, Subpasses.deferred)
     .srcStageMask(stage::eColorAttachmentOutput)
     .dstStageMask(stage::eFragmentShader)
     .srcAccessMask(access::eColorAttachmentWrite)
     .dstAccessMask(access::eInputAttachmentRead)
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  maker.dependency(deferred.subpass, transTri.subpass)
+  maker.dependency(Subpasses.deferred, Subpasses.translucent)
     .srcStageMask(stage::eColorAttachmentOutput)
     .dstStageMask(stage::eEarlyFragmentTests | stage::eLateFragmentTests)
     .srcAccessMask(access::eColorAttachmentWrite)
     .dstAccessMask(access::eDepthStencilAttachmentRead)
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  maker.dependency(transTri.subpass, VK_SUBPASS_EXTERNAL)
+  maker.dependency(Subpasses.translucent, VK_SUBPASS_EXTERNAL)
     .srcStageMask(stage::eColorAttachmentOutput)
     .dstStageMask(stage::eBottomOfPipe)
     .srcAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
@@ -108,145 +98,16 @@ void BasicRenderer::createDirectPipeline() {
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
   renderPass = maker.createUnique(vkDevice);
 
+  createPipelines();
+}
+
+void BasicRenderer::createPipelines() {
   auto pipelineLayout = *mm->basicLayout.pipelineLayout;
   pipelineCache = vkDevice.createPipelineCacheUnique({});
 
-  { // Pipeline
-    GraphicsPipelineMaker pipelineMaker{vkDevice, extent.width, extent.height};
-    pipelineMaker.subpass(opaqueTri.subpass)
-      .vertexBinding(0, Vertex::stride(), Vertex::attributes(0, 0))
-      .topology(vk::PrimitiveTopology::eTriangleList)
-      .polygonMode(vk::PolygonMode::eFill)
-      .cullMode(vk::CullModeFlagBits::eBack)
-      .frontFace(vk::FrontFace::eCounterClockwise)
-      .depthTestEnable(true)
-      .depthWriteEnable(true)
-      .depthCompareOp(vk::CompareOp::eLessOrEqual)
-      .dynamicState(vk::DynamicState::eViewport)
-      .dynamicState(vk::DynamicState::eScissor)
-      .rasterizationSamples(sampleCount)
-      .sampleShadingEnable(enableSampleShading)
-      .minSampleShading(minSampleShading);
-
-    pipelineMaker.blendColorAttachment(false);
-    pipelineMaker.blendColorAttachment(false);
-    pipelineMaker.blendColorAttachment(false);
-    pipelineMaker.blendColorAttachment(false);
-    pipelineMaker.blendColorAttachment(false);
-
-    pipelineMaker.shader(shader::eVertex, basic_vert, __ArraySize__(basic_vert));
-    SpecializationMaker sp;
-    auto spInfo = sp.entry(modelConfig.maxNumTexture).create();
-    pipelineMaker.shader(
-      shader::eFragment, gbuffer_frag, __ArraySize__(gbuffer_frag), &spInfo);
-    opaqueTri.pipeline =
-      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-    debugMarker.name(*opaqueTri.pipeline, "opaque triangle pipeline");
-
-    pipelineMaker.polygonMode(vk::PolygonMode::eLine);
-
-    opaqueTriWireframe.pipeline =
-      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-
-    pipelineMaker.topology(vk::PrimitiveTopology::eLineList)
-      .polygonMode(vk::PolygonMode::eFill)
-      .cullMode(vk::CullModeFlagBits::eNone)
-      .lineWidth(1.f);
-    opaqueLine.pipeline =
-      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-    debugMarker.name(*opaqueLine.pipeline, "opaque line pipeline");
-  }
-  { // shading pipeline
-    GraphicsPipelineMaker pipelineMaker{vkDevice, extent.width, extent.height};
-    pipelineMaker.subpass(deferred.subpass)
-      .cullMode(vk::CullModeFlagBits::eNone)
-      .frontFace(vk::FrontFace::eClockwise)
-      .depthTestEnable(false)
-      .dynamicState(vk::DynamicState::eViewport)
-      .dynamicState(vk::DynamicState::eScissor)
-      .rasterizationSamples(sampleCount)
-      .sampleShadingEnable(enableSampleShading)
-      .minSampleShading(minSampleShading)
-      .blendColorAttachment(false);
-
-    pipelineMaker.shader(shader::eVertex, quad_vert, __ArraySize__(quad_vert));
-    if(config.sampleCount > 1) {
-      pipelineMaker.shader(
-        shader::eFragment, deferred_ms_frag, __ArraySize__(deferred_ms_frag));
-    } else {
-      pipelineMaker.shader(
-        shader::eFragment, deferred_frag, __ArraySize__(deferred_frag));
-    }
-    deferred.pipeline =
-      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-    debugMarker.name(*deferred.pipeline, "deferred pipeline");
-  }
-
-  { // shading pipeline for IBL
-    GraphicsPipelineMaker pipelineMaker{vkDevice, extent.width, extent.height};
-    pipelineMaker.subpass(deferred.subpass)
-      .cullMode(vk::CullModeFlagBits::eNone)
-      .frontFace(vk::FrontFace::eClockwise)
-      .depthTestEnable(false)
-      .dynamicState(vk::DynamicState::eViewport)
-      .dynamicState(vk::DynamicState::eScissor)
-      .rasterizationSamples(sampleCount)
-      .sampleShadingEnable(enableSampleShading)
-      .minSampleShading(minSampleShading)
-      .blendColorAttachment(false);
-
-    pipelineMaker.shader(shader::eVertex, quad_vert, __ArraySize__(quad_vert));
-    if(config.sampleCount > 1)
-      pipelineMaker.shader(
-        shader::eFragment, deferred_ibl_ms_frag, __ArraySize__(deferred_ibl_ms_frag));
-    else
-      pipelineMaker.shader(
-        shader::eFragment, deferred_ibl_frag, __ArraySize__(deferred_ibl_frag));
-    deferredIBL.pipeline =
-      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-    debugMarker.name(*deferredIBL.pipeline, "deferred IBL pipeline");
-  }
-
-  { // translucent pipeline
-    GraphicsPipelineMaker pipelineMaker{vkDevice, extent.width, extent.height};
-    pipelineMaker.subpass(transTri.subpass)
-      .vertexBinding(0, Vertex::stride(), Vertex::attributes(0, 0))
-      .cullMode(vk::CullModeFlagBits::eNone)
-      .frontFace(vk::FrontFace::eCounterClockwise)
-      .depthTestEnable(true)
-      .depthCompareOp(vk::CompareOp::eLessOrEqual)
-      .depthWriteEnable(false)
-      .dynamicState(vk::DynamicState::eViewport)
-      .dynamicState(vk::DynamicState::eScissor)
-      .rasterizationSamples(sampleCount)
-      .sampleShadingEnable(enableSampleShading)
-      .minSampleShading(minSampleShading);
-
-    using flag = vk::ColorComponentFlagBits;
-    pipelineMaker.blendColorAttachment(true)
-      .srcColorBlendFactor(vk::BlendFactor::eSrcAlpha)
-      .dstColorBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
-      .colorBlendOp(vk::BlendOp::eAdd)
-      .srcAlphaBlendFactor(vk::BlendFactor::eOne)
-      .dstAlphaBlendFactor(vk::BlendFactor::eOneMinusSrcAlpha)
-      .alphaBlendOp(vk::BlendOp::eAdd)
-      .colorWriteMask(flag::eR | flag::eG | flag::eB | flag::eA);
-
-    pipelineMaker.shader(shader::eVertex, basic_vert, __ArraySize__(basic_vert));
-    pipelineMaker.shader(
-      shader::eFragment, translucent_frag, __ArraySize__(translucent_frag));
-
-    transTri.pipeline =
-      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-    debugMarker.name(*transTri.pipeline, "translucent tri pipeline");
-
-    pipelineMaker.topology(vk::PrimitiveTopology::eLineList)
-      .cullMode(vk::CullModeFlagBits::eNone)
-      .lineWidth(1.f);
-    transLine.pipeline =
-      pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-    debugMarker.name(*transLine.pipeline, "translucent line pipeline");
-  }
+  createOpaquePipeline(pipelineLayout);
+  createDeferredPipeline(pipelineLayout);
+  createTranslucentPipeline(pipelineLayout);
 }
 
 void BasicRenderer::recreateResources() {

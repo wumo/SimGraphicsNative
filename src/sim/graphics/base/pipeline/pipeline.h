@@ -75,6 +75,7 @@ public:
   vk::UniquePipeline createUnique(
     const vk::Device &device, const vk::PipelineCache &pipelineCache,
     const vk::PipelineLayout &pipelineLayout, const vk::RenderPass &renderPass);
+  GraphicsPipelineMaker &clearShaders();
   GraphicsPipelineMaker &shader(
     const vk::ShaderStageFlagBits &stageFlagBits, const std::string &filename,
     const vk::SpecializationInfo *pSpecializationInfo = nullptr);
@@ -150,7 +151,6 @@ public:
 
   GraphicsPipelineMaker &clearColorBlendAttachments();
   GraphicsPipelineMaker &clearDynamicStates();
-  GraphicsPipelineMaker &clearShaders();
   GraphicsPipelineMaker &clearVertexAttributeDescriptions();
   GraphicsPipelineMaker &clearVertexBindingDescriptions();
 

@@ -20,16 +20,24 @@ public:
 
 protected:
   void createModelManager();
-  void createDirectPipeline();
+
+  void createRenderPass();
+  void createPipelines();
+  void createOpaquePipeline(const vk::PipelineLayout &pipelineLayout);
+  void createDeferredPipeline(const vk::PipelineLayout &pipelineLayout);
+  void createTranslucentPipeline(const vk::PipelineLayout &pipelineLayout);
+
   void recreateResources();
 
   void resize() override;
+
   void updateFrame(
     std::function<void(uint32_t, float)> &updater, uint32_t imageIndex,
     float elapsedDuration) override;
 
 protected:
   const ModelConfig modelConfig;
+
   const vk::Device &vkDevice;
   vk::SampleCountFlagBits sampleCount{vk::SampleCountFlagBits ::e1};
   bool enableSampleShading{true};
@@ -37,18 +45,22 @@ protected:
 
   uPtr<BasicModelManager> mm{};
   vk::UniquePipelineCache pipelineCache;
+
   vk::UniqueRenderPass renderPass;
+
   std::vector<vk::UniqueFramebuffer> framebuffers{};
 
-  struct Pipe {
-    vk::UniquePipeline pipeline;
-    uint32_t subpass;
-  } opaqueTri, opaqueLine, deferred, deferredIBL, transTri, transLine;
-  Pipe opaqueTriWireframe;
+  struct {
+    uint32_t gBuffer, deferred, translucent, combine;
+  } Subpasses{};
 
   struct {
+    vk::UniquePipeline opaqueTri, opaqueLine, opaqueTriWireframe, deferred, deferredIBL,
+      transTri, transLine;
+  } Pipelines;
+  struct {
     uPtr<StorageAttachmentImage> offscreenImage;
-    uPtr<ColorInputAttachmentImage> position, normal, albedo, pbr, emissive;
+    uPtr<ColorInputAttachmentImage> position, normal, albedo, pbr, emissive, translucent;
     uPtr<DepthStencilImage> depth;
   } attachments;
 };

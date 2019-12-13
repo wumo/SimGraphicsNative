@@ -35,7 +35,7 @@ auto main(int argc, const char **argv) -> int {
                            0,
                          })
                        .newPrimitive());
-  Transform t{-center, vec3{0.1f}};
+  Transform t{-center};
 
   auto rectMaterial = mm.newMaterial();
   rectMaterial->setColorFactor({0.f, 1.f, 0.f, 1.f});

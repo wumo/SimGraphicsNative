@@ -19,6 +19,8 @@ private:
   AABB loadVertices(const tinygltf::Model &model, const tinygltf::Primitive &primitive);
   void loadIndices(const tinygltf::Model &model, const tinygltf::Primitive &primitive);
   
+  void loadAnimations(const tinygltf::Model &model);
+  
   BasicModelManager &mm;
 
   std::vector<uint32_t> indices;

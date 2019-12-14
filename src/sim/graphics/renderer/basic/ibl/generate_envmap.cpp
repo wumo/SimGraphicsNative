@@ -1,6 +1,7 @@
 #include "envmap_generator.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
+#include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/base/resource/buffers.h"
 #include "sim/graphics/compiledShaders/envmap/filtercube_vert.h"
 #include "sim/graphics/compiledShaders/envmap/irradiancecube_frag.h"

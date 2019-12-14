@@ -24,6 +24,7 @@ Ptr<Model> GLTFLoader::load(const std::string &file) {
   const auto &_scene = model.scenes[std::max(model.defaultScene, 0)];
   for(int i: _scene.nodes)
     nodes.push_back(loadNode(i, model));
+
   return mm.newModel(std::move(nodes));
 }
 
@@ -314,6 +315,12 @@ void GLTFLoader::loadIndices(
     }
     default:
       error("Index component type", indicesAccessor.componentType, "not supported!");
+  }
+}
+
+void GLTFLoader::loadAnimations(const tinygltf::Model &model) {
+  for(const auto &animation: model.animations) {
+  
   }
 }
 

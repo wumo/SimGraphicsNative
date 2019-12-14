@@ -2,6 +2,7 @@
 #include "../basic_model_manager.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
+#include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/envmap/genbrdflut_vert.h"
 #include "sim/graphics/compiledShaders/envmap/genbrdflut_frag.h"
 

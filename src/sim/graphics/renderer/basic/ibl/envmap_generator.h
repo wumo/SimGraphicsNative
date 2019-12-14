@@ -2,7 +2,7 @@
 #include "sim/graphics/base/resource/images.h"
 #include "sim/graphics/base/resource/buffers.h"
 #include "sim/graphics/base/device.h"
-#include "../basic_model.h"
+#include "sim/graphics/renderer/basic/model/basic_model.h"
 
 namespace sim::graphics::renderer::basic {
 

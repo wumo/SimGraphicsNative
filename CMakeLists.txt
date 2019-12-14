@@ -69,8 +69,6 @@ set(oceanFFT
   )
 
 set(basicRendererSrc
-  src/sim/graphics/renderer/basic/basic_model.cpp
-  src/sim/graphics/renderer/basic/basic_model.h
   src/sim/graphics/renderer/basic/basic_model_buffer.cpp
   src/sim/graphics/renderer/basic/basic_model_buffer.h
   src/sim/graphics/renderer/basic/basic_model_manager.cpp
@@ -83,6 +81,26 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/builder/primitive_builder.cpp
   src/sim/graphics/renderer/basic/builder/primitive_builder.h
   src/sim/graphics/renderer/basic/ptr.h
+  
+  src/sim/graphics/renderer/basic/model/aabb.h
+  src/sim/graphics/renderer/basic/model/animation.cpp
+  src/sim/graphics/renderer/basic/model/animation.h
+  src/sim/graphics/renderer/basic/model/basic_model.h
+  src/sim/graphics/renderer/basic/model/material.cpp
+  src/sim/graphics/renderer/basic/model/material.h
+  src/sim/graphics/renderer/basic/model/mesh.cpp
+  src/sim/graphics/renderer/basic/model/mesh.h
+  src/sim/graphics/renderer/basic/model/model.cpp
+  src/sim/graphics/renderer/basic/model/model.h
+  src/sim/graphics/renderer/basic/model/model_instance.cpp
+  src/sim/graphics/renderer/basic/model/model_instance.h
+  src/sim/graphics/renderer/basic/model/node.cpp
+  src/sim/graphics/renderer/basic/model/node.h
+  src/sim/graphics/renderer/basic/model/primitive.cpp
+  src/sim/graphics/renderer/basic/model/primitive.h
+  src/sim/graphics/renderer/basic/model/transform.cpp
+  src/sim/graphics/renderer/basic/model/transform.h
+  src/sim/graphics/renderer/basic/model/vertex.h
   
   src/sim/graphics/renderer/basic/loader/gltf_loader.cpp
   src/sim/graphics/renderer/basic/loader/gltf_loader.h

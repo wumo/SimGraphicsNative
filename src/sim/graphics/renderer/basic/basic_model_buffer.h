@@ -1,5 +1,5 @@
 #pragma once
-#include "basic_model.h"
+#include "sim/graphics/renderer/basic/model/basic_model.h"
 #include "sim/graphics/base/vkcommon.h"
 #include "sim/graphics/base/resource/buffers.h"
 

@@ -277,9 +277,13 @@ AABB GLTFLoader::loadVertices(
 
 void GLTFLoader::loadIndices(
   const tinygltf::Model &model, const tinygltf::Primitive &primitive) {
-  errorIf(primitive.indices < 0, "mesh without indices!!");
-
   indices.clear();
+
+  if(primitive.indices < 0) {
+    for(int i = 0; i < vertices.size(); ++i)
+      indices.push_back(i);
+    return;
+  }
 
   auto indicesID = primitive.indices;
 

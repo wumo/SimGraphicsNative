@@ -22,7 +22,7 @@ Ptr<Model> GLTFLoader::load(const std::string &file) {
 
   std::vector<Ptr<Node>> nodes;
   const auto &_scene = model.scenes[std::max(model.defaultScene, 0)];
-  _nodes.resize(_scene.nodes.size());
+  _nodes.resize(model.nodes.size());
   for(int i: _scene.nodes)
     nodes.push_back(loadNode(i, model));
 

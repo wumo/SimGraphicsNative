@@ -82,6 +82,7 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/builder/primitive_builder.h
   src/sim/graphics/renderer/basic/ptr.h
   
+  src/sim/graphics/renderer/basic/model/aabb.cpp
   src/sim/graphics/renderer/basic/model/aabb.h
   src/sim/graphics/renderer/basic/model/animation.cpp
   src/sim/graphics/renderer/basic/model/animation.h
@@ -100,6 +101,7 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/model/primitive.h
   src/sim/graphics/renderer/basic/model/transform.cpp
   src/sim/graphics/renderer/basic/model/transform.h
+  src/sim/graphics/renderer/basic/model/vertex.cpp
   src/sim/graphics/renderer/basic/model/vertex.h
   
   src/sim/graphics/renderer/basic/loader/gltf_loader.cpp

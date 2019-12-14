@@ -1,5 +1,8 @@
 #include "primitive.h"
 namespace sim::graphics::renderer::basic {
+
+uint32_t Range::endOffset() const { return offset + size; }
+
 Primitive::Primitive(
   const Range &index, const Range &vertex, const AABB &aabb,
   const PrimitiveTopology &topology, const DynamicType &_type)

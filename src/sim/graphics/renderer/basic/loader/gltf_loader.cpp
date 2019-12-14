@@ -22,10 +22,12 @@ Ptr<Model> GLTFLoader::load(const std::string &file) {
 
   std::vector<Ptr<Node>> nodes;
   const auto &_scene = model.scenes[std::max(model.defaultScene, 0)];
+  _nodes.resize(_scene.nodes.size());
   for(int i: _scene.nodes)
     nodes.push_back(loadNode(i, model));
 
-  return mm.newModel(std::move(nodes));
+  loadAnimations(model);
+  return mm.newModel(std::move(nodes), std::move(animations));
 }
 
 SamplerAddressMode _getVkWrapMode(int32_t wrapMode) {
@@ -188,6 +190,7 @@ Ptr<Node> GLTFLoader::loadNode(int thisID, const tinygltf::Model &model) {
                                              make_quat(node.rotation.data());
   }
   auto _node = mm.newNode(t, node.name);
+  _nodes[thisID] = _node;
 
   if(node.mesh > -1) {
     auto &mesh = model.meshes[node.mesh];
@@ -319,8 +322,82 @@ void GLTFLoader::loadIndices(
 }
 
 void GLTFLoader::loadAnimations(const tinygltf::Model &model) {
+  using Path = Animation::AnimationChannel::PathType;
+  using Interpolation = Animation::AnimationSampler::InterpolationType;
+
+  animations.reserve(model.animations.size());
   for(const auto &animation: model.animations) {
-  
+    Animation _animation{};
+    _animation.name = animation.name;
+    for(auto &sampler: animation.samplers) {
+      Animation::AnimationSampler _sampler;
+      if(sampler.interpolation == "LINEAR")
+        _sampler.interpolation = Interpolation ::Linear;
+      else if(sampler.interpolation == "STEP")
+        _sampler.interpolation = Interpolation ::Step;
+      else if(sampler.interpolation == "CUBICSPLINE")
+        _sampler.interpolation = Interpolation ::CubicSpline;
+      else
+        error("Not supported");
+      {
+        const auto &accessor = model.accessors[sampler.input];
+        const auto &bufferView = model.bufferViews[accessor.bufferView];
+        const auto &buffer = model.buffers[bufferView.buffer];
+
+        assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+
+        auto buf = reinterpret_cast<const float *>(
+          &buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+        for(size_t index = 0; index < accessor.count; index++)
+          _sampler.keyTimings.push_back(buf[index]);
+      }
+      {
+        const auto &accessor = model.accessors[sampler.output];
+        const auto &bufferView = model.bufferViews[accessor.bufferView];
+        const auto &buffer = model.buffers[bufferView.buffer];
+
+        assert(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+
+        auto dataPtr = &buffer.data[accessor.byteOffset + bufferView.byteOffset];
+        switch(accessor.type) {
+          case TINYGLTF_TYPE_VEC3: {
+            auto buf = reinterpret_cast<const glm::vec3 *>(dataPtr);
+            for(size_t index = 0; index < accessor.count; index++) {
+              _sampler.keyFrames.emplace_back(buf[index], 0.0f);
+            }
+            break;
+          }
+          case TINYGLTF_TYPE_VEC4: {
+            auto buf = reinterpret_cast<const glm::vec4 *>(dataPtr);
+            for(size_t index = 0; index < accessor.count; index++) {
+              _sampler.keyFrames.push_back(buf[index]);
+            }
+            break;
+          }
+          default: {
+            error("Not supported");
+            break;
+          }
+        }
+      }
+      _animation.samplers.push_back(_sampler);
+    }
+
+    for(auto &channel: animation.channels) {
+      Animation::AnimationChannel _channel;
+      if(channel.target_path == "translation") _channel.path = Path::Translation;
+      else if(channel.target_path == "rotation")
+        _channel.path = Path::Rotation;
+      else if(channel.target_path == "scale")
+        _channel.path = Path::Scale;
+      else
+        error("Not supported");
+      _channel.samplerIdx = channel.sampler;
+      _channel.node = _nodes[channel.target_node];
+      _animation.channels.push_back(_channel);
+    }
+
+    animations.push_back(_animation);
   }
 }
 

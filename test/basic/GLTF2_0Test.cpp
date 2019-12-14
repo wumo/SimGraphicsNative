@@ -22,9 +22,9 @@ auto main(int argc, const char **argv) -> int {
   camera.setLocation({2.f, 2.f, 2.f});
   mm.addLight(LightType ::Directional, {-1, -1, -1});
 
-    std::string name = "DamagedHelmet";
-    auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
-//  std::string path = "assets/private/models/DamagedHelmet.glb";
+  std::string name = "InterpolationTest";
+  auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
+  //  std::string path = "assets/private/models/DamagedHelmet.glb";
   auto model = mm.loadModel(path);
   auto aabb = model->aabb();
   println(aabb);
@@ -81,6 +81,7 @@ auto main(int argc, const char **argv) -> int {
 
   PanningCamera panningCamera(camera);
   bool pressed{false};
+  bool rotate{false};
   sim::graphics::FPSMeter mFPSMeter;
   app.run([&](uint32_t imageIndex, float elapsedDuration) {
     mFPSMeter.update(elapsedDuration);
@@ -89,10 +90,15 @@ auto main(int argc, const char **argv) -> int {
       " ", int32_t(mFPSMeter.FPS()), " FPS (", mFPSMeter.FrameTime(), " ms)");
     auto fullTitle = "Test  " + frameStats;
     app.setWindowTitle(fullTitle);
-    t.rotation =
-      t.rotation * angleAxis(pi<float>() * elapsedDuration * 0.2f, vec3{0.f, 1.f, 0.f});
-    box->setTransform(t);
-    instance->setTransform(t);
+    if(rotate) {
+      t.rotation =
+        t.rotation * angleAxis(pi<float>() * elapsedDuration * 0.2f, vec3{0.f, 1.f, 0.f});
+      box->setTransform(t);
+      instance->setTransform(t);
+    }
+    auto model = instance->model();
+    for(int i = 0; i < model->animations().size(); ++i)
+      model->animate(i, elapsedDuration);
     if(app.input.keyPressed[KeyW]) pressed = true;
     else if(pressed) {
       mm.setWireframe(!mm.wireframe());

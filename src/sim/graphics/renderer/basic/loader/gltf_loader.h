@@ -18,13 +18,15 @@ private:
     const tinygltf::Model &model, const tinygltf::Primitive &primitive);
   AABB loadVertices(const tinygltf::Model &model, const tinygltf::Primitive &primitive);
   void loadIndices(const tinygltf::Model &model, const tinygltf::Primitive &primitive);
-  
+
   void loadAnimations(const tinygltf::Model &model);
-  
+
   BasicModelManager &mm;
 
   std::vector<uint32_t> indices;
   std::vector<Vertex> vertices;
+  std::vector<Ptr<Node>> _nodes;
+  std::vector<Animation> animations;
 
   std::vector<SamplerDef> samplerDefs;
   std::vector<Ptr<TextureImage2D>> textures;

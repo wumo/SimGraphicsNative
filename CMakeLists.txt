@@ -84,8 +84,6 @@ set(basicRendererSrc
   
   src/sim/graphics/renderer/basic/model/aabb.cpp
   src/sim/graphics/renderer/basic/model/aabb.h
-  src/sim/graphics/renderer/basic/model/animation.cpp
-  src/sim/graphics/renderer/basic/model/animation.h
   src/sim/graphics/renderer/basic/model/basic_model.h
   src/sim/graphics/renderer/basic/model/material.cpp
   src/sim/graphics/renderer/basic/model/material.h

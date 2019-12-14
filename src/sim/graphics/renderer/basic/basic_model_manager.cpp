@@ -293,8 +293,10 @@ Ptr<Node> BasicModelManager::newNode(
   return Ptr<Node>::add(Scene.nodes, Node{transform, name, offset});
 }
 
-Ptr<Model> BasicModelManager::newModel(std::vector<Ptr<Node>> &&nodes) {
-  return Ptr<Model>::add(Scene.models, std::move(Model{nodes}));
+Ptr<Model> BasicModelManager::newModel(
+  std::vector<Ptr<Node>> &&nodes, std::vector<Animation> &&animations) {
+  return Ptr<Model>::add(
+    Scene.models, std::move(Model{std::move(nodes), std::move(animations)}));
 }
 
 Ptr<Model> BasicModelManager::loadModel(const std::string &file) {

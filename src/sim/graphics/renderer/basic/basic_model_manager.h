@@ -52,7 +52,8 @@ public:
 
   Ptr<Node> newNode(const Transform &transform = {}, const std::string &name = "");
 
-  Ptr<Model> newModel(std::vector<Ptr<Node>> &&nodes);
+  Ptr<Model> newModel(
+    std::vector<Ptr<Node>> &&nodes, std::vector<Animation> &&animations = {});
 
   Ptr<Model> loadModel(const std::string &file);
 

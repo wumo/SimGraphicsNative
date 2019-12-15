@@ -150,7 +150,7 @@ private:
     std::vector<ModelInstance> instances;
 
     // draw queue index map to Ptr<Mesh>
-    std::array<std::vector<Ptr<Mesh>>, 4> drawQueues;
+    std::array<std::vector<Ptr<Mesh>>, 6> drawQueues;
 
     PerspectiveCamera camera{{10, 10, 10}, {0, 0, 0}, {0, 1, 0}};
     Lighting lighting{};

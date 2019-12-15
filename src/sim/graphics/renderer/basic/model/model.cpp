@@ -4,6 +4,16 @@ namespace sim::graphics::renderer::basic {
 using Path = Animation::AnimationChannel::PathType;
 using Interpolation = Animation::AnimationSampler::InterpolationType;
 
+void Animation::reset(uint32_t index) {
+  channels[index].prevTime = 0;
+  channels[index].prevKey = 0;
+}
+
+void Animation::resetAll() {
+  for(auto i = 0u; i < channels.size(); ++i)
+    reset(i);
+}
+
 void Animation::animate(uint32_t index, float elapsed) {
   auto &channel = channels[index];
   auto &sampler = samplers[channel.samplerIdx];

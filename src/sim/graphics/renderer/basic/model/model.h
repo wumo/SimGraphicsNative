@@ -24,6 +24,8 @@ public:
     glm::vec4 interpolateRotation(uint32_t key, uint32_t nextKey, float t) const;
     glm::vec4 linear(uint32_t key, uint32_t nextKey, float t) const;
   };
+  void reset(uint32_t index);
+  void resetAll();
   void animate(uint32_t index, float elapsed);
   void animateAll(float elapsed);
 

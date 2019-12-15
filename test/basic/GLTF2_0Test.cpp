@@ -97,8 +97,8 @@ auto main(int argc, const char **argv) -> int {
       instance->setTransform(t);
     }
     auto model = instance->model();
-    for(int i = 0; i < model->animations().size(); ++i)
-      model->animate(i, elapsedDuration);
+    for(auto &animation: model->animations())
+      animation.animateAll(elapsedDuration);
     if(app.input.keyPressed[KeyW]) pressed = true;
     else if(pressed) {
       mm.setWireframe(!mm.wireframe());

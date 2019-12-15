@@ -4,10 +4,11 @@ namespace sim::graphics::renderer::basic {
 using Path = Animation::AnimationChannel::PathType;
 using Interpolation = Animation::AnimationSampler::InterpolationType;
 
-void Animation::interpolate(
-  AnimationChannel &channel, const AnimationSampler &sampler, Ptr<Node> node,
-  float elapsed) {
-  auto transform = node->transform();
+void Animation::animate(uint32_t index, float elapsed) {
+  auto &channel = channels[index];
+  auto &sampler = samplers[channel.samplerIdx];
+
+  auto transform = channel.node->transform();
   glm::vec4 result{};
   if(sampler.keyTimings.size() == 1) result = sampler.keyFrames[0];
   else {
@@ -50,7 +51,12 @@ void Animation::interpolate(
       break;
     case Path::Scale: transform.scale = result; break;
   }
-  node->setTransform(transform);
+  channel.node->setTransform(transform);
+}
+
+void Animation::animateAll(float elapsed) {
+  for(auto i = 0u; i < channels.size(); ++i)
+    animate(i, elapsed);
 }
 
 glm::vec4 Animation::AnimationSampler::cubicSpline(
@@ -95,12 +101,5 @@ AABB Model::aabb() {
     _aabb.merge(node->aabb());
   return _aabb;
 }
-const std::vector<Animation> &Model::animations() const { return _animations; }
-void Model::animate(uint32_t animationIdx, float elapsed) {
-  auto &animation = _animations[animationIdx];
-  for(auto &channel: animation.channels) {
-    auto &sampler = animation.samplers[channel.samplerIdx];
-    Animation::interpolate(channel, sampler, channel.node, elapsed);
-  }
-}
+std::vector<Animation> &Model::animations() { return _animations; }
 }

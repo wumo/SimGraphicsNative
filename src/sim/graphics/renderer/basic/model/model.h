@@ -24,14 +24,12 @@ public:
     glm::vec4 interpolateRotation(uint32_t key, uint32_t nextKey, float t) const;
     glm::vec4 linear(uint32_t key, uint32_t nextKey, float t) const;
   };
+  void animate(uint32_t index, float elapsed);
+  void animateAll(float elapsed);
 
   std::string name;
   std::vector<AnimationSampler> samplers;
   std::vector<AnimationChannel> channels;
-
-  static void interpolate(
-    AnimationChannel &channel, const AnimationSampler &sampler, Ptr<Node> node,
-    float elapsed);
 };
 
 class Model {
@@ -45,8 +43,7 @@ public:
 
   AABB aabb();
 
-  const std::vector<Animation> &animations() const;
-  void animate(uint32_t animationIdx, float elapsed);
+  std::vector<Animation> &animations();
 
 private:
   std::vector<Ptr<Node>> _nodes;

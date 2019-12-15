@@ -4,36 +4,47 @@
 namespace sim::graphics::renderer::basic {
 using namespace glm;
 
-const std::vector<Vertex> &PrimitiveBuilder::vertices() const { return _vertices; }
+const std::vector<Vertex::Position> &PrimitiveBuilder::positions() const {
+  return _positions;
+}
+const std::vector<Vertex::Normal> &PrimitiveBuilder::normals() const { return _normals; }
+const std::vector<Vertex::UV> &PrimitiveBuilder::uvs() const { return _uvs; }
 const std::vector<uint32_t> &PrimitiveBuilder::indices() const { return _indices; }
 const std::vector<Primitive> &PrimitiveBuilder::primitives() const { return _primitives; }
 
 PrimitiveBuilder &PrimitiveBuilder::newPrimitive(PrimitiveTopology topology) {
   Range indexRange;
-  Range vertexRange;
+  Range positionRange, normalRange, uvRange;
   if(_primitives.empty()) {
     indexRange = {0, uint32_t(_indices.size())};
-    vertexRange = {0, uint32_t(_vertices.size())};
+    positionRange = {0, uint32_t(_positions.size())};
+    normalRange = {0, uint32_t(_normals.size())};
+    uvRange = {0, uint32_t(_uvs.size())};
   } else {
     auto &last = _primitives.back();
     indexRange = {last.index().endOffset(),
                   uint32_t(_indices.size()) - last.index().endOffset()};
-    vertexRange = {last.vertex().endOffset(),
-                   uint32_t(_vertices.size()) - last.vertex().endOffset()};
+    positionRange = {last.position().endOffset(),
+                     uint32_t(_positions.size()) - last.position().endOffset()};
+    normalRange = {last.normal().endOffset(),
+                   uint32_t(_normals.size()) - last.normal().endOffset()};
+    uvRange = {last.uv().endOffset(), uint32_t(_uvs.size()) - last.uv().endOffset()};
   }
-  _primitives.emplace_back(indexRange, vertexRange, aabb, topology);
+  _primitives.emplace_back(
+    indexRange, positionRange, normalRange, uvRange, aabb, topology);
   aabb = {};
   return *this;
 }
 
 uint32_t PrimitiveBuilder::currentVertexID() const {
-  return uint32_t(_vertices.size()) -
-         (_primitives.empty() ? 0u : _primitives.back().vertex().endOffset());
+  return uint32_t(_positions.size()) -
+         (_primitives.empty() ? 0u : _primitives.back().position().endOffset());
 }
 
 PrimitiveBuilder &PrimitiveBuilder::from(
-  std::vector<Vertex> &vertices, std::vector<uint32_t> &indices,
-  PrimitiveTopology primitive) {
+  const std::vector<Vertex::Position> &positions,
+  const std::vector<Vertex::Normal> &normals, const std::vector<Vertex::UV> &uvs,
+  std::vector<uint32_t> &indices, PrimitiveTopology primitive) {
 
   const auto vertexID = currentVertexID();
   if(vertexID > 0)
@@ -41,21 +52,14 @@ PrimitiveBuilder &PrimitiveBuilder::from(
       this->_indices.push_back(index + vertexID);
   else
     append(this->_indices, indices);
-  append(this->_vertices, vertices);
-  for(const auto &vertex: vertices)
-    aabb.merge(vertex.position);
+
+  append(this->_positions, positions);
+  append(this->_normals, normals);
+  append(this->_uvs, uvs);
+
+  for(const auto &position: positions)
+    aabb.merge(position);
   return *this;
-}
-
-PrimitiveBuilder &PrimitiveBuilder::from(
-  std::vector<glm::vec3> &vertexPositions, std::vector<uint32_t> &indices,
-  PrimitiveTopology primitive) {
-
-  std::vector<Vertex> vertices;
-  vertices.reserve(vertexPositions.size());
-  for(auto &pos: vertexPositions)
-    vertices.push_back({pos});
-  return from(vertices, indices, primitive);
 }
 
 mat3 transform(const mat3 &X, const mat3 &Y) { return Y * inverse(X); }
@@ -85,9 +89,9 @@ PrimitiveBuilder &PrimitiveBuilder::triangle(
   const vec3 p1, const vec3 p2, const vec3 p3) {
   const auto normal = normalize(cross((p2 - p1), (p3 - p1)));
   const auto vertexID = currentVertexID();
-  append(
-    _vertices,
-    {{p1, normal, {0.f, 0.f}}, {p2, normal, {1.0f, 0.f}}, {p3, normal, {0.f, 1.0f}}});
+  append(_positions, {p1, p2, p3});
+  append(_normals, {normal, normal, normal});
+  append(_uvs, {{0.f, 0.f}, {1.0f, 0.f}, {0.f, 1.0f}});
   append(_indices, {vertexID, vertexID + 1, vertexID + 2});
   aabb.merge(p1, p2, p3);
   return *this;
@@ -101,11 +105,9 @@ PrimitiveBuilder &PrimitiveBuilder::rectangle(
   const auto p3 = center - x - y;
   const auto p4 = center + x - y;
   const auto vertexID = currentVertexID();
-  append(
-    _vertices, {{p1, normal, {0.f, 0.f}},
-                {p2, normal, {1.0f, 0.f}},
-                {p3, normal, {1.0f, 1.f}},
-                {p4, normal, {0.0f, 1.f}}});
+  append(_positions, {p1, p2, p3, p4});
+  append(_normals, {normal, normal, normal, normal});
+  append(_uvs, {{0.f, 0.f}, {1.0f, 0.f}, {1.f, 1.0f}, {0.0f, 1.f}});
   append(
     _indices,
     {vertexID, vertexID + 1, vertexID + 2, vertexID, vertexID + 2, vertexID + 3});
@@ -128,7 +130,9 @@ PrimitiveBuilder &PrimitiveBuilder::gridMesh(
   for(uint32_t row = 0; row <= ny; ++row)
     for(uint32_t column = 0; column <= nx; ++column) {
       auto p = origin + float(column) * _x + float(row) * _y;
-      append(_vertices, {{p, normal, {column * u, row * v}}});
+      append(_positions, {p});
+      append(_normals, {normal});
+      append(_uvs, {{column * u, row * v}});
       aabb.merge(p);
     }
   for(uint32_t row = 0; row < ny; ++row)
@@ -163,16 +167,16 @@ PrimitiveBuilder &PrimitiveBuilder::circle(vec3 center, vec3 z, float R, int seg
   z = normalize(z);
   auto rotation = angleAxis(angle, z);
   auto vertexID = currentVertexID();
-  append(
-    _vertices, {{center, z, {0.5f, 0.5f}},
-                {center + right, z, {0.5f + 0.5f * sin(0.f), 0.5f + 0.5f * cos(0.f)}}});
+  append(_positions, {center, center + right});
+  append(_normals, {z, z});
+  append(_uvs, {{0.5f, 0.5f}, {0.5f + 0.5f * sin(0.f), 0.5f + 0.5f * cos(0.f)}});
   aabb.merge(center, center + right);
   for(int i = 2; i <= segments; ++i) {
     right = rotation * right;
-    _vertices.push_back(
-      {right + center,
-       z,
-       {0.5f + 0.5f * sin((i - 1) * angle), 0.5f + 0.5f * cos((i - 1) * angle)}});
+    append(_positions, {right + center});
+    append(_normals, {z});
+    append(
+      _uvs, {{0.5f + 0.5f * sin((i - 1) * angle), 0.5f + 0.5f * cos((i - 1) * angle)}});
     aabb.merge(right + center);
     append(_indices, {vertexID, vertexID + i - 1, vertexID + i});
   }
@@ -193,16 +197,17 @@ PrimitiveBuilder &PrimitiveBuilder::cone(
   auto uintZ = normalize(z);
   for(int i = 0; i < segments; ++i) {
     //    auto N = normalize(cross(rotation * right - right, z - right));
-    _vertices.push_back({center + z, uintZ, {0.5f, 0.5f}});
-    _vertices.push_back({center + right,
-                         right,
-                         {0.5f + 0.5f * sin(i * angle), 0.5f + 0.5f * cos(i * angle)}});
+    append(_positions, {center + z, center + right});
+    append(_normals, {uintZ, right});
+    append(
+      _uvs, {{0.5f, 0.5f}, {0.5f + 0.5f * sin(i * angle), 0.5f + 0.5f * cos(i * angle)}});
     aabb.merge(center + z, center + right);
     right = rotation * right;
-    _vertices.push_back(
-      {right + center,
-       right,
-       {0.5f + 0.5f * sin((i + 1) * angle), 0.5f + 0.5f * cos((i + 1) * angle)}});
+
+    append(_positions, {right + center});
+    append(_normals, {right});
+    append(
+      _uvs, {{0.5f + 0.5f * sin((i + 1) * angle), 0.5f + 0.5f * cos((i + 1) * angle)}});
     aabb.merge(right + center);
     append(_indices, {vertexID + 3 * i, vertexID + 3 * i + 1, vertexID + 3 * i + 2});
   }
@@ -220,12 +225,14 @@ PrimitiveBuilder &PrimitiveBuilder::cylinder(
 
   for(int i = 0; i < segments; ++i) {
     //    auto N = normalize(right + rotation * right);
-    _vertices.push_back({center + right + z, right, {1.f / segments * i, 0.f}});
-    _vertices.push_back({center + right, right, {1.f / segments * i, 0.f}});
+    append(_positions, {center + right + z, center + right});
+    append(_normals, {right, right});
+    append(_uvs, {{1.f / segments * i, 0.f}, {1.f / segments * i, 0.f}});
     aabb.merge(center + right + z, center + right);
     right = rotation * right;
-    _vertices.push_back({center + right, right, {1.f / segments * (i + 1), 0.f}});
-    _vertices.push_back({center + right + z, right, {1.f / segments * (i + 1), 0.f}});
+    append(_positions, {center + right, center + right + z});
+    append(_normals, {right, right});
+    append(_uvs, {{1.f / segments * (i + 1), 0.f}, {1.f / segments * (i + 1), 0.f}});
     aabb.merge(center + right, center + right + z);
     append(
       _indices, {vertexID + 4 * i, vertexID + 4 * i + 1, vertexID + 4 * i + 2,
@@ -249,11 +256,11 @@ PrimitiveBuilder &PrimitiveBuilder::sphere(vec3 center, float R, int nsubd) {
   auto uvs = mesh->tcoords;
   auto vertexID = currentVertexID();
   for(auto i = 0; i < mesh->npoints; ++i, vid += 3) {
-    _vertices.push_back(
-      Vertex{{points[vid], points[vid + 1], points[vid + 2]},
-             {normals[vid], normals[vid + 1], normals[vid + 2]},
-             uvs ? vec3{uvs[vid], uvs[vid + 1], 0.f} : vec3{0.0f, 0.0f, 0.f}});
-    aabb.merge(_vertices.back().position);
+    append(_positions, {{points[vid], points[vid + 1], points[vid + 2]}});
+    append(_normals, {{normals[vid], normals[vid + 1], normals[vid + 2]}});
+    append(_uvs, {uvs ? vec3{uvs[vid], uvs[vid + 1], 0.f} : vec3{0.0f, 0.0f, 0.f}});
+
+    aabb.merge(_positions.back());
   }
   auto triangles = mesh->triangles;
   vid = 0;
@@ -312,7 +319,9 @@ PrimitiveBuilder &PrimitiveBuilder::grid(
   for(uint32_t row = 0; row <= ny; ++row)
     for(uint32_t column = 0; column <= nx; ++column) {
       auto p = origin + float(column) * _x + float(row) * _y;
-      append(_vertices, {{p, normal, {column * u, row * v}}});
+      append(_positions, {p});
+      append(_normals, {normal});
+      append(_uvs, {{column * u, row * v}});
       aabb.merge(p);
     }
   for(uint32_t row = 0; row < ny; ++row)
@@ -330,7 +339,9 @@ PrimitiveBuilder &PrimitiveBuilder::grid(
 
 PrimitiveBuilder &PrimitiveBuilder::line(vec3 p1, vec3 p2) {
   const auto vertexID = currentVertexID();
-  append(_vertices, {{p1}, {p2}});
+  append(_positions, {p1, p2});
+  append(_normals, {{}, {}});
+  append(_uvs, {{}, {}});
   aabb.merge(p1, p2);
   append(_indices, {vertexID, vertexID + 1});
   return *this;
@@ -342,7 +353,9 @@ PrimitiveBuilder &PrimitiveBuilder::rectangleLine(vec3 center, vec3 x, vec3 y) {
   const auto p3 = center - x - y;
   const auto p4 = center + x - y;
   const auto vertexID = currentVertexID();
-  append(_vertices, {{p1}, {p2}, {p3}, {p4}});
+  append(_positions, {p1, p2, p3, p4});
+  append(_normals, {{}, {}, {}, {}});
+  append(_uvs, {{}, {}, {}, {}});
   aabb.merge(p1, p2, p3, p4);
   append(
     _indices, {vertexID, vertexID + 1, vertexID + 1, vertexID + 2, vertexID + 2,
@@ -362,7 +375,9 @@ PrimitiveBuilder &PrimitiveBuilder::boxLine(vec3 center, vec3 x, vec3 y, float h
   const auto b4 = center + x - y + z;
 
   const auto vertexID = currentVertexID();
-  append(_vertices, {{f1}, {f2}, {f3}, {f4}, {b1}, {b2}, {b3}, {b4}});
+  append(_positions, {f1, f2, f3, f4, b1, b2, b3, b4});
+  append(_normals, {{}, {}, {}, {}, {}, {}, {}, {}});
+  append(_uvs, {{}, {}, {}, {}, {}, {}, {}, {}});
   aabb.merge(f1, f2, f3, f4, b1, b2, b3, b4);
   append(_indices, {vertexID,     vertexID + 1, vertexID + 1, vertexID + 2, vertexID + 2,
                     vertexID + 3, vertexID + 3, vertexID,     vertexID + 4, vertexID + 5,

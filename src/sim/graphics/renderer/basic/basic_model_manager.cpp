@@ -18,9 +18,16 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     vkDevice{renderer.vkDevice} {
   {
     auto &allocator = renderer.device->allocator();
-
-    Buffer.primitives = u<HostPrimitivesBuffer>(
-      allocator, modelConfig.maxNumVertex, modelConfig.maxNumIndex);
+    Buffer.position =
+      u<DeviceVertexBuffer<Vertex::Position>>(allocator, modelConfig.maxNumVertex);
+    Buffer.normal =
+      u<DeviceVertexBuffer<Vertex::Normal>>(allocator, modelConfig.maxNumVertex);
+    Buffer.uv = u<DeviceVertexBuffer<Vertex::UV>>(allocator, modelConfig.maxNumVertex);
+    Buffer.joint0 =
+      u<DeviceVertexBuffer<Vertex::Joint>>(allocator, modelConfig.maxNumVertex);
+    Buffer.weight0 =
+      u<DeviceVertexBuffer<Vertex::Weight>>(allocator, modelConfig.maxNumVertex);
+    Buffer.indices = u<DeviceIndexBuffer>(allocator, modelConfig.maxNumVertex);
 
     Buffer.dynamicPrimitives = u<DevicePrimitivesBuffer>(
       allocator, modelConfig.maxNumDynamicVertex, modelConfig.maxNumDynamicIndex,
@@ -132,8 +139,11 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
   }
 
   {
-    debugMarker.name(Buffer.primitives->vertexBuffer(), "vertex buffer");
-    debugMarker.name(Buffer.primitives->indexBuffer(), "index buffer");
+    debugMarker.name(Buffer.position->buffer(), "position buffer");
+    debugMarker.name(Buffer.normal->buffer(), "normal buffer");
+    debugMarker.name(Buffer.uv->buffer(), "uv buffer");
+    debugMarker.name(Buffer.joint0->buffer(), "joint0 buffer");
+    debugMarker.name(Buffer.weight0->buffer(), "weight0 buffer");
     debugMarker.name(Buffer.transforms->buffer(), "transforms buffer");
     debugMarker.name(Buffer.materials->buffer(), "materials buffer");
     debugMarker.name(Buffer.meshes->buffer(), "meshes buffer");
@@ -168,14 +178,18 @@ Ptr<Primitive> BasicModelManager::newDynamicPrimitive(
 }
 
 Ptr<Primitive> BasicModelManager::newPrimitive(
-  const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices,
-  const AABB &aabb, const PrimitiveTopology &topology) {
+  const std::vector<Vertex::Position> &positions,
+  const std::vector<Vertex::Normal> &normals, const std::vector<Vertex::UV> &uvs,
+  const std::vector<uint32_t> &indices, const AABB &aabb,
+  const PrimitiveTopology &topology) {
 
-  auto primitive = Buffer.primitives->add(
-    device, vertices.data(), uint32_t(vertices.size()), indices.data(),
-    uint32_t(indices.size()), aabb, topology);
+  auto positionRange = Buffer.position->add(device, positions.data(), positions.size());
+  auto normalRange = Buffer.normal->add(device, normals.data(), normals.size());
+  auto uvRange = Buffer.uv->add(device, uvs.data(), uvs.size());
+  auto indexRange = Buffer.indices->add(device, indices.data(), indices.size());
 
-  return Ptr<Primitive>::add(Scene.primitives, primitive);
+  return Ptr<Primitive>::add(
+    Scene.primitives, {indexRange, positionRange, normalRange, uvRange, aabb, topology});
 }
 
 Ptr<Primitive> BasicModelManager::newPrimitive(const PrimitiveBuilder &primitiveBuilder) {
@@ -186,12 +200,20 @@ auto BasicModelManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
   -> std::vector<Ptr<Primitive>> {
   std::vector<Ptr<Primitive>> primitives;
   for(auto &primitive: primitiveBuilder.primitives()) {
-    auto _primitive = Buffer.primitives->add(
-      device, primitiveBuilder.vertices().data() + primitive.vertex().offset,
-      primitive.vertex().size,
-      primitiveBuilder.indices().data() + primitive.index().offset,
-      primitive.index().size, primitive.aabb(), primitive.topology());
-    primitives.push_back(Ptr<Primitive>::add(Scene.primitives, _primitive));
+    auto positionRange = Buffer.position->add(
+      device, primitiveBuilder.positions().data() + primitive.position().offset,
+      primitive.position().size);
+    auto normalRange = Buffer.normal->add(
+      device, primitiveBuilder.normals().data() + primitive.normal().offset,
+      primitive.normal().size);
+    auto uvRange = Buffer.uv->add(
+      device, primitiveBuilder.uvs().data() + primitive.uv().offset, primitive.uv().size);
+    auto indexRange = Buffer.indices->add(
+      device, primitiveBuilder.indices().data() + primitive.index().offset,
+      primitive.index().size);
+    primitives.push_back(Ptr<Primitive>::add(
+      Scene.primitives, {indexRange, positionRange, normalRange, uvRange,
+                         primitive.aabb(), primitive.topology()}));
   }
   return primitives;
 }
@@ -404,8 +426,10 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
       bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.ibl.set(),
       Sets.iblSet, nullptr);
 
-  cb.bindVertexBuffers(0, Buffer.primitives->vertexBuffer(), zero);
-  cb.bindIndexBuffer(Buffer.primitives->indexBuffer(), zero, vk::IndexType::eUint32);
+  cb.bindVertexBuffers(0, Buffer.position->buffer(), zero);
+  cb.bindVertexBuffers(1, Buffer.normal->buffer(), zero);
+  cb.bindVertexBuffers(2, Buffer.uv->buffer(), zero);
+  cb.bindIndexBuffer(Buffer.indices->buffer(), zero, vk::IndexType::eUint32);
 
   debugMarker.begin(cb, "Subpass opaque tri");
   if(RenderPass.wireframe)
@@ -450,8 +474,8 @@ void BasicModelManager::debugInfo() {
                      modelConfig.maxNumTransparentMeshes +
                      modelConfig.maxNumTransparentLineMeshes;
   sim::debugLog(
-    "vertices: ", Buffer.primitives->vertexCount(), "/", modelConfig.maxNumVertex,
-    ", indices: ", Buffer.primitives->indexCount(), "/", modelConfig.maxNumIndex,
+    "vertices: ", Buffer.position->count(), "/", modelConfig.maxNumVertex,
+    ", indices: ", Buffer.indices->count(), "/", modelConfig.maxNumIndex,
     ", transforms: ", modelConfig.maxNumTransform - Scene.freeTransforms.size(), "/",
     modelConfig.maxNumTransform, ", meshes: ", Scene.meshes.size(), "/", totalMeshes,
     ", materials: ", modelConfig.maxNumMaterial - Scene.freeMaterials.size(), "/",
@@ -462,12 +486,12 @@ void BasicModelManager::debugInfo() {
 
 void BasicModelManager::ensureVertices(uint32_t toAdd) const {
   errorIf(
-    Buffer.primitives->vertexCount() + toAdd > modelConfig.maxNumVertex,
+    Buffer.position->count() + toAdd > modelConfig.maxNumVertex,
     "exceeding maximum number of vertices!");
 }
 void BasicModelManager::ensureIndices(uint32_t toAdd) const {
   errorIf(
-    Buffer.primitives->indexCount() + toAdd > modelConfig.maxNumIndex,
+    Buffer.indices->count() + toAdd > modelConfig.maxNumIndex,
     "exceeding maximum number of vertices!");
 }
 void BasicModelManager::ensureMeshes(uint32_t toAdd) const {

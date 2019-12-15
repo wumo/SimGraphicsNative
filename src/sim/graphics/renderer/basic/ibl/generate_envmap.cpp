@@ -51,7 +51,7 @@ EnvMaps EnvMapGenerator::generateEnvMap(TextureImageCube &envCube) {
   builder.box({}, {0.5f, 0, 0}, {0, 0.5f, 0}, 0.5f);
   builder.newPrimitive();
 
-  auto vbo = u<HostVertexBuffer>(device.allocator(), builder.vertices());
+  auto vbo = u<HostVertexBuffer>(device.allocator(), builder.positions());
   auto ibo = u<HostIndexBuffer>(device.allocator(), builder.indices());
   auto primitive = builder.primitives()[0];
   generateEnvMap(EnvMap::Irradiance, *irradiance, envCube, *vbo, *ibo, primitive);
@@ -150,8 +150,8 @@ void EnvMapGenerator::generateEnvMap(
   { // Pipeline
     GraphicsPipelineMaker pipelineMaker{device.getDevice(), dim, dim};
     pipelineMaker.subpass(subpass)
-      .vertexBinding(0, Vertex::stride())
-      .vertexAttribute(Vertex::attributes(0, 0)[0])
+      .vertexBinding(0, sizeof(Vertex::Position))
+      .vertexAttribute(0, 0, vk::Format::eR32G32B32Sfloat, 0)
       .topology(vk::PrimitiveTopology::eTriangleList)
       .polygonMode(vk::PolygonMode::eFill)
       .cullMode(vk::CullModeFlagBits::eNone)

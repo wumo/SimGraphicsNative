@@ -24,7 +24,11 @@ private:
   BasicModelManager &mm;
 
   std::vector<uint32_t> indices;
-  std::vector<Vertex> vertices;
+  std::vector<Vertex::Position> positions;
+  std::vector<Vertex::Normal> normals;
+  std::vector<Vertex::UV> uvs;
+  std::vector<Vertex::Joint> joint0s;
+  std::vector<Vertex::Weight> weight0s;
   std::vector<Ptr<Node>> _nodes;
   std::vector<Animation> animations;
 

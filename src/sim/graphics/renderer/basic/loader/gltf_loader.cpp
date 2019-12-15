@@ -209,7 +209,7 @@ Ptr<Mesh> GLTFLoader::loadPrimitive(
 
   auto aabb = loadVertices(model, primitive);
   loadIndices(model, primitive);
-  auto _primitive = mm.newPrimitive(vertices, indices, aabb);
+  auto _primitive = mm.newPrimitive(positions, normals, uvs, indices, aabb);
 
   auto material = primitive.material < 0 ? mm.material(0) :
                                            materials.at(primitive.material);
@@ -220,7 +220,9 @@ AABB GLTFLoader::loadVertices(
   const tinygltf::Model &model, const tinygltf::Primitive &primitive) {
   errorIf(!contains(primitive.attributes, "POSITION"), "missing required POSITION data!");
 
-  vertices.clear();
+  positions.clear();
+  normals.clear();
+  uvs.clear();
 
   auto verticesID = primitive.attributes.at("POSITION");
 
@@ -235,7 +237,11 @@ AABB GLTFLoader::loadVertices(
   uint32_t uv0ByteStride{-1u};
 
   auto posAccessor = model.accessors[verticesID];
-  vertices.reserve(posAccessor.count);
+
+  positions.reserve(posAccessor.count);
+  normals.reserve(posAccessor.count);
+  uvs.reserve(posAccessor.count);
+
   auto &posView = model.bufferViews[posAccessor.bufferView];
   bufferPos = (const float *)(&(
     model.buffers[posView.buffer].data[posAccessor.byteOffset + posView.byteOffset]));
@@ -270,11 +276,11 @@ AABB GLTFLoader::loadVertices(
 
   //vertices
   for(size_t v = 0; v < posAccessor.count; v++) {
-    Vertex vert{};
-    vert.position = make_vec3(&bufferPos[v * posByteStride]);
-    if(bufferNormals) vert.normal = make_vec3(&bufferNormals[v * normByteStride]);
-    if(bufferTexCoords) vert.uv = make_vec2(&bufferTexCoords[v * uv0ByteStride]);
-    vertices.push_back(vert);
+    positions.push_back(make_vec3(&bufferPos[v * posByteStride]));
+    normals.push_back(
+      bufferNormals ? make_vec3(&bufferNormals[v * normByteStride]) : glm::vec3{});
+    uvs.push_back(
+      bufferTexCoords ? make_vec2(&bufferTexCoords[v * uv0ByteStride]) : glm::vec2{});
   }
   return {posMin, posMax};
 }
@@ -284,7 +290,7 @@ void GLTFLoader::loadIndices(
   indices.clear();
 
   if(primitive.indices < 0) {
-    for(int i = 0; i < vertices.size(); ++i)
+    for(int i = 0; i < positions.size(); ++i)
       indices.push_back(i);
     return;
   }

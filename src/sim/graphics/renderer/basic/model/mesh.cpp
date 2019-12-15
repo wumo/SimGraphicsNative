@@ -48,7 +48,7 @@ auto Mesh::getDrawCMD() const -> vk::DrawIndexedIndirectCommand {
   Range index, vertex;
   if(_primitive) {
     auto &primitive = _primitive.get();
-    vertex = primitive.vertex();
+    vertex = primitive.position();
     index = primitive.index();
   }
   return {

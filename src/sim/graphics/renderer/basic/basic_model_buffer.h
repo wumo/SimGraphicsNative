@@ -5,6 +5,52 @@
 
 namespace sim::graphics::renderer::basic {
 
+template<typename T>
+class DeviceVertexBuffer {
+public:
+  explicit DeviceVertexBuffer(const VmaAllocator &allocator, uint32_t maxNum)
+    : maxNum{maxNum}, _count{0} {
+    data = u<VertexBuffer>(allocator, maxNum * sizeof(T));
+  }
+
+  Range add(Device &device, const T *ubo, uint32_t num) {
+    errorIf(_count + num >= this->maxNum, "exceeding max number of data");
+    auto offset = _count;
+    data->upload(device, ubo, num * sizeof(T), offset * sizeof(T));
+    _count += num;
+    return {offset, num};
+  }
+  uint32_t count() const { return _count; }
+  vk::Buffer buffer() { return data->buffer(); }
+
+private:
+  uPtr<VertexBuffer> data;
+  uint32_t maxNum, _count;
+};
+
+class DeviceIndexBuffer {
+
+public:
+  DeviceIndexBuffer(const VmaAllocator &allocator, uint32_t maxNum)
+    : maxNum{maxNum}, _count{0} {
+    data = u<IndexBuffer>(allocator, maxNum * sizeof(uint32_t));
+  }
+
+  Range add(Device &device, const uint32_t *ubo, uint32_t num) {
+    errorIf(_count + num >= this->maxNum, "exceeding max number of data");
+    auto offset = _count;
+    data->upload(device, ubo, num * sizeof(uint32_t), offset * sizeof(uint32_t));
+    _count += num;
+    return {offset, num};
+  }
+  uint32_t count() const { return _count; }
+  vk::Buffer buffer() { return data->buffer(); }
+
+private:
+  uPtr<IndexBuffer> data;
+  uint32_t maxNum{-1u}, _count;
+};
+
 struct PrimitivesBuffer {
   uint32_t maxNumVertex{-1u};
   uint32_t maxNumIndex{-1u};

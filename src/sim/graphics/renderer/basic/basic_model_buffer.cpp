@@ -26,7 +26,7 @@ Primitive HostPrimitivesBuffer::add(
   Range vertex{_vertexCount, vertexCount}, index{_indexCount, indexCount};
   _vertexCount += vertexCount;
   _indexCount += indexCount;
-  return {index, vertex, aabb, topology};
+  return {index, vertex, {}, {}, aabb, topology};
 }
 void HostPrimitivesBuffer::update(
   Device &device, Range _vertex, Range _index, const Vertex *vertices,
@@ -63,7 +63,7 @@ Primitive DevicePrimitivesBuffer::add(
   Range vertex{_vertexCount, vertexCount}, index{_indexCount, indexCount};
   _vertexCount += vertexCount;
   _indexCount += indexCount;
-  return {index, vertex, aabb, topology, DynamicType ::Dynamic};
+  return {index, vertex, {}, {}, aabb, topology, DynamicType ::Dynamic};
 }
 vk::Buffer DevicePrimitivesBuffer::vertexBuffer(uint32_t imageIndex) {
   return vbo[imageIndex]._vertices->buffer();

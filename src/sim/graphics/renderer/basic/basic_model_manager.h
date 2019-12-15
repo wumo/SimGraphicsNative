@@ -28,8 +28,10 @@ public:
   explicit BasicModelManager(BasicRenderer &renderer);
 
   Ptr<Primitive> newPrimitive(
-    const std::vector<Vertex> &vertices, const std::vector<uint32_t> &indices,
-    const AABB &aabb, const PrimitiveTopology &topology = PrimitiveTopology::Triangles);
+    const std::vector<Vertex::Position> &positions,
+    const std::vector<Vertex::Normal> &normals, const std::vector<Vertex::UV> &uvs,
+    const std::vector<uint32_t> &indices, const AABB &aabb,
+    const PrimitiveTopology &topology = PrimitiveTopology::Triangles);
 
   Ptr<Primitive> newPrimitive(const PrimitiveBuilder &primitiveBuilder);
   std::vector<Ptr<Primitive>> newPrimitives(const PrimitiveBuilder &primitiveBuilder);
@@ -112,8 +114,15 @@ private:
   const ModelConfig &modelConfig;
 
   struct Buffer {
-    uPtr<PrimitivesBuffer> primitives;
+    uPtr<DeviceVertexBuffer<Vertex::Position>> position;
+    uPtr<DeviceVertexBuffer<Vertex::Normal>> normal;
+    uPtr<DeviceVertexBuffer<Vertex::UV>> uv;
+    uPtr<DeviceVertexBuffer<Vertex::Joint>> joint0;
+    uPtr<DeviceVertexBuffer<Vertex::Weight>> weight0;
+    uPtr<DeviceIndexBuffer> indices;
+
     uPtr<DevicePrimitivesBuffer> dynamicPrimitives;
+
     uPtr<HostStorageUBOBuffer<glm::mat4>> transforms;
     uPtr<HostStorageUBOBuffer<Material::UBO>> materials;
 
@@ -122,7 +131,7 @@ private:
     uPtr<HostUBOBuffer<Lighting::UBO>> lighting;
     uPtr<HostStorageUBOBuffer<Light::UBO>> lights;
 
-    std::array<uPtr<HostIndirectUBOBuffer<vk::DrawIndexedIndirectCommand>>, 4> drawQueue;
+    std::array<uPtr<HostIndirectUBOBuffer<vk::DrawIndexedIndirectCommand>>, 6> drawQueue;
     uPtr<HostStorageUBOBuffer<Mesh::UBO>> meshes;
   } Buffer;
 

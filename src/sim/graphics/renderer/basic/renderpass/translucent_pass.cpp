@@ -4,12 +4,18 @@
 
 namespace sim::graphics::renderer::basic {
 using shader = vk::ShaderStageFlagBits;
+using f = vk::Format;
 
 void BasicRenderer::createTranslucentPipeline(
   const vk::PipelineLayout &pipelineLayout) { // translucent pipeline
   GraphicsPipelineMaker pipelineMaker{vkDevice, extent.width, extent.height};
   pipelineMaker.subpass(Subpasses.translucent)
-    .vertexBinding(0, Vertex::stride(), Vertex::attributes(0, 0))
+    .vertexBinding(0, sizeof(Vertex::Position))
+    .vertexAttribute(0, 0, f::eR32G32B32Sfloat, 0)
+    .vertexBinding(1, sizeof(Vertex::Normal))
+    .vertexAttribute(1, 1, f::eR32G32B32Sfloat, 0)
+    .vertexBinding(2, sizeof(Vertex::UV))
+    .vertexAttribute(2, 2, f::eR32G32Sfloat, 0)
     .cullMode(vk::CullModeFlagBits::eNone)
     .frontFace(vk::FrontFace::eCounterClockwise)
     .depthTestEnable(true)

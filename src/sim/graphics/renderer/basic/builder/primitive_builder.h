@@ -16,18 +16,9 @@ public:
    * @param checkIndexInRange check if index is out of the range of vertices
    */
   PrimitiveBuilder &from(
-    std::vector<Vertex> &vertices, std::vector<uint32_t> &indices,
-    PrimitiveTopology primitive = PrimitiveTopology::Triangles);
-  /**
-   * construct the mesh from predefined vertex positions and indices. Vertex normal and uv
-   * will be zero.
-   * @param vertices
-   * @param indices
-   * @param primitive
-   * @param checkIndexInRange check if index is out of the range of vertices
-   */
-  PrimitiveBuilder &from(
-    std::vector<glm::vec3> &vertexPositions, std::vector<uint32_t> &indices,
+    const std::vector<Vertex::Position> &positions,
+    const std::vector<Vertex::Normal> &normals, const std::vector<Vertex::UV> &uvs,
+    std::vector<uint32_t> &indices,
     PrimitiveTopology primitive = PrimitiveTopology::Triangles);
 
   /**generate a triangle from 3 nodes. Nodes should be in the Counter-Clock-Wise order.*/
@@ -119,7 +110,9 @@ public:
   */
   PrimitiveBuilder &boxLine(glm::vec3 center, glm::vec3 x, glm::vec3 y, float half_z);
 
-  const std::vector<Vertex> &vertices() const;
+  const std::vector<Vertex::Position> &positions() const;
+  const std::vector<Vertex::Normal> &normals() const;
+  const std::vector<Vertex::UV> &uvs() const;
   const std::vector<uint32_t> &indices() const;
   const std::vector<Primitive> &primitives() const;
 
@@ -127,7 +120,9 @@ private:
   uint32_t currentVertexID() const;
 
 private:
-  std::vector<Vertex> _vertices;
+  std::vector<Vertex::Position> _positions;
+  std::vector<Vertex::Normal> _normals;
+  std::vector<Vertex::UV> _uvs;
   std::vector<uint32_t> _indices;
   AABB aabb;
   std::vector<Primitive> _primitives;

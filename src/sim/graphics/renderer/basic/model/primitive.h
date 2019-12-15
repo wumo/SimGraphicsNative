@@ -18,20 +18,25 @@ public:
   /**
    *
    * @param index
-   * @param vertex
+   * @param position
    * @param aabb
    * @param topology once set, cannot change.
    */
   Primitive(
-    const Range &index, const Range &vertex, const AABB &aabb,
-    const PrimitiveTopology &topology, const DynamicType &_type = DynamicType::Static);
+    const Range &index, const Range &position, const Range &normal, const Range &uv,
+    const AABB &aabb, const PrimitiveTopology &topology,
+    const DynamicType &_type = DynamicType::Static);
   const Range &index() const;
-  const Range &vertex() const;
+  const Range &position() const;
+  const Range &normal() const;
+  const Range &uv() const;
+  const Range &joint0() const;
+  const Range &weight0() const;
   const AABB &aabb() const;
   PrimitiveTopology topology() const;
 
 private:
-  Range _index, _vertex;
+  Range _index, _position, _normal, _uv, _joint0, _weight0;
   AABB _aabb;
   PrimitiveTopology _topology{PrimitiveTopology::Triangles};
   DynamicType _type{DynamicType::Static};

@@ -33,7 +33,7 @@ auto main(int argc, const char **argv) -> int {
   auto center = aabb.center();
   auto halfRange = aabb.halfRange();
 
-  auto width = 10;
+  auto width = 100;
   vec3 origin{-width / 2, 0, -width / 2};
   for(int nx = 0; nx < width; ++nx)
     for(int ny = 0; ny < width; ++ny) {

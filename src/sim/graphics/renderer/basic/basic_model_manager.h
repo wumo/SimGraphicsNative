@@ -117,6 +117,7 @@ private:
   struct {
     uPtr<DeviceVertexBuffer<Vertex::Position>> position;
     uPtr<DeviceVertexBuffer<Vertex::Normal>> normal;
+    uPtr<DeviceVertexBuffer<Vertex::Tangent>> tangent;
     uPtr<DeviceVertexBuffer<Vertex::UV>> uv;
     uPtr<DeviceVertexBuffer<Vertex::Joint>> joint0;
     uPtr<DeviceVertexBuffer<Vertex::Weight>> weight0;

@@ -38,8 +38,8 @@ Deferred::Deferred(
 
   createDeferredPipeline();
 
-//  if(config.gui)
-//    gui = u<GuiPass>(window, *vkInstance, *device, *swapchain, *descriptorPool);
+  //  if(config.gui)
+  //    gui = u<GuiPass>(window, *vkInstance, *device, *swapchain, *descriptorPool);
 
   recreateResources();
 }
@@ -381,7 +381,7 @@ void Deferred::recreateResources() {
     framebuffers[i] = vkDevice.createFramebufferUnique(info);
   }
 
-//  if(config.gui) gui->resizeGui(extent);
+  //  if(config.gui) gui->resizeGui(extent);
 }
 
 void Deferred::resize() {

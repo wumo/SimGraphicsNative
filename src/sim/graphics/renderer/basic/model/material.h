@@ -2,7 +2,7 @@
 #include "sim/graphics/renderer/basic/ptr.h"
 #include "sim/graphics/base/vkcommon.h"
 #include "sim/graphics/base/resource/images.h"
-#include "../basic_model_buffer.h"
+#include "model_buffer.h"
 
 namespace sim::graphics::renderer::basic {
 

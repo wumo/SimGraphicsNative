@@ -1,5 +1,5 @@
 #include "descriptors.h"
-#include "syntactic_sugar.h"
+#include "sim/util/syntactic_sugar.h"
 #include <algorithm>
 
 namespace sim::graphics {

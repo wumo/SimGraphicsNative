@@ -1,6 +1,6 @@
 #include "device.h"
 #include "vulkan_base.h"
-#include "syntactic_sugar.h"
+#include "sim/util/syntactic_sugar.h"
 
 #define VMA_IMPLEMENTATION
 #define VMA_STATIC_VULKAN_FUNCTIONS 0

@@ -57,7 +57,7 @@ protected:
   std::vector<vk::UniqueFramebuffer> framebuffers;
   vk::UniqueDescriptorPool descriptorPool;
 
-//  uPtr<GuiPass> gui;
+  //  uPtr<GuiPass> gui;
 
   float normalLength{1.f};
 

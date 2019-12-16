@@ -43,4 +43,7 @@ void DrawQueue::mark(DebugMarker &debugMarker) {
 vk::Buffer DrawQueue::buffer(DrawQueue::DrawType drawType) {
   return queues[static_cast<uint32_t>(drawType)]->buffer();
 }
+uint32_t DrawQueue::count(DrawType drawType) {
+  return queues[static_cast<uint32_t>(drawType)]->count();
+}
 }

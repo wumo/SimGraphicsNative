@@ -1,13 +1,9 @@
 #pragma once
 #include "aabb.h"
+#include "sim/util/range.h"
 
 namespace sim::graphics::renderer::basic {
-struct Range {
-  uint32_t offset{0};
-  uint32_t size{0};
-
-  uint32_t endOffset() const;
-};
+using namespace sim::util;
 
 enum class PrimitiveTopology { Triangles, Lines, Procedural };
 enum class DynamicType { Static, Dynamic };

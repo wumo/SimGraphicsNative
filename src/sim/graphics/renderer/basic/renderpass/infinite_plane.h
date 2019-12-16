@@ -4,7 +4,6 @@
 namespace sim::graphics::renderer::basic {
 class infinite_plane {
 public:
-
 private:
   vk::UniquePipeline pipeline;
 };

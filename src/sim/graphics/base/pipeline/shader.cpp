@@ -1,7 +1,7 @@
 #include "shader.h"
 #include <unordered_map>
 #include <fstream>
-#include "syntactic_sugar.h"
+#include "sim/util/syntactic_sugar.h"
 
 namespace sim::graphics {
 ShaderModule::ShaderModule(

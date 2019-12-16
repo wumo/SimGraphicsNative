@@ -97,6 +97,6 @@ void Deferred::render(
   debugMarker.end(cb);
   cb.endRenderPass();
 
-//  if(config.gui) gui->drawGui(imageIndex, cb);
+  //  if(config.gui) gui->drawGui(imageIndex, cb);
 }
 }

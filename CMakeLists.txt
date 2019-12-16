@@ -20,6 +20,7 @@ option(BUILD_DEFERRED_RENDERER "Build deferred renderer" OFF)
 option(BUILD_RAYTRACING_RENDERER "Build raytracing renderer" OFF)
 
 set(sources
+  src/sim/util/range.h
   src/sim/graphics/base/config.h
   src/sim/graphics/base/debug_marker.h
   src/sim/graphics/base/device.cpp
@@ -51,8 +52,8 @@ set(sources
   src/sim/graphics/util/fps_meter.h
   src/sim/graphics/util/materials.h
   
-  src/syntactic_sugar.h
-  src/syntactic_sugar.cpp
+  src/sim/util/syntactic_sugar.h
+  src/sim/util/syntactic_sugar.cpp
   )
 
 set(renderpassSrc
@@ -69,8 +70,6 @@ set(oceanFFT
   )
 
 set(basicRendererSrc
-  src/sim/graphics/renderer/basic/basic_model_buffer.cpp
-  src/sim/graphics/renderer/basic/basic_model_buffer.h
   src/sim/graphics/renderer/basic/basic_model_manager.cpp
   src/sim/graphics/renderer/basic/basic_model_manager.h
   src/sim/graphics/renderer/basic/basic_renderer.cpp
@@ -84,6 +83,8 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/model/aabb.cpp
   src/sim/graphics/renderer/basic/model/aabb.h
   src/sim/graphics/renderer/basic/model/basic_model.h
+  src/sim/graphics/renderer/basic/model/model_buffer.cpp
+  src/sim/graphics/renderer/basic/model/model_buffer.h
   src/sim/graphics/renderer/basic/model/draw_queue.cpp
   src/sim/graphics/renderer/basic/model/draw_queue.h
   src/sim/graphics/renderer/basic/model/light.cpp

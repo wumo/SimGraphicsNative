@@ -2,7 +2,7 @@
 
 #include "images.h"
 #include "buffers.h"
-#include "syntactic_sugar.h"
+#include "sim/util/syntactic_sugar.h"
 
 #include <stb_image.h>
 #include <gli/gli.hpp>
@@ -150,7 +150,8 @@ void ImageBase::upload(
 }
 
 void ImageBase::upload(
-  Device &device, const unsigned char *bytes, size_t sizeInBytes, bool transitToShaderRead) {
+  Device &device, const unsigned char *bytes, size_t sizeInBytes,
+  bool transitToShaderRead) {
   HostBuffer stagingBuffer{vmaImage->allocator, buffer::eTransferSrc,
                            static_cast<vk::DeviceSize>(sizeInBytes)};
   stagingBuffer.updateRaw(reinterpret_cast<const void *>(bytes), sizeInBytes);

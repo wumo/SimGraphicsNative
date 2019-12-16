@@ -22,7 +22,7 @@ auto main(int argc, const char **argv) -> int {
   camera.setLocation({2.f, 2.f, 2.f});
   mm.addLight(LightType ::Directional, {-1, -1, -1});
 
-  std::string name = "SpecGlossVsMetalRough";
+  std::string name = "CesiumMilkTruck";
   auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
   //  std::string path = "assets/private/models/DamagedHelmet.glb";
   auto model = mm.loadModel(path);
@@ -32,47 +32,15 @@ auto main(int argc, const char **argv) -> int {
   auto scale = 1 / std::max(std::max(range.x, range.y), range.z);
   auto center = aabb.center();
   auto halfRange = aabb.halfRange();
-  Transform t{{-center * scale}, glm::vec3{scale}};
-  //  t.translation = -center;
-  auto instance = mm.newModelInstance(model, t);
 
-  auto primitives = mm.newPrimitives(
-    PrimitiveBuilder()
-      .boxLine(center, {halfRange.x, 0.f, 0.f}, {0.f, halfRange.y, 0.f}, halfRange.z)
-      .newPrimitive(PrimitiveTopology::Lines)
-      .axis({}, 2.f, 0.01f, 0.05f, 50)
-      .newPrimitive());
-
-  sim::println(primitives[0]->aabb());
-
-  auto boxMaterial = mm.newMaterial();
-  boxMaterial->setColorFactor({1.f, 0.f, 0.f, 1.f});
-  auto boxMesh = mm.newMesh(primitives[0], boxMaterial);
-  auto boxNode = mm.newNode();
-  Node::addMesh(boxNode, boxMesh);
-  auto boxModel = mm.newModel({boxNode});
-  auto box = mm.newModelInstance(boxModel, t);
-
-  auto yellowMat = mm.newMaterial();
-  yellowMat->setColorFactor({Yellow, 1.f});
-  auto redMat = mm.newMaterial();
-  redMat->setColorFactor({Red, 1.f});
-  auto greenMat = mm.newMaterial();
-  greenMat->setColorFactor({Green, 1.f});
-  auto blueMat = mm.newMaterial();
-  blueMat->setColorFactor({Blue, 1.f});
-
-  auto originMesh = mm.newMesh(primitives[1], yellowMat);
-  auto xMesh = mm.newMesh(primitives[2], redMat);
-  auto yMesh = mm.newMesh(primitives[3], greenMat);
-  auto zMesh = mm.newMesh(primitives[4], blueMat);
-  auto axisNode = mm.newNode();
-  Node::addMesh(axisNode, originMesh);
-  Node::addMesh(axisNode, xMesh);
-  Node::addMesh(axisNode, yMesh);
-  Node::addMesh(axisNode, zMesh);
-  auto axisModel = mm.newModel({axisNode});
-  auto axis = mm.newModelInstance(axisModel);
+  auto width = 10;
+  vec3 origin{-width / 2, 0, -width / 2};
+  for(int nx = 0; nx < width; ++nx)
+    for(int ny = 0; ny < width; ++ny) {
+      Transform t{{origin + -center * scale + vec3{nx, 0, ny}}, glm::vec3{scale}};
+      //  t.translation = -center;
+      auto instance = mm.newModelInstance(model, t);
+    }
 
   auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   mm.useEnvironmentMap(envCube);
@@ -90,13 +58,6 @@ auto main(int argc, const char **argv) -> int {
       " ", int32_t(mFPSMeter.FPS()), " FPS (", mFPSMeter.FrameTime(), " ms)");
     auto fullTitle = "Test  " + frameStats;
     app.setWindowTitle(fullTitle);
-    if(rotate) {
-      t.rotation =
-        t.rotation * angleAxis(pi<float>() * elapsedDuration * 0.2f, vec3{0.f, 1.f, 0.f});
-      box->setTransform(t);
-      instance->setTransform(t);
-    }
-    auto model = instance->model();
     for(auto &animation: model->animations())
       animation.animateAll(elapsedDuration);
     if(app.input.keyPressed[KeyW]) pressed = true;

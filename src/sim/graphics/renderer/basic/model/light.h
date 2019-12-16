@@ -1,6 +1,6 @@
 #pragma once
 #include "sim/graphics/base/glm_common.h"
-#include "../basic_model_buffer.h"
+#include "model_buffer.h"
 
 namespace sim::graphics::renderer::basic {
 

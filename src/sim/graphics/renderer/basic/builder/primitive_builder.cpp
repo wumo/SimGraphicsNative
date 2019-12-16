@@ -1,5 +1,5 @@
 #include "primitive_builder.h"
-#include "syntactic_sugar.h"
+#include "sim/util/syntactic_sugar.h"
 
 namespace sim::graphics::renderer::basic {
 using namespace glm;

@@ -42,6 +42,11 @@ class ModelInstance {
 
 public:
   static void applyModel(Ptr<Model> model, Ptr<ModelInstance> instance);
+
+private:
+  static void generateMeshInstances(Ptr<ModelInstance> instance, Ptr<Node> node);
+
+public:
   explicit ModelInstance(
     BasicModelManager &mm, Ptr<Model> model, const Transform &transform);
 

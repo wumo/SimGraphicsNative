@@ -29,10 +29,6 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
       u<DeviceVertexBuffer<Vertex::Weight>>(allocator, modelConfig.maxNumVertex);
     Buffer.indices = u<DeviceIndexBuffer>(allocator, modelConfig.maxNumVertex);
 
-    Buffer.dynamicPrimitives = u<DevicePrimitivesBuffer>(
-      allocator, modelConfig.maxNumDynamicVertex, modelConfig.maxNumDynamicIndex,
-      config.numFrame);
-
     Buffer.transforms =
       u<HostManagedStorageUBOBuffer<glm::mat4>>(allocator, modelConfig.maxNumTransform);
 
@@ -130,7 +126,7 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     debugMarker.name(Buffer.weight0->buffer(), "weight0 buffer");
     debugMarker.name(Buffer.transforms->buffer(), "transforms buffer");
     debugMarker.name(Buffer.materials->buffer(), "materials buffer");
-    debugMarker.name(Buffer.meshInstances->buffer(), "meshes buffer");
+    debugMarker.name(Buffer.meshInstances->buffer(), "mesh instances buffer");
     Buffer.drawQueue->mark(debugMarker);
     debugMarker.name(Buffer.camera->buffer(), "camera buffer");
     debugMarker.name(Buffer.lighting->buffer(), "lighting buffer");
@@ -168,13 +164,6 @@ void BasicModelManager::resize(vk::Extent2D extent) {
 }
 
 PerspectiveCamera &BasicModelManager::camera() { return Scene.camera; }
-
-Ptr<Primitive> BasicModelManager::newDynamicPrimitive(
-  uint32_t vertexCount, uint32_t indexCount, const AABB &aabb,
-  const PrimitiveTopology &topology) {
-  auto primitive = Buffer.dynamicPrimitives->add(vertexCount, indexCount, aabb, topology);
-  return Ptr<Primitive>::add(Scene.dynamicPrimitives, primitive);
-}
 
 Ptr<Primitive> BasicModelManager::newPrimitive(
   const std::vector<Vertex::Position> &positions,
@@ -350,14 +339,14 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueTri);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueTriangles), 0,
-    Scene.drawQueues[0].size(), stride);
+    Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueTriangles), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass opaque line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueLine);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueLines), 0,
-    Scene.drawQueues[1].size(), stride);
+    Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueLines), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass deferred shading");
@@ -374,14 +363,14 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transTri);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentTriangles), 0,
-    Scene.drawQueues[2].size(), stride);
+    Buffer.drawQueue->count(DrawQueue::DrawType::TransparentTriangles), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass translucent line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transLine);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentLines), 0,
-    Scene.drawQueues[3].size(), stride);
+    Buffer.drawQueue->count(DrawQueue::DrawType::TransparentLines), stride);
   debugMarker.end(cb);
 }
 
@@ -397,17 +386,6 @@ void BasicModelManager::debugInfo() {
     ", materials: ", Buffer.materials->count(), "/", modelConfig.maxNumMaterial,
     ", textures: ", Image.textures.size(), "/", modelConfig.maxNumTexture,
     ", lights: ", Scene.lights.size(), "/", modelConfig.maxNumLights);
-}
-
-void BasicModelManager::ensureVertices(uint32_t toAdd) const {
-  errorIf(
-    Buffer.position->count() + toAdd > modelConfig.maxNumVertex,
-    "exceeding maximum number of vertices!");
-}
-void BasicModelManager::ensureIndices(uint32_t toAdd) const {
-  errorIf(
-    Buffer.indices->count() + toAdd > modelConfig.maxNumIndex,
-    "exceeding maximum number of vertices!");
 }
 void BasicModelManager::ensureTextures(uint32_t toAdd) const {
   errorIf(

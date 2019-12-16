@@ -31,9 +31,9 @@ public:
   const std::vector<Ptr<Mesh>> &meshes() const;
   const Ptr<Node> &parent() const;
   const std::vector<Ptr<Node>> &children() const;
-  
+
   AABB aabb();
-  
+
   void fix();
 
 private:

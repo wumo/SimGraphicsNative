@@ -106,7 +106,7 @@ void RayTracing::render(
     access::eTransferWrite);
   ImageBase::copy(cb, *offscreenImage, swapchainImage);
 
-//  if(config.gui) gui->drawGui(imageIndex, cb);
+  //  if(config.gui) gui->drawGui(imageIndex, cb);
 }
 
 void RayTracing::traceRays(const vk::CommandBuffer &cb) {

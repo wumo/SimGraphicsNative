@@ -49,7 +49,7 @@ protected:
   vk::UniqueQueryPool queryPool;
   std::vector<uint64_t> pipelineStats;
   std::vector<std::string> pipelineStatNames;
-  
+
   vk::UniqueRenderPass renderPass;
 
   std::vector<vk::UniqueFramebuffer> framebuffers{};
@@ -62,6 +62,7 @@ protected:
     vk::UniquePipeline opaqueTri, opaqueLine, opaqueTriWireframe, deferred, deferredIBL,
       transTri, transLine;
   } Pipelines;
+  
   struct {
     uPtr<StorageAttachmentImage> offscreenImage;
     uPtr<ColorInputAttachmentImage> position, normal, albedo, pbr, emissive, translucent;

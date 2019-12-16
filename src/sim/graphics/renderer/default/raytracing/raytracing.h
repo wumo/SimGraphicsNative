@@ -115,7 +115,7 @@ private:
     Pass gBuffer, gBufferLine, wireFrame, deferred;
   } debug;
 
-//  uPtr<GuiPass> gui;
+  //  uPtr<GuiPass> gui;
 };
 
 }

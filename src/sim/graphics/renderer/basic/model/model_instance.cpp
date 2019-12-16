@@ -38,13 +38,16 @@ void MeshInstance::setVisible(bool visible) {
 
 void ModelInstance::applyModel(Ptr<Model> model, Ptr<ModelInstance> instance) {
   errorIf(!instance->_model, "instance already has model");
-  auto generateMeshInstances = [](Ptr<ModelInstance> instance, Ptr<Node> node) {
-    for(auto &mesh: node->_meshes)
-      instance->_meshInstances.emplace_back(
-        instance->_mm, mesh->primitive(), mesh->material(), node, instance);
-  };
   for(auto &node: model->_nodes)
     generateMeshInstances(instance, node);
+}
+
+void ModelInstance::generateMeshInstances(Ptr<ModelInstance> instance, Ptr<Node> node) {
+  for(auto &mesh: node->_meshes)
+    instance->_meshInstances.emplace_back(
+      instance->_mm, mesh->primitive(), mesh->material(), node, instance);
+  for(auto &child: node->_children)
+    generateMeshInstances(instance, child);
 }
 
 ModelInstance::ModelInstance(

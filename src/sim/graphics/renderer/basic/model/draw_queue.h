@@ -19,6 +19,7 @@ public:
     -> Allocation<vk::DrawIndexedIndirectCommand>;
 
   vk::Buffer buffer(DrawType drawType);
+  uint32_t count(DrawType drawType);
 
   void mark(DebugMarker &debugMarker);
 

@@ -13,7 +13,7 @@
 #include "model_config.h"
 #include "model/basic_model.h"
 #include "model/draw_queue.h"
-#include "basic_model_buffer.h"
+#include "sim/graphics/renderer/basic/model/model_buffer.h"
 #include "builder/primitive_builder.h"
 #include "perspective_camera.h"
 #include "sim/graphics/renderer/basic/model/light.h"
@@ -66,10 +66,6 @@ public:
 
   void useEnvironmentMap(Ptr<TextureImageCube> envMap);
 
-  Ptr<Primitive> newDynamicPrimitive(
-    uint32_t vertexCount, uint32_t indexCount, const AABB &aabb = {},
-    const PrimitiveTopology &topology = PrimitiveTopology::Triangles);
-
   void computeMesh(const std::string &imagePath, Ptr<Primitive> primitive);
 
   Ptr<Light> addLight(
@@ -93,7 +89,7 @@ private:
   friend class MeshInstance;
   friend class ModelInstance;
   friend class Light;
-  
+
   Allocation<Material::UBO> allocateMaterialUBO();
   Allocation<Light::UBO> allocateLightUBO();
   Allocation<glm::mat4> allocateMatrixUBO();
@@ -108,13 +104,7 @@ private:
 
   void drawScene(vk::CommandBuffer cb, uint32_t imageIndex);
 
-  void ensureVertices(uint32_t toAdd) const;
-  void ensureIndices(uint32_t toAdd) const;
-  void ensureMeshes(uint32_t toAdd) const;
-  void ensureTransforms(uint32_t toAdd) const;
-  void ensureMaterials(uint32_t toAdd) const;
   void ensureTextures(uint32_t toAdd) const;
-  void ensureLights(uint32_t toAdd) const;
 
 private:
   BasicRenderer &renderer;
@@ -124,15 +114,13 @@ private:
   const Config &config;
   const ModelConfig &modelConfig;
 
-  struct Buffer {
+  struct {
     uPtr<DeviceVertexBuffer<Vertex::Position>> position;
     uPtr<DeviceVertexBuffer<Vertex::Normal>> normal;
     uPtr<DeviceVertexBuffer<Vertex::UV>> uv;
     uPtr<DeviceVertexBuffer<Vertex::Joint>> joint0;
     uPtr<DeviceVertexBuffer<Vertex::Weight>> weight0;
     uPtr<DeviceIndexBuffer> indices;
-
-    uPtr<DevicePrimitivesBuffer> dynamicPrimitives;
 
     uPtr<HostManagedStorageUBOBuffer<Material::UBO>> materials;
     uPtr<HostManagedStorageUBOBuffer<glm::mat4>> transforms;
@@ -154,9 +142,6 @@ private:
     std::vector<Node> nodes;
     std::vector<Model> models;
     std::vector<ModelInstance> instances;
-
-    // draw queue index map to Ptr<Mesh>
-    std::array<std::vector<Ptr<Mesh>>, 6> drawQueues;
 
     PerspectiveCamera camera{{10, 10, 10}, {0, 0, 0}, {0, 1, 0}};
     Lighting lighting{};

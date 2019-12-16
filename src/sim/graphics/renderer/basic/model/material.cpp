@@ -5,6 +5,7 @@ namespace sim::graphics::renderer::basic {
 
 Material::Material(BasicModelManager &mm, MaterialType type)
   : mm{mm}, _type{type}, ubo{mm.allocateMaterialUBO()} {
+  *ubo.ptr = Material::UBO{};
   ubo.ptr->type = static_cast<uint32_t>(_type);
 }
 

@@ -19,8 +19,7 @@ using buildASFlag = vk::BuildAccelerationStructureFlagBitsNV;
 RayTracing::RayTracing(
   const RayTracingConfig &config, const ModelConfig &modelLimit,
   const DebugConfig &debugConfig)
-  : Renderer{config, modelLimit, FeatureConfig{FeatureConfig::RayTracing},
-             debugConfig},
+  : Renderer{config, modelLimit, FeatureConfig{FeatureConfig::RayTracing}, debugConfig},
     config{config} {
   createSceneManager();
 
@@ -29,8 +28,8 @@ RayTracing::RayTracing(
 
   createRayTracingPipeline();
   if(config.debug) createDeferredPipeline();
-//  if(config.gui)
-//    gui = u<GuiPass>(window, *vkInstance, *device, *swapchain, *descriptorPool);
+  //  if(config.gui)
+  //    gui = u<GuiPass>(window, *vkInstance, *device, *swapchain, *descriptorPool);
 
   recreateResources();
 }
@@ -113,7 +112,7 @@ void RayTracing::recreateResources() {
   updateRayTracingSets();
 
   if(config.debug) resizeDeferred();
-//  if(config.gui) gui->resizeGui(extent);
+  //  if(config.gui) gui->resizeGui(extent);
 }
 
 void RayTracing::resize() {

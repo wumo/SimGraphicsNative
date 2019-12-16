@@ -1,6 +1,6 @@
 #pragma once
 
-#include <syntactic_sugar.h>
+#include <sim/util/syntactic_sugar.h>
 #include "sim/graphics/renderer/default/deferred/deferred.h"
 #include "sim/graphics/renderer/default/raytracing/raytracing.h"
 #include "sim/graphics/renderer/default/util/panning_camera.h"

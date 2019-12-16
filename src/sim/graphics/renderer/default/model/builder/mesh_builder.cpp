@@ -1,5 +1,5 @@
 #include "mesh_builder.h"
-#include "syntactic_sugar.h"
+#include "sim/util/syntactic_sugar.h"
 #include "sim/graphics/renderer/default/model/model_manager.h"
 
 namespace sim::graphics::renderer::defaultRenderer {

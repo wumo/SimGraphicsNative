@@ -2,7 +2,7 @@
 #include "sim/graphics/util/materials.h"
 #include "sim/graphics/renderer/default/util/panning_camera.h"
 #include "sim/graphics/util/fps_meter.h"
-#include <syntactic_sugar.h>
+#include <sim/util/syntactic_sugar.h>
 using namespace sim::graphics::renderer::defaultRenderer;
 using namespace sim;
 using namespace sim::graphics;

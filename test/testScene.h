@@ -1,7 +1,7 @@
 #pragma once
 #include "sim/graphics/renderer/default/model/camera.h"
 #include "sim/graphics/renderer/default/model/light.h"
-#include "syntactic_sugar.h"
+#include "sim/util/syntactic_sugar.h"
 #include "sim/graphics/util/materials.h"
 #include "sim/graphics/compiledShaders/intersection/sphere_rint.h"
 #include "sim/graphics/compiledShaders/intersection/infinite_plane_rint.h"

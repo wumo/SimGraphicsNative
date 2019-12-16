@@ -4,6 +4,11 @@
 #include "sim/graphics/base/resource/buffers.h"
 
 namespace sim::graphics::renderer::basic {
+template<typename T>
+struct Allocation {
+  uint32_t offset;
+  T *ptr;
+};
 
 template<typename T>
 class DeviceVertexBuffer {
@@ -152,18 +157,66 @@ struct HostStorageUBOBuffer {
 };
 
 template<typename T>
-struct HostIndirectUBOBuffer {
-  uPtr<HostIndirectBuffer> data;
+struct HostManagedStorageUBOBuffer {
+  uPtr<HostStorageBuffer> data;
+  std::vector<uint32_t> freeSlots;
   uint32_t maxNum;
-  HostIndirectUBOBuffer(const VmaAllocator &allocator, uint32_t maxNum): maxNum{maxNum} {
-    data = u<HostIndirectBuffer>(allocator, maxNum * sizeof(T));
+  HostManagedStorageUBOBuffer(const VmaAllocator &allocator, uint32_t maxNum)
+    : maxNum{maxNum} {
+    data = u<HostStorageBuffer>(allocator, maxNum * sizeof(T));
+    freeSlots.reserve(maxNum);
+    for(int32_t i = maxNum; i > 0; --i)
+      freeSlots.push_back(i - 1);
   }
 
-  void update(Device &device, uint32_t index, T ubo) {
-    errorIf(index >= this->maxNum, "exceeding max number of data");
-    data->updateSingle(ubo, index * sizeof(T));
+  Allocation<T> allocate() {
+    errorIf(freeSlots.empty(), "Buffer is full!");
+    auto offset = freeSlots.back();
+    freeSlots.pop_back();
+    return {offset, data->ptr<T>() + offset};
+  }
+
+  void deallocate(Allocation<T> allocation) {
+    errorIf(allocation.ptr != data->ptr<T>() + allocation.offset, "Invalid allocation!");
+    freeSlots.push_back(allocation.offset);
+  }
+
+  void update(Device &device, uint32_t offset, T ubo) {
+    errorIf(offset >= this->maxNum, "exceeding max number of data");
+    data->updateSingle(ubo, offset * sizeof(T));
   }
   vk::Buffer buffer() { return data->buffer(); }
+
+  uint32_t count() { return maxNum - freeSlots.size(); }
+};
+
+struct HostIndirectUBOBuffer {
+  using CMDType = vk::DrawIndexedIndirectCommand;
+  uPtr<HostIndirectBuffer> data;
+  uint32_t maxNum, _count{0};
+  HostIndirectUBOBuffer(const VmaAllocator &allocator, uint32_t maxNum): maxNum{maxNum} {
+    data = u<HostIndirectBuffer>(allocator, maxNum * sizeof(CMDType));
+  }
+
+  auto allocate() -> Allocation<CMDType> {
+    errorIf(_count >= this->maxNum, "exceeding max number of data");
+    auto offset = _count++;
+    return {offset, data->ptr<CMDType>() + offset};
+  }
+
+  auto deallocate(Allocation<CMDType> allocation) {
+    errorIf(
+      allocation.ptr != data->ptr<CMDType>() + allocation.offset, "Invalid allocation!");
+    error("Not implemented");
+  }
+
+  void update(Device &device, uint32_t offset, vk::DrawIndexedIndirectCommand ubo) {
+    errorIf(offset >= _count, "exceeding allocated number of data");
+    data->updateSingle(ubo, offset * sizeof(vk::DrawIndexedIndirectCommand));
+  }
+  vk::Buffer buffer() { return data->buffer(); }
+
+  uint32_t count() { return _count; }
 };
 
 }

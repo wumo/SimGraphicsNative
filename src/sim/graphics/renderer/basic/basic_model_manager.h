@@ -1,6 +1,8 @@
 #pragma once
 #include <functional>
 #include <unordered_map>
+#include <sim/graphics/renderer/basic/model/model_instance.h>
+
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/shader.h"
 #include "sim/graphics/base/pipeline/sampler.h"
@@ -10,10 +12,11 @@
 #include "sim/graphics/base/debug_marker.h"
 #include "model_config.h"
 #include "model/basic_model.h"
+#include "model/draw_queue.h"
 #include "basic_model_buffer.h"
 #include "builder/primitive_builder.h"
 #include "perspective_camera.h"
-#include "light.h"
+#include "sim/graphics/renderer/basic/model/light.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -85,12 +88,20 @@ public:
   void debugInfo();
 
 private:
-  static uint32_t drawQueueIndex(Ptr<Primitive> primitive, Ptr<Material> material);
+  friend class Material;
+  friend class Node;
+  friend class MeshInstance;
+  friend class ModelInstance;
+  friend class Light;
+  
+  Allocation<Material::UBO> allocateMaterialUBO();
+  Allocation<Light::UBO> allocateLightUBO();
+  Allocation<glm::mat4> allocateMatrixUBO();
+  Allocation<MeshInstance::UBO> allocateMeshInstanceUBO();
+  Allocation<vk::DrawIndexedIndirectCommand> allocateDrawCMD(
+    const Ptr<Primitive> &primitive, const Ptr<Material> &material);
 
-  void addToDrawQueue(Ptr<Mesh> mesh);
-
-  DrawQueueIndex changeDrawQueue(Ptr<Mesh> mesh);
-
+private:
   void resize(vk::Extent2D extent);
   void updateScene(vk::CommandBuffer cb, uint32_t imageIndex);
   void updateTextures();
@@ -123,24 +134,19 @@ private:
 
     uPtr<DevicePrimitivesBuffer> dynamicPrimitives;
 
-    uPtr<HostStorageUBOBuffer<glm::mat4>> transforms;
-    uPtr<HostStorageUBOBuffer<Material::UBO>> materials;
+    uPtr<HostManagedStorageUBOBuffer<Material::UBO>> materials;
+    uPtr<HostManagedStorageUBOBuffer<glm::mat4>> transforms;
+    uPtr<HostManagedStorageUBOBuffer<MeshInstance::UBO>> meshInstances;
+    uPtr<DrawQueue> drawQueue;
 
     uPtr<HostUBOBuffer<PerspectiveCamera::UBO>> camera;
 
     uPtr<HostUBOBuffer<Lighting::UBO>> lighting;
-    uPtr<HostStorageUBOBuffer<Light::UBO>> lights;
+    uPtr<HostManagedStorageUBOBuffer<Light::UBO>> lights;
 
-    std::array<uPtr<HostIndirectUBOBuffer<vk::DrawIndexedIndirectCommand>>, 6> drawQueue;
-    uPtr<HostStorageUBOBuffer<Mesh::UBO>> meshes;
   } Buffer;
 
   struct {
-    std::vector<uint32_t> freeMeshes;
-    std::vector<uint32_t> freeMaterials;
-    std::vector<uint32_t> freeTransforms;
-    std::vector<uint32_t> freeLights;
-
     std::vector<Primitive> primitives;
     std::vector<Primitive> dynamicPrimitives;
     std::vector<Material> materials;

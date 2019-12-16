@@ -102,7 +102,10 @@ glm::vec4 Animation::AnimationSampler::linear(
 }
 
 Model::Model(std::vector<Ptr<Node>> &&nodes, std::vector<Animation> &&animations)
-  : _nodes{std::move(nodes)}, _animations{std::move(animations)} {}
+  : _nodes{std::move(nodes)}, _animations{std::move(animations)} {
+  for(auto &node: _nodes)
+    node->fix();
+}
 
 const std::vector<Ptr<Node>> &Model::nodes() const { return _nodes; }
 AABB Model::aabb() {

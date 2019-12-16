@@ -2,6 +2,7 @@
 #include "sim/graphics/renderer/basic/ptr.h"
 #include "sim/graphics/base/vkcommon.h"
 #include "sim/graphics/base/resource/images.h"
+#include "../basic_model_buffer.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -19,13 +20,16 @@ enum class MaterialType : uint32_t {
   eTranslucent = 0x20u
 };
 
+class BasicModelManager;
+
 class Material {
   friend class BasicModelManager;
   friend class Mesh;
+  friend class MeshInstance;
 
   // ref in shaders
   struct alignas(sizeof(glm::vec4)) UBO {
-    glm::vec4 baseColorFactor{1.f, 1.f, 1.f, 1.f};
+    glm::vec4 colorFactor{1.f, 1.f, 1.f, 1.f};
     glm::vec4 pbrFactor{0.f, 1.f, 0.f, 0.f};
     glm::vec4 emissiveFactor{0.f, 0.f, 0.f, 0.f};
     float occlusionStrength{1.f};
@@ -38,9 +42,8 @@ public:
   /**
    *
    * @param type  once set, cannot change.
-   * @param offset
    */
-  explicit Material(MaterialType type, uint32_t offset);
+  explicit Material(BasicModelManager &mm, MaterialType type);
 
   const Ptr<TextureImage2D> &colorTex() const;
   Material &setColorTex(const Ptr<TextureImage2D> &colorTex);
@@ -65,10 +68,7 @@ public:
   MaterialType type() const;
 
 private:
-  bool incoherent() const;
-  void invalidate();
-  uint32_t offset() const;
-  UBO flush();
+  BasicModelManager &mm;
 
   Ptr<TextureImage2D> _colorTex{}, _pbrTex{}, _normalTex{}, _occlusionTex{},
     _emissiveTex{};
@@ -80,8 +80,7 @@ private:
 
   MaterialType _type{MaterialType::eNone};
 
-  bool _incoherent{true};
-  uint32_t _offset{-1u};
+  Allocation<Material::UBO> ubo;
 };
 
 }

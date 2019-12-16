@@ -1,5 +1,7 @@
 #pragma once
 #include "sim/graphics/base/glm_common.h"
+#include "../basic_model_buffer.h"
+
 namespace sim::graphics::renderer::basic {
 
 // ref in shaders
@@ -40,6 +42,8 @@ private:
 
 enum class LightType : uint32_t { Directional = 1u, Point = 2u, Spot = 3u };
 
+class BasicModelManager;
+
 struct Light {
   // ref in shaders
   struct alignas(sizeof(glm::vec4)) UBO {
@@ -54,54 +58,24 @@ struct Light {
 
 public:
   explicit Light(
-    LightType type, glm::vec3 direction, glm::vec3 color, glm::vec3 location,
-    uint32_t offset)
-    : _type{type},
-      _direction{direction},
-      _color{color},
-      _location{location},
-      _offset(offset) {}
+    BasicModelManager &mm, LightType type, glm::vec3 direction, glm::vec3 color,
+    glm::vec3 location);
 
-  LightType type() const { return _type; }
-  void setType(LightType type) {
-    _type = type;
-    _incoherent = true;
-  }
-  const glm::vec3 &color() const { return _color; }
-  void setColor(const glm::vec3 &color) {
-    _color = color;
-    _incoherent = true;
-  }
-  const glm::vec3 &direction() const { return _direction; }
-  void setDirection(const glm::vec3 &direction) {
-    _direction = direction;
-    _incoherent = true;
-  }
-  const glm::vec3 &location() const { return _location; }
-  void setLocation(const glm::vec3 &location) {
-    _location = location;
-    _incoherent = true;
-  }
-  float intensity() const { return _intensity; }
-  void setIntensity(float intensity) {
-    _intensity = intensity;
-    _incoherent = true;
-  }
-  float range() const { return _range; }
-  void setRange(float range) {
-    _range = range;
-    _incoherent = true;
-  }
-
-  bool incoherent() const { return _incoherent; }
-  uint32_t offset() const { return _offset; }
-  UBO flush() {
-    _incoherent = false;
-    return {_color,    _intensity,           _direction,           _range,
-            _location, _spot.innerConeAngle, _spot.outerConeAngle, uint32_t(_type)};
-  }
+  LightType type() const;
+  void setType(LightType type);
+  const glm::vec3 &color() const;
+  void setColor(const glm::vec3 &color);
+  const glm::vec3 &direction() const;
+  void setDirection(const glm::vec3 &direction);
+  const glm::vec3 &location() const;
+  void setLocation(const glm::vec3 &location);
+  float intensity() const;
+  void setIntensity(float intensity);
+  float range() const;
+  void setRange(float range);
 
 private:
+  BasicModelManager &_mm;
   LightType _type{LightType ::Directional};
   glm::vec3 _color{1.f};
   glm::vec3 _direction{0.f, -1.f, 0.f};
@@ -113,8 +87,7 @@ private:
     float innerConeAngle{}, outerConeAngle{};
   } _spot;
 
-  bool _incoherent{true};
-  uint32_t _offset;
+  Allocation<UBO> ubo;
 };
 
 }

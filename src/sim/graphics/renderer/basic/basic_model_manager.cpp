@@ -34,42 +34,26 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
       config.numFrame);
 
     Buffer.transforms =
-      u<HostStorageUBOBuffer<glm::mat4>>(allocator, modelConfig.maxNumTransform);
-    Scene.freeTransforms.reserve(modelConfig.maxNumTransform);
-    for(int32_t i = modelConfig.maxNumTransform; i > 0; --i)
-      Scene.freeTransforms.push_back(i - 1);
+      u<HostManagedStorageUBOBuffer<glm::mat4>>(allocator, modelConfig.maxNumTransform);
 
-    Buffer.materials =
-      u<HostStorageUBOBuffer<Material::UBO>>(allocator, modelConfig.maxNumMaterial);
-    Scene.freeMaterials.reserve(modelConfig.maxNumMaterial);
-    for(int32_t i = modelConfig.maxNumMaterial; i > 0; --i)
-      Scene.freeMaterials.push_back(i - 1);
+    Buffer.materials = u<HostManagedStorageUBOBuffer<Material::UBO>>(
+      allocator, modelConfig.maxNumMaterial);
 
     Buffer.camera = u<HostUBOBuffer<PerspectiveCamera::UBO>>(allocator);
 
     Buffer.lighting = u<HostUBOBuffer<Lighting::UBO>>(allocator);
     Scene.lighting.setNumLights(modelConfig.maxNumLights);
     Buffer.lights =
-      u<HostStorageUBOBuffer<Light::UBO>>(allocator, modelConfig.maxNumLights);
-    Scene.freeLights.reserve(modelConfig.maxNumLights);
-    for(int32_t i = modelConfig.maxNumLights; i > 0; --i)
-      Scene.freeLights.push_back(i - 1);
+      u<HostManagedStorageUBOBuffer<Light::UBO>>(allocator, modelConfig.maxNumLights);
 
-    Buffer.drawQueue = {u<HostIndirectUBOBuffer<vk::DrawIndexedIndirectCommand>>(
-                          allocator, modelConfig.maxNumMeshes),
-                        u<HostIndirectUBOBuffer<vk::DrawIndexedIndirectCommand>>(
-                          allocator, modelConfig.maxNumLineMeshes),
-                        u<HostIndirectUBOBuffer<vk::DrawIndexedIndirectCommand>>(
-                          allocator, modelConfig.maxNumTransparentMeshes),
-                        u<HostIndirectUBOBuffer<vk::DrawIndexedIndirectCommand>>(
-                          allocator, modelConfig.maxNumTransparentLineMeshes)};
+    Buffer.drawQueue = u<DrawQueue>(
+      allocator, modelConfig.maxNumMeshes, modelConfig.maxNumLineMeshes,
+      modelConfig.maxNumTransparentMeshes, modelConfig.maxNumTransparentLineMeshes);
     auto totalMeshes = modelConfig.maxNumMeshes + modelConfig.maxNumLineMeshes +
                        modelConfig.maxNumTransparentMeshes +
                        modelConfig.maxNumTransparentLineMeshes;
-    Buffer.meshes = u<HostStorageUBOBuffer<Mesh::UBO>>(allocator, totalMeshes);
-    Scene.freeMeshes.reserve(totalMeshes);
-    for(int32_t i = totalMeshes; i > 0; --i)
-      Scene.freeMeshes.push_back(i - 1);
+    Buffer.meshInstances =
+      u<HostManagedStorageUBOBuffer<MeshInstance::UBO>>(allocator, totalMeshes);
   }
 
   {
@@ -110,7 +94,7 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
 
   {
     basicSetDef.cam(Buffer.camera->buffer());
-    basicSetDef.meshes(Buffer.meshes->buffer());
+    basicSetDef.meshes(Buffer.meshInstances->buffer());
     basicSetDef.transforms(Buffer.transforms->buffer());
     basicSetDef.material(Buffer.materials->buffer());
     basicSetDef.lighting(Buffer.lighting->buffer());
@@ -146,15 +130,30 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     debugMarker.name(Buffer.weight0->buffer(), "weight0 buffer");
     debugMarker.name(Buffer.transforms->buffer(), "transforms buffer");
     debugMarker.name(Buffer.materials->buffer(), "materials buffer");
-    debugMarker.name(Buffer.meshes->buffer(), "meshes buffer");
-    debugMarker.name(Buffer.drawQueue[0]->buffer(), "drawOpaqueCMDs buffer");
-    debugMarker.name(Buffer.drawQueue[1]->buffer(), "drawLineCMDs buffer");
-    debugMarker.name(Buffer.drawQueue[2]->buffer(), "drawTransparentCMDs buffer");
-    debugMarker.name(Buffer.drawQueue[3]->buffer(), "drawTransparentLineCMDs buffer");
+    debugMarker.name(Buffer.meshInstances->buffer(), "meshes buffer");
+    Buffer.drawQueue->mark(debugMarker);
     debugMarker.name(Buffer.camera->buffer(), "camera buffer");
     debugMarker.name(Buffer.lighting->buffer(), "lighting buffer");
     debugMarker.name(Buffer.lights->buffer(), "lights buffer");
   }
+}
+
+Allocation<Material::UBO> BasicModelManager::allocateMaterialUBO() {
+  return Buffer.materials->allocate();
+}
+Allocation<Light::UBO> BasicModelManager::allocateLightUBO() {
+  return Buffer.lights->allocate();
+}
+Allocation<glm::mat4> BasicModelManager::allocateMatrixUBO() {
+  return Buffer.transforms->allocate();
+}
+Allocation<MeshInstance::UBO> BasicModelManager::allocateMeshInstanceUBO() {
+  return Buffer.meshInstances->allocate();
+}
+auto BasicModelManager::allocateDrawCMD(
+  const Ptr<Primitive> &primitive, const Ptr<Material> &material)
+  -> Allocation<vk::DrawIndexedIndirectCommand> {
+  return Buffer.drawQueue->allocate(primitive, material);
 }
 
 void BasicModelManager::resize(vk::Extent2D extent) {
@@ -250,69 +249,16 @@ Ptr<TextureImageCube> BasicModelManager::newCubeTexture(
 }
 
 Ptr<Material> BasicModelManager::newMaterial(MaterialType type) {
-  ensureMaterials(1);
-  auto offset = Scene.freeMaterials.back();
-  Scene.freeMaterials.pop_back();
-  return Ptr<Material>::add(Scene.materials, Material{type, offset});
-}
-
-uint32_t BasicModelManager::drawQueueIndex(
-  Ptr<Primitive> primitive, Ptr<Material> material) {
-  auto base = 0u;
-  switch(material->type()) {
-    case MaterialType::eBRDF:
-    case MaterialType::eBRDFSG: break;
-    case MaterialType::eReflective:
-    case MaterialType::eRefractive:
-    case MaterialType::eNone: base = 0u; break;
-    case MaterialType::eTranslucent: base = 2u; break;
-  }
-  switch(primitive->topology()) {
-    case PrimitiveTopology::Triangles: base += 0u; break;
-    case PrimitiveTopology::Lines: base += 1u; break;
-    case PrimitiveTopology::Procedural: error("Not supported"); break;
-  }
-  return base;
+  return Ptr<Material>::add(Scene.materials, Material{*this, type});
 }
 
 Ptr<Mesh> BasicModelManager::newMesh(Ptr<Primitive> primitive, Ptr<Material> material) {
-  ensureMeshes(1);
-  auto offset = Scene.freeMeshes.back();
-  Scene.freeMeshes.pop_back();
-  auto mesh = Ptr<Mesh>::add(Scene.meshes, Mesh{primitive, material, {}, offset});
-  addToDrawQueue(mesh);
-  return mesh;
-}
-
-void BasicModelManager::addToDrawQueue(Ptr<Mesh> mesh) {
-  auto queueIndex = drawQueueIndex(mesh->primitive(), mesh->material());
-  auto &drawQueue = Scene.drawQueues[queueIndex];
-  drawQueue.push_back(mesh);
-  mesh->setDrawQueue({queueIndex, uint32_t(drawQueue.size() - 1)});
-}
-
-DrawQueueIndex BasicModelManager::changeDrawQueue(Ptr<Mesh> mesh) {
-  auto oldQueueIndex = mesh->_drawIndex.queueID;
-  auto &oldQueue = Scene.drawQueues[oldQueueIndex];
-
-  auto offset = mesh->_drawIndex.offset;
-  if(offset != oldQueue.size() - 1) { // not end, swap to end
-    auto end = oldQueue.back();
-    oldQueue[offset] = end;
-    end->setDrawQueue({oldQueueIndex, offset});
-    Buffer.drawQueue[oldQueueIndex]->update(device, offset, end->getDrawCMD());
-  }
-  oldQueue.pop_back();
-  addToDrawQueue(mesh);
-  return mesh->_drawIndex;
+  return Ptr<Mesh>::add(Scene.meshes, Mesh{primitive, material});
 }
 
 Ptr<Node> BasicModelManager::newNode(
   const Transform &transform, const std::string &name) {
-  ensureTransforms(1);
-  auto offset = Scene.freeTransforms.back();
-  Scene.freeTransforms.pop_back();
-  return Ptr<Node>::add(Scene.nodes, Node{transform, name, offset});
+  return Ptr<Node>::add(Scene.nodes, Node{*this, transform, name});
 }
 
 Ptr<Model> BasicModelManager::newModel(
@@ -328,12 +274,9 @@ Ptr<Model> BasicModelManager::loadModel(const std::string &file) {
 
 Ptr<ModelInstance> BasicModelManager::newModelInstance(
   Ptr<Model> model, const Transform &transform) {
-  ensureTransforms(1);
-  auto offset = Scene.freeTransforms.back();
-  Scene.freeTransforms.pop_back();
   auto instance =
-    Ptr<ModelInstance>::add(Scene.instances, ModelInstance{transform, offset});
-  ModelInstance::applyModel(instance, model);
+    Ptr<ModelInstance>::add(Scene.instances, ModelInstance{*this, model, transform});
+  ModelInstance::applyModel(model, instance);
   return instance;
 }
 
@@ -356,44 +299,13 @@ void BasicModelManager::computeMesh(
 
 Ptr<Light> BasicModelManager::addLight(
   LightType type, glm::vec3 direction, glm::vec3 color, glm::vec3 location) {
-  ensureLights(1);
-  auto offset = Scene.freeLights.back();
-  Scene.freeLights.pop_back();
-  return Ptr<Light>::add(Scene.lights, Light{type, direction, color, location, offset});
+  return Ptr<Light>::add(Scene.lights, Light{*this, type, direction, color, location});
 }
 
 void BasicModelManager::updateScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   if(Scene.camera.incoherent()) Buffer.camera->update(device, Scene.camera.flush());
 
   if(Scene.lighting.incoherent()) Buffer.lighting->update(device, Scene.lighting.flush());
-
-  for(auto &light: Scene.lights)
-    if(light.incoherent()) Buffer.lights->update(device, light.offset(), light.flush());
-
-  for(auto &instance: Scene.instances)
-    if(instance.incoherent())
-      Buffer.transforms->update(device, instance.offset(), instance.flush());
-
-  for(auto &node: Scene.nodes)
-    if(node.incoherent()) Buffer.transforms->update(device, node.offset(), node.flush());
-
-  for(auto &material: Scene.materials)
-    if(material.incoherent())
-      Buffer.materials->update(device, material.offset(), material.flush());
-
-  for(auto i = 0u; i < Scene.meshes.size(); ++i)
-    if(Ptr<Mesh> mesh{&Scene.meshes, i}; mesh->incoherent()) {
-      auto [offset, drawIndex] = mesh->offset();
-
-      auto _expectedQueueIndex = drawQueueIndex(mesh->primitive(), mesh->material());
-      if(drawIndex.queueID != _expectedQueueIndex) // change queue
-        drawIndex = changeDrawQueue(mesh);
-
-      Buffer.meshes->update(device, offset, mesh->getUBO());
-      Buffer.drawQueue[drawIndex.queueID]->update(
-        device, drawIndex.offset, mesh->getDrawCMD());
-      mesh->flush();
-    }
 
   updateTextures();
 }
@@ -437,13 +349,15 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   else
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueTri);
   cb.drawIndexedIndirect(
-    Buffer.drawQueue[0]->buffer(), 0, Scene.drawQueues[0].size(), stride);
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueTriangles), 0,
+    Scene.drawQueues[0].size(), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass opaque line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueLine);
   cb.drawIndexedIndirect(
-    Buffer.drawQueue[1]->buffer(), 0, Scene.drawQueues[1].size(), stride);
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueLines), 0,
+    Scene.drawQueues[1].size(), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass deferred shading");
@@ -459,13 +373,15 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.nextSubpass(vk::SubpassContents::eInline);
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transTri);
   cb.drawIndexedIndirect(
-    Buffer.drawQueue[2]->buffer(), 0, Scene.drawQueues[2].size(), stride);
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentTriangles), 0,
+    Scene.drawQueues[2].size(), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass translucent line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transLine);
   cb.drawIndexedIndirect(
-    Buffer.drawQueue[3]->buffer(), 0, Scene.drawQueues[3].size(), stride);
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentLines), 0,
+    Scene.drawQueues[3].size(), stride);
   debugMarker.end(cb);
 }
 
@@ -476,12 +392,11 @@ void BasicModelManager::debugInfo() {
   sim::debugLog(
     "vertices: ", Buffer.position->count(), "/", modelConfig.maxNumVertex,
     ", indices: ", Buffer.indices->count(), "/", modelConfig.maxNumIndex,
-    ", transforms: ", modelConfig.maxNumTransform - Scene.freeTransforms.size(), "/",
-    modelConfig.maxNumTransform, ", meshes: ", Scene.meshes.size(), "/", totalMeshes,
-    ", materials: ", modelConfig.maxNumMaterial - Scene.freeMaterials.size(), "/",
-    modelConfig.maxNumMaterial, ", textures: ", Image.textures.size(), "/",
-    modelConfig.maxNumTexture, ", lights: ", Scene.lights.size(), "/",
-    modelConfig.maxNumLights);
+    ", transforms: ", Buffer.transforms->count(), "/", modelConfig.maxNumTransform,
+    ", meshes: ", Scene.meshes.size(), "/", totalMeshes,
+    ", materials: ", Buffer.materials->count(), "/", modelConfig.maxNumMaterial,
+    ", textures: ", Image.textures.size(), "/", modelConfig.maxNumTexture,
+    ", lights: ", Scene.lights.size(), "/", modelConfig.maxNumLights);
 }
 
 void BasicModelManager::ensureVertices(uint32_t toAdd) const {
@@ -494,24 +409,11 @@ void BasicModelManager::ensureIndices(uint32_t toAdd) const {
     Buffer.indices->count() + toAdd > modelConfig.maxNumIndex,
     "exceeding maximum number of vertices!");
 }
-void BasicModelManager::ensureMeshes(uint32_t toAdd) const {
-  errorIf(Scene.freeMeshes.size() < toAdd, "exceeding maximum number of meshes!");
-}
-void BasicModelManager::ensureTransforms(uint32_t toAdd) const {
-  errorIf(Scene.freeTransforms.size() < toAdd, "exceeding maximum number of transforms!");
-}
-void BasicModelManager::ensureMaterials(uint32_t toAdd) const {
-  errorIf(Scene.freeMaterials.size() < toAdd, "exceeding maximum number of vertices!");
-}
 void BasicModelManager::ensureTextures(uint32_t toAdd) const {
   errorIf(
     Image.textures.size() + toAdd > modelConfig.maxNumTexture,
     "exceeding maximum number of textures!");
 }
-void BasicModelManager::ensureLights(uint32_t toAdd) const {
-  errorIf(Scene.freeLights.size() < toAdd, "exceeding maximum number of lights!");
-}
-
 Ptr<Primitive> BasicModelManager::primitive(uint32_t index) {
   assert(index < Scene.primitives.size());
   return Ptr<Primitive>{&Scene.primitives, index};

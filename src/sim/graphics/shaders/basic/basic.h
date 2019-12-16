@@ -36,7 +36,7 @@ struct LightInstanceUBO {
 };
 
 struct Mesh {
-  uint primitive, instance, node, material;
+  uint primitive, material, node, instance;
 };
 
 const uint MaterialType_BRDF = 0x1u;

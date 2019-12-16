@@ -75,7 +75,6 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/basic_model_manager.h
   src/sim/graphics/renderer/basic/basic_renderer.cpp
   src/sim/graphics/renderer/basic/basic_renderer.h
-  src/sim/graphics/renderer/basic/light.h
   src/sim/graphics/renderer/basic/model_config.h
   src/sim/graphics/renderer/basic/perspective_camera.h
   src/sim/graphics/renderer/basic/builder/primitive_builder.cpp
@@ -85,6 +84,10 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/model/aabb.cpp
   src/sim/graphics/renderer/basic/model/aabb.h
   src/sim/graphics/renderer/basic/model/basic_model.h
+  src/sim/graphics/renderer/basic/model/draw_queue.cpp
+  src/sim/graphics/renderer/basic/model/draw_queue.h
+  src/sim/graphics/renderer/basic/model/light.cpp
+  src/sim/graphics/renderer/basic/model/light.h
   src/sim/graphics/renderer/basic/model/material.cpp
   src/sim/graphics/renderer/basic/model/material.h
   src/sim/graphics/renderer/basic/model/mesh.cpp

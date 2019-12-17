@@ -51,7 +51,7 @@ public:
     const std::string &imagePath, const SamplerDef &samplerDef = {},
     bool generateMipmap = true);
 
-  Ptr<TextureImage2D> newHeightTexture(
+  Ptr<TextureImage2D> newGrayTexture(
     const std::string &imagePath, const SamplerDef &samplerDef = {},
     bool generateMipmap = true);
 

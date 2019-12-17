@@ -239,7 +239,7 @@ Ptr<TextureImageCube> BasicModelManager::newCubeTexture(
   return Ptr<TextureImageCube>::add(Image.cubeTextures, std::move(texture));
 }
 
-Ptr<TextureImage2D> BasicModelManager::newHeightTexture(
+Ptr<TextureImage2D> BasicModelManager::newGrayTexture(
   const std::string &imagePath, const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
   auto t = TextureImage2D::loadFromGrayScaleFile(

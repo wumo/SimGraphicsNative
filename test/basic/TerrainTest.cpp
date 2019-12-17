@@ -35,11 +35,13 @@ auto main(int argc, const char **argv) -> int {
 
   auto albedoTex = mm.newTexture("assets/private/terrain/CoastalMountains/Albedo.png");
   auto normalTex = mm.newTexture("assets/private/terrain/CoastalMountains/Normal.png");
+  auto occlusionTex = mm.newTexture("assets/private/terrain/CoastalMountains/AO.png");
   auto heightTex =
-    mm.newHeightTexture("assets/private/terrain/CoastalMountains/Height.png");
+    mm.newGrayTexture("assets/private/terrain/CoastalMountains/Height.png");
 
   gridMaterial->setColorTex(albedoTex);
   gridMaterial->setNormalTex(normalTex);
+  gridMaterial->setOcclusionTex(occlusionTex);
   gridMaterial->setHeightTex(heightTex);
 
   auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");

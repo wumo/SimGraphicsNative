@@ -20,7 +20,7 @@ auto main(int argc, const char **argv) -> int {
 
   auto &camera = mm.camera();
   camera.setLocation({2.f, 2.f, 2.f});
-//  mm.addLight(LightType ::Directional, {-1, -1, -1});
+  mm.addLight(LightType ::Directional, {-1, -1, -1});
 
   std::string name = "DamagedHelmet";
   auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
@@ -31,7 +31,7 @@ auto main(int argc, const char **argv) -> int {
   auto scale = 1 / std::max(std::max(range.x, range.y), range.z);
   auto center = aabb.center();
   auto halfRange = aabb.halfRange();
-  Transform t{{-center * scale + vec3{0, 1.6, 0}}, glm::vec3{scale}};
+  Transform t{{-center * scale + vec3{0, 1.8, 0}}, glm::vec3{scale}};
   //  t.translation = -center;
   auto instance = mm.newModelInstance(model, t);
 
@@ -52,10 +52,10 @@ auto main(int argc, const char **argv) -> int {
                       .newPrimitive(PrimitiveTopology::Terrain));
   gridPrimitive->setAabb({{0, -1, 0}, {0, 10, 0}});
 
-  auto gridMaterial = mm.newMaterial(MaterialType::eTerrain);
+  auto gridMaterial = mm.newMaterial(MaterialType::eNone);
 
-  gridMaterial->setColorFactor({0.8f, 0.8f, 0.8f, 1.f});
-  gridMaterial->setPbrFactor({0, 0.4, 0, 0});
+  gridMaterial->setColorFactor({1.f, 1.f, 1.f, 1.f});
+  gridMaterial->setPbrFactor({0, 1, 0, 0});
   auto gridMesh = mm.newMesh(gridPrimitive, gridMaterial);
   auto gridNode = mm.newNode();
   Node::addMesh(gridNode, gridMesh);

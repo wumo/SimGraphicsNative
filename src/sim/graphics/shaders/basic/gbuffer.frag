@@ -86,9 +86,8 @@ void main() {
                     vec3(0, 0, 0);
   emissive = material.emissiveFactor.rgb * emissive;
 
-  int applyIBL = 0;
-  if(material.type == MaterialType_BRDFSG || material.type == MaterialType_BRDF)
-    applyIBL = 1;
+  int applyIBL = 1;
+  if(material.type == MaterialType_None) applyIBL = 0;
   outPosition.rgb = inWorldPos;
   outNormal = vec4(normal, applyIBL);
   outDiffuse = vec4(diffuseColor, ao);

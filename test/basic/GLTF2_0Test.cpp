@@ -38,7 +38,7 @@ auto main(int argc, const char **argv) -> int {
   auto instance = mm.newModelInstance(model, t);
 
   auto primitives = mm.newPrimitives(
-    PrimitiveBuilder()
+    PrimitiveBuilder(mm)
       .boxLine(center, {halfRange.x, 0.f, 0.f}, {0.f, halfRange.y, 0.f}, halfRange.z)
       .newPrimitive(PrimitiveTopology::Lines)
       .axis({}, 2.f, 0.01f, 0.05f, 50)

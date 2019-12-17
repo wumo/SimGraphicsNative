@@ -23,8 +23,8 @@ layout(set = 1, binding = 4,input_attachment_index = 4) uniform SUBPASS_INPUT sa
 // clang-format on
 
 layout(set = 0, binding = 0) uniform Camera { CameraUBO cam; };
-layout(set = 0, binding = 5) uniform LightingUBO { LightUBO lighting; };
-layout(set = 0, binding = 6, std430) readonly buffer LightsBuffer {
+layout(set = 0, binding = 6) uniform LightingUBO { LightUBO lighting; };
+layout(set = 0, binding = 7, std430) readonly buffer LightsBuffer {
   LightInstanceUBO lights[];
 };
 
@@ -44,7 +44,9 @@ layout(set = 2, binding = 2) uniform sampler2D samplerBRDFLUT;
 
 void main() {
   vec3 postion = SUBPASS_LOAD(samplerPosition).rgb;
-  vec3 normal = SUBPASS_LOAD(samplerNormal).rgb;
+  vec4 normalIBL = SUBPASS_LOAD(samplerNormal).rgba;
+  vec3 normal = normalIBL.xyz;
+  float useIBL = normalIBL.a;
   vec4 diffuseAO = SUBPASS_LOAD(samplerDiffuse);
   vec3 diffuseColor = diffuseAO.rgb;
   float ao = diffuseAO.w;
@@ -60,7 +62,7 @@ void main() {
 
   vec3 color = shadeBRDF(
     postion, normal, diffuseColor, ao, specularColor, perceptualRoughness, emissive,
-    cam.eye.xyz);
+    useIBL, cam.eye.xyz);
 
   // outColor.rgb = vec3(perceptualRoughness);
   // outColor.rgb = vec3(metallic);
@@ -69,6 +71,7 @@ void main() {
   // outColor.rgb = vec3(ao);
   // outColor.rgb = LINEARtoSRGB(emissive);
   // outColor.rgb = vec3(f0);
+  //  outColor = toneMap(vec4(color, 1.0), lighting.exposure);
   outColor.rgb = LINEARtoSRGB(color);
 }
 

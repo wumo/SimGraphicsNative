@@ -93,10 +93,12 @@ private:
   friend class MeshInstance;
   friend class ModelInstance;
   friend class Light;
+  friend class Primitive;
 
   Allocation<Material::UBO> allocateMaterialUBO();
   Allocation<Light::UBO> allocateLightUBO();
   Allocation<glm::mat4> allocateMatrixUBO();
+  Allocation<Primitive::UBO> allocatePrimitiveUBO();
   Allocation<MeshInstance::UBO> allocateMeshInstanceUBO();
   Allocation<vk::DrawIndexedIndirectCommand> allocateDrawCMD(
     const Ptr<Primitive> &primitive, const Ptr<Material> &material);
@@ -129,6 +131,7 @@ private:
 
     uPtr<HostManagedStorageUBOBuffer<Material::UBO>> materials;
     uPtr<HostManagedStorageUBOBuffer<glm::mat4>> transforms;
+    uPtr<HostManagedStorageUBOBuffer<Primitive::UBO>> primitives;
     uPtr<HostManagedStorageUBOBuffer<MeshInstance::UBO>> meshInstances;
     uPtr<DrawQueue> drawQueue;
 
@@ -176,7 +179,8 @@ private:
 
   struct BasicSetDef: DescriptorSetDef {
     __uniform__(cam, shader::eVertex | shader::eFragment);
-    __buffer__(meshes, shader::eVertex);
+    __buffer__(primitives, shader::eVertex);
+    __buffer__(meshInstances, shader::eVertex);
     __buffer__(transforms, shader::eVertex);
     __buffer__(material, shader::eVertex | shader::eFragment);
     __samplers__(textures, flag{}, shader::eVertex | shader::eFragment);

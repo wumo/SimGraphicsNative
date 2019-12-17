@@ -35,7 +35,14 @@ struct LightInstanceUBO {
   uint type;
 };
 
-struct Mesh {
+struct PrimitiveUBO {
+  uvec2 index, position, normal, uv, joint0, weight0;
+  vec3 min, max;
+  uint topology;
+  uint type;
+};
+
+struct MeshInstanceUBO {
   uint primitive, material, node, instance;
 };
 

@@ -3,6 +3,7 @@
 #include "sim/graphics/base/resource/buffers.h"
 #include "sim/graphics/base/device.h"
 #include "sim/graphics/renderer/basic/model/basic_model.h"
+#include "../basic_model_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -12,9 +13,12 @@ struct EnvMaps {
   uPtr<TextureImageCube> irradiance, preFiltered;
 };
 
+class BasicModelManager;
+
 class EnvMapGenerator {
 public:
-  explicit EnvMapGenerator(Device &device): device{device} {}
+  explicit EnvMapGenerator(Device &device, BasicModelManager &mm)
+    : device{device}, mm{mm} {}
 
   uPtr<TextureImage2D> generateBRDFLUT();
   EnvMaps generateEnvMap(TextureImageCube &envCube);
@@ -26,5 +30,6 @@ private:
 
 private:
   Device &device;
+  BasicModelManager &mm;
 };
 }

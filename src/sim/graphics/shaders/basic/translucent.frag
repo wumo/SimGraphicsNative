@@ -13,12 +13,12 @@ layout(location = 0) in fs {
 };
 
 layout(set = 0, binding = 0) uniform Camera { CameraUBO cam; };
-layout(set = 0, binding = 3, std430) readonly buffer MaterialBuffer {
+layout(set = 0, binding = 4, std430) readonly buffer MaterialBuffer {
   MaterialUBO materials[];
 };
-layout(set = 0, binding = 4) uniform sampler2D textures[maxNumTextures];
-layout(set = 0, binding = 5) uniform LightingUBO { LightUBO lighting; };
-layout(set = 0, binding = 6, std430) readonly buffer LightsBuffer {
+layout(set = 0, binding = 5) uniform sampler2D textures[maxNumTextures];
+layout(set = 0, binding = 6) uniform LightingUBO { LightUBO lighting; };
+layout(set = 0, binding = 7, std430) readonly buffer LightsBuffer {
   LightInstanceUBO lights[];
 };
 layout(location = 0) out vec4 outColor;

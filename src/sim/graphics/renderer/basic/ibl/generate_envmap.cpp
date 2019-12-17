@@ -47,7 +47,7 @@ EnvMaps EnvMapGenerator::generateEnvMap(TextureImageCube &envCube) {
     prefiltered->setSampler(maker.createUnique(device.getDevice()));
   }
 
-  PrimitiveBuilder builder{};
+  PrimitiveBuilder builder{mm};
   builder.box({}, {0.5f, 0, 0}, {0, 0.5f, 0}, 0.5f);
   builder.newPrimitive();
 

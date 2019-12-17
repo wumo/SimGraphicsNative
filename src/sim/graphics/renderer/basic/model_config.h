@@ -11,6 +11,8 @@ struct ModelConfig {
   uint32_t maxNumTransform{10'0000};
   /**max number of static materials*/
   uint32_t maxNumMaterial{1'0000};
+  /**max number of primitives*/
+  uint32_t maxNumPrimitives{1'0000};
   /**max number of static mesh instances*/
   uint32_t maxNumMeshes{100'0000}, maxNumLineMeshes{1'000},
     maxNumTransparentMeshes{1'000}, maxNumTransparentLineMeshes{1'000};

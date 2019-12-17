@@ -24,7 +24,7 @@ auto main(int argc, const char **argv) -> int {
   vec3 center{0.f, 10.f, 0.f};
 
   auto primitives =
-    mm.newPrimitives(PrimitiveBuilder()
+    mm.newPrimitives(PrimitiveBuilder(mm)
                        .rectangle(center, {2.f, 0.f, 0.f}, {0.f, 2.f, 0.f})
                        .newPrimitive()
                        .rectangle(

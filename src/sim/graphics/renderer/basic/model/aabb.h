@@ -4,8 +4,8 @@
 
 namespace sim::graphics::renderer::basic {
 struct AABB {
-  glm::vec3 min{std::numeric_limits<float>::infinity()},
-    max{-std::numeric_limits<float>::infinity()};
+  glm::vec3 min{std::numeric_limits<float>::infinity()};
+  alignas(sizeof(glm::vec4)) glm::vec3 max{-std::numeric_limits<float>::infinity()};
 
   AABB transform(glm::mat4 m) const;
 

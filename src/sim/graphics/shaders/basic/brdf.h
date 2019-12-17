@@ -197,12 +197,12 @@ vec3 applySpotLight(
 
 vec3 shadeBRDF(
   vec3 postion, vec3 normal, vec3 diffuseColor, float ao, vec3 specularColor,
-  float perceptualRoughness, vec3 emissive, vec3 cam_location) {
+  float perceptualRoughness, vec3 emissive, float useIBL, vec3 cam_location) {
   perceptualRoughness = clamp(perceptualRoughness, 0.0, 1.0);
   // Roughness is authored as perceptual roughness; as is convention,
   // convert to material roughness by squaring the perceptual roughness [2].
   float alphaRoughness = perceptualRoughness * perceptualRoughness;
-  
+
   // Compute reflectance.
   float reflectance = max(max(specularColor.r, specularColor.g), specularColor.b);
 
@@ -229,8 +229,9 @@ vec3 shadeBRDF(
   }
 
 #ifdef USE_IBL
-  // Calculate lighting contribution from image based lighting source (IBL)
-  color += getIBLContribution(materialInfo, normal, view);
+  if(useIBL > 0.5)
+    // Calculate lighting contribution from image based lighting source (IBL)
+    color += getIBLContribution(materialInfo, normal, view);
 #endif
 
   color = color * ao;

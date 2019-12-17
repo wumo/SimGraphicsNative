@@ -19,7 +19,7 @@ auto main(int argc, const char **argv) -> int {
   mm.addLight();
 
   auto boxPrimitive = mm.newPrimitive(
-    PrimitiveBuilder().box({}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, 1.f).newPrimitive());
+    PrimitiveBuilder(mm).box({}, {1.f, 0.f, 0.f}, {0.f, 1.f, 0.f}, 1.f).newPrimitive());
 
   sim::println(boxPrimitive->aabb());
 

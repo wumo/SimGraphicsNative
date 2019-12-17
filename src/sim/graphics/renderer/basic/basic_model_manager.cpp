@@ -35,6 +35,9 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     Buffer.materials = u<HostManagedStorageUBOBuffer<Material::UBO>>(
       allocator, modelConfig.maxNumMaterial);
 
+    Buffer.primitives = u<HostManagedStorageUBOBuffer<Primitive::UBO>>(
+      allocator, modelConfig.maxNumPrimitives);
+
     Buffer.camera = u<HostUBOBuffer<PerspectiveCamera::UBO>>(allocator);
 
     Buffer.lighting = u<HostUBOBuffer<Lighting::UBO>>(allocator);
@@ -92,7 +95,8 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
 
   {
     basicSetDef.cam(Buffer.camera->buffer());
-    basicSetDef.meshes(Buffer.meshInstances->buffer());
+    basicSetDef.primitives(Buffer.primitives->buffer());
+    basicSetDef.meshInstances(Buffer.meshInstances->buffer());
     basicSetDef.transforms(Buffer.transforms->buffer());
     basicSetDef.material(Buffer.materials->buffer());
     basicSetDef.lighting(Buffer.lighting->buffer());
@@ -128,6 +132,7 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     debugMarker.name(Buffer.weight0->buffer(), "weight0 buffer");
     debugMarker.name(Buffer.transforms->buffer(), "transforms buffer");
     debugMarker.name(Buffer.materials->buffer(), "materials buffer");
+    debugMarker.name(Buffer.primitives->buffer(), "primitives buffer");
     debugMarker.name(Buffer.meshInstances->buffer(), "mesh instances buffer");
     Buffer.drawQueue->mark(debugMarker);
     debugMarker.name(Buffer.camera->buffer(), "camera buffer");
@@ -144,6 +149,9 @@ Allocation<Light::UBO> BasicModelManager::allocateLightUBO() {
 }
 Allocation<glm::mat4> BasicModelManager::allocateMatrixUBO() {
   return Buffer.transforms->allocate();
+}
+Allocation<Primitive::UBO> BasicModelManager::allocatePrimitiveUBO() {
+  return Buffer.primitives->allocate();
 }
 Allocation<MeshInstance::UBO> BasicModelManager::allocateMeshInstanceUBO() {
   return Buffer.meshInstances->allocate();
@@ -179,7 +187,8 @@ Ptr<Primitive> BasicModelManager::newPrimitive(
   auto indexRange = Buffer.indices->add(device, indices.data(), indices.size());
 
   return Ptr<Primitive>::add(
-    Scene.primitives, {indexRange, positionRange, normalRange, uvRange, aabb, topology});
+    Scene.primitives,
+    {*this, indexRange, positionRange, normalRange, uvRange, aabb, topology});
 }
 
 Ptr<Primitive> BasicModelManager::newPrimitive(const PrimitiveBuilder &primitiveBuilder) {
@@ -202,7 +211,7 @@ auto BasicModelManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
       device, primitiveBuilder.indices().data() + primitive.index().offset,
       primitive.index().size);
     primitives.push_back(Ptr<Primitive>::add(
-      Scene.primitives, {indexRange, positionRange, normalRange, uvRange,
+      Scene.primitives, {*this, indexRange, positionRange, normalRange, uvRange,
                          primitive.aabb(), primitive.topology()}));
   }
   return primitives;
@@ -281,7 +290,7 @@ Ptr<ModelInstance> BasicModelManager::newModelInstance(
 }
 
 void BasicModelManager::useEnvironmentMap(Ptr<TextureImageCube> envMap) {
-  EnvMapGenerator envMapGenerator{device};
+  EnvMapGenerator envMapGenerator{device, *this};
   Image.brdfLUT = envMapGenerator.generateBRDFLUT();
   auto cubes = envMapGenerator.generateEnvMap(*envMap);
   Image.irradiance = std::move(cubes.irradiance);

@@ -1,16 +1,29 @@
 #pragma once
 #include "aabb.h"
 #include "sim/util/range.h"
+#include "model_buffer.h"
 
 namespace sim::graphics::renderer::basic {
 using namespace sim::util;
 
-enum class PrimitiveTopology { Triangles, Lines, Procedural, Terrain };
-enum class DynamicType { Static, Dynamic };
+enum class PrimitiveTopology : uint32_t { Triangles, Lines, Procedural, Terrain };
+enum class DynamicType : uint32_t { Static, Dynamic };
+
+class BasicModelManager;
 
 class Primitive {
+  friend class MeshInstance;
+  
 public:
-  Primitive() = default;
+  //ref in shaders
+  struct alignas(sizeof(glm::vec4)) UBO {
+    Range _index, _position, _normal, _uv, _joint0, _weight0;
+    AABB _aabb;
+    PrimitiveTopology _topology{PrimitiveTopology::Triangles};
+    DynamicType _type{DynamicType::Static};
+  };
+
+public:
   /**
    *
    * @param index
@@ -19,8 +32,8 @@ public:
    * @param topology once set, cannot change.
    */
   Primitive(
-    const Range &index, const Range &position, const Range &normal, const Range &uv,
-    const AABB &aabb, const PrimitiveTopology &topology,
+    BasicModelManager &mm, const Range &index, const Range &position, const Range &normal,
+    const Range &uv, const AABB &aabb, const PrimitiveTopology &topology,
     const DynamicType &_type = DynamicType::Static);
   const Range &index() const;
   const Range &position() const;
@@ -29,12 +42,17 @@ public:
   const Range &joint0() const;
   const Range &weight0() const;
   const AABB &aabb() const;
+  void setAabb(const AABB &aabb);
   PrimitiveTopology topology() const;
 
 private:
+  BasicModelManager &mm;
+
   Range _index, _position, _normal, _uv, _joint0, _weight0;
   AABB _aabb;
   PrimitiveTopology _topology{PrimitiveTopology::Triangles};
   DynamicType _type{DynamicType::Static};
+
+  Allocation<UBO> ubo;
 };
 }

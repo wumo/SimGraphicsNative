@@ -3,8 +3,12 @@
 #include "par_shapes.h"
 
 namespace sim ::graphics::renderer::basic {
+class BasicModelManager;
+
 class PrimitiveBuilder {
 public:
+  explicit PrimitiveBuilder(BasicModelManager &mm);
+
   PrimitiveBuilder &newPrimitive(
     PrimitiveTopology topology = PrimitiveTopology::Triangles);
 
@@ -120,6 +124,7 @@ private:
   uint32_t currentVertexID() const;
 
 private:
+  BasicModelManager &mm;
   std::vector<Vertex::Position> _positions;
   std::vector<Vertex::Normal> _normals;
   std::vector<Vertex::UV> _uvs;

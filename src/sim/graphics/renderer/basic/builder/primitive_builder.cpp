@@ -1,8 +1,11 @@
 #include "primitive_builder.h"
 #include "sim/util/syntactic_sugar.h"
+#include "../basic_model_manager.h"
 
 namespace sim::graphics::renderer::basic {
 using namespace glm;
+
+PrimitiveBuilder::PrimitiveBuilder(BasicModelManager &mm): mm(mm) {}
 
 const std::vector<Vertex::Position> &PrimitiveBuilder::positions() const {
   return _positions;
@@ -31,7 +34,7 @@ PrimitiveBuilder &PrimitiveBuilder::newPrimitive(PrimitiveTopology topology) {
     uvRange = {last.uv().endOffset(), uint32_t(_uvs.size()) - last.uv().endOffset()};
   }
   _primitives.emplace_back(
-    indexRange, positionRange, normalRange, uvRange, aabb, topology);
+    mm, indexRange, positionRange, normalRange, uvRange, aabb, topology);
   aabb = {};
   return *this;
 }

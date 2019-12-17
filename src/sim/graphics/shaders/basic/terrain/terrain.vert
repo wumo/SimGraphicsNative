@@ -9,14 +9,19 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inUV0;
 
 layout(set = 0, binding = 0) uniform Camera { CameraUBO cam; };
-layout(set = 0, binding = 1, std430) readonly buffer MeshesBuffer { Mesh meshes[]; };
-layout(set = 0, binding = 2, std430) readonly buffer TransformBuffer {
+layout(set = 0, binding = 1, std430) readonly buffer PrimitivesBuffer {
+  PrimitiveUBO primitives[];
+};
+layout(set = 0, binding = 2, std430) readonly buffer MeshesBuffer {
+  MeshInstanceUBO meshes[];
+};
+layout(set = 0, binding = 3, std430) readonly buffer TransformBuffer {
   mat4 transforms[];
 };
-layout(set = 0, binding = 3, std430) readonly buffer MaterialBuffer {
+layout(set = 0, binding = 4, std430) readonly buffer MaterialBuffer {
   MaterialUBO materials[];
 };
-layout(set = 0, binding = 4) uniform sampler2D textures[maxNumTextures];
+layout(set = 0, binding = 5) uniform sampler2D textures[maxNumTextures];
 
 layout(location = 0) out vs {
   vec3 outWorldPos;
@@ -28,10 +33,12 @@ layout(location = 0) out vs {
 out gl_PerVertex { vec4 gl_Position; };
 
 void main() {
-  Mesh mesh = meshes[gl_InstanceIndex];
+  MeshInstanceUBO mesh = meshes[gl_InstanceIndex];
+  PrimitiveUBO primitive = primitives[mesh.primitive];
   mat4 model = transforms[mesh.instance] * transforms[mesh.node];
   MaterialUBO material = materials[mesh.material];
-  float height = texture(textures[material.heightTex], inUV0).r*10;
+  float range = primitive.max.y - primitive.min.y;
+  float height = primitive.min.y + texture(textures[material.heightTex], inUV0).r * range;
   vec3 normal =
     material.normalTex >= 0 ? texture(textures[material.normalTex], inUV0).rgb : inNormal;
   vec4 pos = vec4(inPos, 1.0);

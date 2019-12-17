@@ -18,10 +18,10 @@ layout(location = 2) out vec4 outDiffuse;
 layout(location = 3) out vec4 outSpecular;
 layout(location = 4) out vec4 outEmissive;
 
-layout(set = 0, binding = 3, std430) readonly buffer MaterialBuffer {
+layout(set = 0, binding = 4, std430) readonly buffer MaterialBuffer {
   MaterialUBO materials[];
 };
-layout(set = 0, binding = 4) uniform sampler2D textures[maxNumTextures];
+layout(set = 0, binding = 5) uniform sampler2D textures[maxNumTextures];
 
 vec3 computeNormal(vec3 sampledNormal) {
   vec3 pos_dx = dFdx(inWorldPos);
@@ -86,8 +86,11 @@ void main() {
                     vec3(0, 0, 0);
   emissive = material.emissiveFactor.rgb * emissive;
 
+  int applyIBL = 0;
+  if(material.type == MaterialType_BRDFSG || material.type == MaterialType_BRDF)
+    applyIBL = 1;
   outPosition.rgb = inWorldPos;
-  outNormal.rgb = normal;
+  outNormal = vec4(normal, applyIBL);
   outDiffuse = vec4(diffuseColor, ao);
   outSpecular = vec4(specularColor, perceptualRoughness);
   outEmissive.rgb = emissive;

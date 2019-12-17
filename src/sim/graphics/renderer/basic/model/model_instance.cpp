@@ -13,7 +13,7 @@ MeshInstance::MeshInstance(
     _instance(instance),
     _ubo{mm.allocateMeshInstanceUBO()},
     _drawCMD{mm.allocateDrawCMD(primitive, material)} {
-  *_ubo.ptr = {0, _material ? _material->ubo.offset : -1u,
+  *_ubo.ptr = {_primitive->ubo.offset, _material ? _material->ubo.offset : -1u,
                _node ? _node->ubo.offset : -1u, _instance ? _instance->_ubo.offset : -1u};
   setVisible(_visible);
   Range index, vertex;

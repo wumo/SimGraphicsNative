@@ -22,8 +22,22 @@ auto main(int argc, const char **argv) -> int {
   camera.setLocation({2.f, 2.f, 2.f});
   mm.addLight(LightType ::Directional, {-1, -1, -1});
 
+  std::string name = "DamagedHelmet";
+  auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
+  auto model = mm.loadModel(path);
+  auto aabb = model->aabb();
+  println(aabb);
+  auto range = aabb.max - aabb.min;
+  auto scale = 1 / std::max(std::max(range.x, range.y), range.z);
+  auto center = aabb.center();
+  auto halfRange = aabb.halfRange();
+  Transform t{{-center * scale}, glm::vec3{scale}};
+  //  t.translation = -center;
+  auto instance = mm.newModelInstance(model, t);
+
   auto gridPrimitive = mm.newPrimitive(
-    PrimitiveBuilder().grid(100, 100).newPrimitive(PrimitiveTopology::Terrain));
+    PrimitiveBuilder(mm).grid(100, 100).newPrimitive(PrimitiveTopology::Terrain));
+  gridPrimitive->setAabb({{0, -3, 0}, {0, 7, 0}});
 
   auto gridMaterial = mm.newMaterial(MaterialType::eTerrain);
   gridMaterial->setColorFactor({0.8f, 0.8f, 0.8f, 1.f});
@@ -33,15 +47,12 @@ auto main(int argc, const char **argv) -> int {
   auto gridModel = mm.newModel({gridNode});
   auto grid = mm.newModelInstance(gridModel);
 
-  auto albedoTex = mm.newTexture("assets/private/terrain/CoastalMountains/Albedo.png");
-  auto normalTex = mm.newTexture("assets/private/terrain/CoastalMountains/Normal.png");
-  auto occlusionTex = mm.newTexture("assets/private/terrain/CoastalMountains/AO.png");
-  auto heightTex =
-    mm.newGrayTexture("assets/private/terrain/CoastalMountains/Height.png");
+  auto albedoTex = mm.newTexture("assets/private/terrain/TreasureIsland/Albedo.png");
+  auto normalTex = mm.newTexture("assets/private/terrain/TreasureIsland/Normal.png");
+  auto heightTex = mm.newGrayTexture("assets/private/terrain/TreasureIsland/Height.png");
 
   gridMaterial->setColorTex(albedoTex);
   gridMaterial->setNormalTex(normalTex);
-  gridMaterial->setOcclusionTex(occlusionTex);
   gridMaterial->setHeightTex(heightTex);
 
   auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");

@@ -85,7 +85,7 @@ private:
 
   MaterialType _type{MaterialType::eNone};
 
-  Allocation<Material::UBO> ubo;
+  Allocation<UBO> ubo;
 };
 
 }

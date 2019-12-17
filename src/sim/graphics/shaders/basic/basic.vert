@@ -7,8 +7,13 @@ layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec2 inUV0;
 
 layout(set = 0, binding = 0) uniform Camera { CameraUBO cam; };
-layout(set = 0, binding = 1, std430) readonly buffer MeshesBuffer { Mesh meshes[]; };
-layout(set = 0, binding = 2, std430) readonly buffer TransformBuffer {
+layout(set = 0, binding = 1, std430) readonly buffer PrimitivesBuffer {
+  PrimitiveUBO primitives[];
+};
+layout(set = 0, binding = 2, std430) readonly buffer MeshesBuffer {
+  MeshInstanceUBO meshes[];
+};
+layout(set = 0, binding = 3, std430) readonly buffer TransformBuffer {
   mat4 transforms[];
 };
 
@@ -22,7 +27,7 @@ layout(location = 0) out vs {
 out gl_PerVertex { vec4 gl_Position; };
 
 void main() {
-  Mesh mesh = meshes[gl_InstanceIndex];
+  MeshInstanceUBO mesh = meshes[gl_InstanceIndex];
   mat4 model = transforms[mesh.instance] * transforms[mesh.node];
   vec4 pos = model * vec4(inPos, 1.0);
   outWorldPos = pos.xyz / pos.w;

@@ -44,10 +44,12 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
 
     Buffer.drawQueue = u<DrawQueue>(
       allocator, modelConfig.maxNumMeshes, modelConfig.maxNumLineMeshes,
-      modelConfig.maxNumTransparentMeshes, modelConfig.maxNumTransparentLineMeshes);
+      modelConfig.maxNumTransparentMeshes, modelConfig.maxNumTransparentLineMeshes,
+      modelConfig.maxNumTerranMeshes);
     auto totalMeshes = modelConfig.maxNumMeshes + modelConfig.maxNumLineMeshes +
                        modelConfig.maxNumTransparentMeshes +
-                       modelConfig.maxNumTransparentLineMeshes;
+                       modelConfig.maxNumTransparentLineMeshes +
+                       modelConfig.maxNumTerranMeshes;
     Buffer.meshInstances =
       u<HostManagedStorageUBOBuffer<MeshInstance::UBO>>(allocator, totalMeshes);
   }
@@ -237,6 +239,15 @@ Ptr<TextureImageCube> BasicModelManager::newCubeTexture(
   return Ptr<TextureImageCube>::add(Image.cubeTextures, std::move(texture));
 }
 
+Ptr<TextureImage2D> BasicModelManager::newHeightTexture(
+  const std::string &imagePath, const SamplerDef &samplerDef, bool generateMipmap) {
+  ensureTextures(1);
+  auto t = TextureImage2D::loadFromGrayScaleFile(
+    device, imagePath, generateMipmap, vk::Format::eR16Unorm);
+  t.setSampler(SamplerMaker(samplerDef).createUnique(vkDevice));
+  return Ptr<TextureImage2D>::add(Image.textures, std::move(t));
+}
+
 Ptr<Material> BasicModelManager::newMaterial(MaterialType type) {
   return Ptr<Material>::add(Scene.materials, Material{*this, type});
 }
@@ -340,6 +351,16 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueTriangles), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueTriangles), stride);
+  debugMarker.end(cb);
+
+  debugMarker.begin(cb, "Subpass terrain");
+  if(RenderPass.wireframe)
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrainWireframe);
+  else
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrain);
+  cb.drawIndexedIndirect(
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::Terrain), 0,
+    Buffer.drawQueue->count(DrawQueue::DrawType::Terrain), stride);
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass opaque line");

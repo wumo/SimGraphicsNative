@@ -413,14 +413,14 @@ vk::ImageCreateInfo TransientColorInputAttachmentImage::info(
 }
 
 TextureImage2D TextureImage2D::loadFromFile(
-  Device &device, const std::string &file, bool generateMipmap) {
+  Device &device, const std::string &file, bool generateMipmap, vk::Format format) {
   if(endWith(file, ".dds") || endWith(file, ".kmg") || endWith(file, ".ktx")) {
     const auto &t = gli::load(file.c_str());
     errorIf(t.empty(), "failed to load texture image!");
     gli::texture2d tex{t};
     auto extent = tex.extent();
     uint32_t texWidth = extent.x, texHeight = extent.y;
-    auto texture = TextureImage2D{device, texWidth, texHeight, generateMipmap};
+    auto texture = TextureImage2D{device, texWidth, texHeight, generateMipmap, format};
     auto dataPtr = static_cast<const unsigned char *>(tex[0].data());
     texture.upload(device, dataPtr, tex[0].size(), !generateMipmap);
     if(generateMipmap) texture._generateMipmap(device);
@@ -436,12 +436,30 @@ TextureImage2D TextureImage2D::loadFromFile(
 
     errorIf(pixels == nullptr, "failed to load texture image!");
     //    errorIf(texChannels != 4, "Currently only support 4 channel image!");
-    auto texture = TextureImage2D{device, texWidth, texHeight, generateMipmap};
-    auto imageSize = texWidth * texHeight * 4;
+    auto texture = TextureImage2D{device, texWidth, texHeight, generateMipmap, format};
+    auto imageSize = texWidth * texHeight * STBI_rgb_alpha * sizeof(stbi_uc);
     texture.upload(device, pixels.get(), imageSize, !generateMipmap);
     if(generateMipmap) texture._generateMipmap(device);
     return texture;
   }
+}
+
+TextureImage2D TextureImage2D::loadFromGrayScaleFile(
+  Device &device, const std::string &file, bool generateMipmap, vk::Format format) {
+  uint32_t texWidth, texHeight, texChannels;
+  auto pixels = UniqueBytes(
+    (unsigned char *)(stbi_load_16(
+      file.c_str(), reinterpret_cast<int *>(&texWidth),
+      reinterpret_cast<int *>(&texHeight), reinterpret_cast<int *>(&texChannels),
+      STBI_grey)),
+    [](stbi_uc *ptr) { stbi_image_free(ptr); });
+
+  errorIf(pixels == nullptr, "failed to load texture image!");
+  auto texture = TextureImage2D{device, texWidth, texHeight, generateMipmap, format};
+  auto imageSize = texWidth * texHeight * sizeof(stbi_us);
+  texture.upload(device, pixels.get(), imageSize, !generateMipmap);
+  if(generateMipmap) texture._generateMipmap(device);
+  return texture;
 }
 
 TextureImage2D TextureImage2D::loadFromBytes(

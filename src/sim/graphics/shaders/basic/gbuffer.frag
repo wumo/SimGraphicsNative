@@ -43,12 +43,15 @@ void main() {
                                          vec3(1, 1, 1);
   albedo = material.baseColorFactor.rgb * albedo;
 
-  vec3 normal =
-    material.type == MaterialType_None ?
-      vec3(0) :
-      (material.normalTex >= 0 ?
-         computeNormal(LINEARtoSRGB(texture(textures[material.normalTex], inUV0).rgb)) :
-         inNormal);
+  vec3 normal;
+  if(material.type == MaterialType_None) normal = vec3(0);
+  else if(material.type == MaterialType_Terrain)
+    normal = inNormal;
+  else
+    normal =
+      material.normalTex >= 0 ?
+        computeNormal(LINEARtoSRGB(texture(textures[material.normalTex], inUV0).rgb)) :
+        inNormal;
 
   vec3 diffuseColor;
   vec3 specularColor;

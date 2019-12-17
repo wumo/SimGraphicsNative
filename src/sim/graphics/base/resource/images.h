@@ -198,7 +198,11 @@ private:
 class TextureImage2D: public ImageBase {
 public:
   static TextureImage2D loadFromFile(
-    Device &device, const std::string &file, bool generateMipmap = false);
+    Device &device, const std::string &file, bool generateMipmap = false,
+    vk::Format format = vk::Format::eR8G8B8A8Srgb);
+  static TextureImage2D loadFromGrayScaleFile(
+    Device &device, const std::string &file, bool generateMipmap = false,
+    vk::Format format = vk::Format::eR16Sfloat);
   static TextureImage2D loadFromBytes(
     Device &device, const unsigned char *bytes, size_t size, uint32_t texWidth,
     uint32_t texHeight, bool generateMipmap = false);

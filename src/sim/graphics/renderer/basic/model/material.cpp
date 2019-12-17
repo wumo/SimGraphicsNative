@@ -39,6 +39,12 @@ Material &Material::setEmissiveTex(const Ptr<TextureImage2D> &emissiveTex) {
   ubo.ptr->emissiveTex = _emissiveTex ? int32_t(_emissiveTex.index()) : -1;
   return *this;
 }
+const Ptr<TextureImage2D> &Material::heightTex() const { return _heightTex; }
+Material &Material::setHeightTex(const Ptr<TextureImage2D> &heightTex) {
+  _heightTex = heightTex;
+  ubo.ptr->heightTex = _heightTex ? int32_t(_heightTex.index()) : -1;
+  return *this;
+}
 const glm::vec4 &Material::colorFactor() const { return _colorFactor; }
 Material &Material::setColorFactor(const glm::vec4 &colorFactor) {
   _colorFactor = colorFactor;

@@ -329,10 +329,14 @@ PrimitiveBuilder &PrimitiveBuilder::grid(
       auto s0 = (nx + 1) * row;
       auto s1 = (nx + 1) * (row + 1);
       append(
-        _indices,
-        {s0 + column + vertexID, s1 + column + vertexID, s1 + column + vertexID,
-         s1 + column + 1 + vertexID, s0 + column + vertexID, s0 + column + 1 + vertexID,
-         s1 + column + 1 + vertexID, s0 + column + 1 + vertexID});
+        _indices, {
+                    s0 + column + vertexID,
+                    s1 + column + vertexID,
+                    s1 + column + 1 + vertexID,
+                    s0 + column + vertexID,
+                    s1 + column + 1 + vertexID,
+                    s0 + column + 1 + vertexID,
+                  });
     }
   return *this;
 }

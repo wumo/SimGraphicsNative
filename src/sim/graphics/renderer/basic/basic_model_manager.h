@@ -51,6 +51,10 @@ public:
     const std::string &imagePath, const SamplerDef &samplerDef = {},
     bool generateMipmap = true);
 
+  Ptr<TextureImage2D> newHeightTexture(
+    const std::string &imagePath, const SamplerDef &samplerDef = {},
+    bool generateMipmap = true);
+
   Ptr<Material> newMaterial(MaterialType type = MaterialType::eNone);
 
   Ptr<Mesh> newMesh(Ptr<Primitive> primitive, Ptr<Material> material);
@@ -174,8 +178,8 @@ private:
     __uniform__(cam, shader::eVertex | shader::eFragment);
     __buffer__(meshes, shader::eVertex);
     __buffer__(transforms, shader::eVertex);
-    __buffer__(material, shader::eFragment);
-    __samplers__(textures, flag{}, shader::eFragment);
+    __buffer__(material, shader::eVertex | shader::eFragment);
+    __samplers__(textures, flag{}, shader::eVertex | shader::eFragment);
     __uniform__(lighting, shader::eFragment);
     __buffer__(lights, shader::eFragment);
   } basicSetDef;

@@ -17,7 +17,9 @@ enum class MaterialType : uint32_t {
   /**diffuse coloring*/
   eNone = 0x10u,
   /**translucent color blending*/
-  eTranslucent = 0x20u
+  eTranslucent = 0x20u,
+  /**terrain */
+  eTerrain = 0x40u
 };
 
 class BasicModelManager;
@@ -34,7 +36,8 @@ class Material {
     glm::vec4 emissiveFactor{0.f, 0.f, 0.f, 0.f};
     float occlusionStrength{1.f};
     float alphaCutoff{0.f};
-    int32_t colorTex{-1}, pbrTex{-1}, normalTex{-1}, occlusionTex{-1}, emissiveTex{-1};
+    int32_t colorTex{-1}, pbrTex{-1}, normalTex{-1}, occlusionTex{-1}, emissiveTex{-1},
+      heightTex{-1};
     uint32_t type{0u};
   };
 
@@ -65,13 +68,15 @@ public:
   Material &setAlphaCutoff(float alphaCutoff);
   const glm::vec4 &emissiveFactor() const;
   Material &setEmissiveFactor(const glm::vec4 &emissiveFactor);
+  const Ptr<TextureImage2D> &heightTex() const;
+  Material &setHeightTex(const Ptr<TextureImage2D> &heightTex);
   MaterialType type() const;
 
 private:
   BasicModelManager &mm;
 
   Ptr<TextureImage2D> _colorTex{}, _pbrTex{}, _normalTex{}, _occlusionTex{},
-    _emissiveTex{};
+    _emissiveTex{}, _heightTex{};
   glm::vec4 _colorFactor{1.f};
   glm::vec4 _pbrFactor{0.f, 1.f, 0.f, 0.f};
   float _occlusionStrength{1.f};

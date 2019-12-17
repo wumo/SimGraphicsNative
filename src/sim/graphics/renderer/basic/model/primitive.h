@@ -5,7 +5,7 @@
 namespace sim::graphics::renderer::basic {
 using namespace sim::util;
 
-enum class PrimitiveTopology { Triangles, Lines, Procedural };
+enum class PrimitiveTopology { Triangles, Lines, Procedural, Terrain };
 enum class DynamicType { Static, Dynamic };
 
 class Primitive {

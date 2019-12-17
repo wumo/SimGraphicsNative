@@ -122,6 +122,7 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/renderpass/deferred_pass.cpp
   src/sim/graphics/renderer/basic/renderpass/opaque_pass.cpp
   src/sim/graphics/renderer/basic/renderpass/translucent_pass.cpp
+  src/sim/graphics/renderer/basic/renderpass/terrain_pass.cpp
   )
 
 set(defaultRendererSrc

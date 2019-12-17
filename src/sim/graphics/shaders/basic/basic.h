@@ -45,6 +45,7 @@ const uint MaterialType_Reflective = 0x4u;
 const uint MaterialType_Refractive = 0x8u;
 const uint MaterialType_None = 0x10u;
 const uint MaterialType_Translucent = 0x20u;
+const uint MaterialType_Terrain = 0x40u;
 
 // ref in shaders
 struct MaterialUBO {
@@ -53,7 +54,7 @@ struct MaterialUBO {
   vec4 emissiveFactor;
   float occlusionStrength;
   float alphaCutoff;
-  int colorTex, pbrTex, normalTex, occlusionTex, emissiveTex;
+  int colorTex, pbrTex, normalTex, occlusionTex, emissiveTex, heightTex;
   uint type;
 };
 

@@ -27,6 +27,7 @@ protected:
   void createOpaquePipeline(const vk::PipelineLayout &pipelineLayout);
   void createDeferredPipeline(const vk::PipelineLayout &pipelineLayout);
   void createTranslucentPipeline(const vk::PipelineLayout &pipelineLayout);
+  void createTerrainPipeline(const vk::PipelineLayout &pipelineLayout);
 
   void recreateResources();
 
@@ -59,10 +60,12 @@ protected:
   } Subpasses{};
 
   struct {
-    vk::UniquePipeline opaqueTri, opaqueLine, opaqueTriWireframe, deferred, deferredIBL,
-      transTri, transLine;
+    vk::UniquePipeline opaqueTri, opaqueLine, opaqueTriWireframe;
+    vk::UniquePipeline deferred, deferredIBL;
+    vk::UniquePipeline transTri, transLine;
+    vk::UniquePipeline terrain, terrainWireframe;
   } Pipelines;
-  
+
   struct {
     uPtr<StorageAttachmentImage> offscreenImage;
     uPtr<ColorInputAttachmentImage> position, normal, albedo, pbr, emissive, translucent;

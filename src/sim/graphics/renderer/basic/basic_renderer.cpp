@@ -133,6 +133,7 @@ void BasicRenderer::createPipelines() {
   createOpaquePipeline(pipelineLayout);
   createDeferredPipeline(pipelineLayout);
   createTranslucentPipeline(pipelineLayout);
+  createTerrainPipeline(pipelineLayout);
 }
 
 void BasicRenderer::recreateResources() {

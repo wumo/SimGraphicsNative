@@ -14,6 +14,8 @@ struct ModelConfig {
   /**max number of static mesh instances*/
   uint32_t maxNumMeshes{100'0000}, maxNumLineMeshes{1'000},
     maxNumTransparentMeshes{1'000}, maxNumTransparentLineMeshes{1'000};
+  /**max number of terrain mesh instances*/
+  uint32_t maxNumTerranMeshes{1'000};
   /**max number of texture including 2d and cube map.*/
   uint32_t maxNumTexture{1000};
   /**max number of lights*/

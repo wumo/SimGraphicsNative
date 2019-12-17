@@ -9,11 +9,13 @@ public:
     OpaqueTriangles = 0u,
     OpaqueLines = 1u,
     TransparentTriangles = 2u,
-    TransparentLines = 3u
+    TransparentLines = 3u,
+    Terrain = 4u
   };
   DrawQueue(
     const VmaAllocator &allocator, uint32_t maxNumMeshes, uint32_t maxNumLineMeshes,
-    uint32_t maxNumTransparentMeshes, uint32_t maxNumTransparentLineMeshes);
+    uint32_t maxNumTransparentMeshes, uint32_t maxNumTransparentLineMeshes,
+    uint32_t maxNumTerrainMeshes);
 
   auto allocate(const Ptr<Primitive> &primitive, const Ptr<Material> &material)
     -> Allocation<vk::DrawIndexedIndirectCommand>;
@@ -27,6 +29,6 @@ private:
   static uint32_t index(Ptr<Primitive> primitive, Ptr<Material> material);
 
 private:
-  std::array<uPtr<HostIndirectUBOBuffer>, 4> queues;
+  std::array<uPtr<HostIndirectUBOBuffer>, 5> queues;
 };
 }

@@ -9,7 +9,7 @@ using namespace sim::graphics::renderer::basic;
 
 auto main(int argc, const char **argv) -> int {
 
-  BasicRenderer app{{}, {}, {true, false}};
+  BasicRenderer app{{}, {}, {}, {true, false}};
 
   auto &mm = app.modelManager();
 

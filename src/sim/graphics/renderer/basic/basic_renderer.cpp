@@ -11,8 +11,9 @@ using bindpoint = vk::PipelineBindPoint;
 using descriptor = vk::DescriptorType;
 
 BasicRenderer::BasicRenderer(
-  const Config &config, const ModelConfig &modelConfig, const DebugConfig &debugConfig)
-  : VulkanBase{config, {}, debugConfig},
+  const Config &config, const ModelConfig &modelConfig,
+  const FeatureConfig &featureConfig, const DebugConfig &debugConfig)
+  : VulkanBase{config, featureConfig, debugConfig},
     modelConfig{modelConfig},
     vkDevice{device->getDevice()} {
   sampleCount = static_cast<vk::SampleCountFlagBits>(config.sampleCount);

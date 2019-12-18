@@ -1,6 +1,9 @@
 #include "../basic_renderer.h"
 #include "sim/graphics/compiledShaders/basic/terrain/terrain_vert.h"
 #include "sim/graphics/compiledShaders/basic/gbuffer_frag.h"
+#include "sim/graphics/compiledShaders/basic/terrain/terrain_tess_vert.h"
+#include "sim/graphics/compiledShaders/basic/terrain/terrain_tesc.h"
+#include "sim/graphics/compiledShaders/basic/terrain/terrain_tese.h"
 
 namespace sim::graphics::renderer::basic {
 using shader = vk::ShaderStageFlagBits;
@@ -37,18 +40,41 @@ void BasicRenderer::createTerrainPipeline(
 
   SpecializationMaker sp;
   auto spInfo = sp.entry(modelConfig.maxNumTexture).create();
-  pipelineMaker
-    .shader(shader::eVertex, terrain_vert, __ArraySize__(terrain_vert), &spInfo)
-    .shader(shader::eFragment, gbuffer_frag, __ArraySize__(gbuffer_frag), &spInfo);
-  Pipelines.terrain =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-  debugMarker.name(*Pipelines.terrain, "terrain pipeline");
+  if(featureConfig & FeatureConfig::Tesselation) {
+    pipelineMaker.topology(vk::PrimitiveTopology::ePatchList).tesselationState(3);
+    pipelineMaker
+      .shader(shader::eVertex, terrain_tess_vert, __ArraySize__(terrain_tess_vert))
+      .shader(
+        shader::eTessellationControl, terrain_tesc, __ArraySize__(terrain_tesc), &spInfo)
+      .shader(
+        shader::eTessellationEvaluation, terrain_tese, __ArraySize__(terrain_tese),
+        &spInfo)
+      .shader(shader::eFragment, gbuffer_frag, __ArraySize__(gbuffer_frag), &spInfo);
 
-  pipelineMaker.polygonMode(vk::PolygonMode::eLine);
+    Pipelines.terrainTess =
+      pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
+    debugMarker.name(*Pipelines.terrainTess, "terrain tessellation pipeline");
 
-  Pipelines.terrainWireframe =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
-  debugMarker.name(*Pipelines.terrainWireframe, "opaque wireframe pipeline");
+    pipelineMaker.polygonMode(vk::PolygonMode::eLine);
+
+    Pipelines.terrainTessWireframe =
+      pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
+    debugMarker.name(
+      *Pipelines.terrainTessWireframe, "terrain tessellation wireframe pipeline");
+  } else {
+    pipelineMaker
+      .shader(shader::eVertex, terrain_vert, __ArraySize__(terrain_vert), &spInfo)
+      .shader(shader::eFragment, gbuffer_frag, __ArraySize__(gbuffer_frag), &spInfo);
+    Pipelines.terrain =
+      pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
+    debugMarker.name(*Pipelines.terrain, "terrain pipeline");
+
+    pipelineMaker.polygonMode(vk::PolygonMode::eLine);
+
+    Pipelines.terrainWireframe =
+      pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
+    debugMarker.name(*Pipelines.terrainWireframe, "terrain wireframe pipeline");
+  }
 }
 
 }

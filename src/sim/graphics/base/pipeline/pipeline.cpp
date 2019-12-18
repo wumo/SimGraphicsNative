@@ -64,9 +64,8 @@ GraphicsPipelineMaker::GraphicsPipelineMaker(
 }
 
 auto GraphicsPipelineMaker::createUnique(
-  const vk::Device &device, const vk::PipelineCache &pipelineCache,
-  const vk::PipelineLayout &pipelineLayout, const vk::RenderPass &renderPass)
-  -> vk::UniquePipeline {
+  const vk::PipelineCache &pipelineCache, const vk::PipelineLayout &pipelineLayout,
+  const vk::RenderPass &renderPass) -> vk::UniquePipeline {
   _colorBlendState.attachmentCount = uint32_t(colorBlendAttachments.size());
   _colorBlendState.pAttachments = colorBlendAttachments.data();
 
@@ -94,6 +93,7 @@ auto GraphicsPipelineMaker::createUnique(
   pipelineInfo.pDepthStencilState = &_depthStencilState;
   pipelineInfo.pColorBlendState = &_colorBlendState;
   pipelineInfo.pDynamicState = &dynamicState;
+  pipelineInfo.pTessellationState = &_tesselationState;
   pipelineInfo.layout = pipelineLayout;
   pipelineInfo.renderPass = renderPass;
   pipelineInfo.subpass = _subpass;
@@ -463,6 +463,12 @@ auto GraphicsPipelineMaker::maxDepthBounds(const float &value)
 auto GraphicsPipelineMaker::dynamicState(const vk::DynamicState &value)
   -> GraphicsPipelineMaker & {
   _dynamicState.push_back(value);
+  return *this;
+}
+
+auto GraphicsPipelineMaker::tesselationState(uint32_t patchControlPoints)
+  -> GraphicsPipelineMaker & {
+  _tesselationState.patchControlPoints = patchControlPoints;
   return *this;
 }
 

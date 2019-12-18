@@ -14,7 +14,7 @@ auto main(int argc, const char **argv) -> int {
   Config config{};
   config.sampleCount = 4;
   config.vsync = false;
-  BasicRenderer app{config, {}, {true, false}};
+  BasicRenderer app{config, {}, {}, {true, false}};
 
   auto &mm = app.modelManager();
 

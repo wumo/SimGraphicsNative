@@ -37,7 +37,8 @@ struct LightInstanceUBO {
 
 struct PrimitiveUBO {
   uvec2 index, position, normal, uv, joint0, weight0;
-  vec3 min, max;
+  vec4 min, max;
+  float tesselationLevel;
   uint topology;
   uint type;
 };
@@ -68,6 +69,24 @@ struct MaterialUBO {
 #define PRECISION 0.000001
 bool isZero(float val) {
   return step(-PRECISION, val) * (1.0 - step(PRECISION, val)) == 1.0;
+}
+
+struct PatchData {
+  mat4 model;
+  float minHeight, maxHeight;
+  uint materialID, heightTex, normalTex;
+};
+
+vec2 BaryLerp(vec2 a, vec2 b, vec2 c, vec3 barycentrics) {
+  return a * barycentrics.x + b * barycentrics.y + c * barycentrics.z;
+}
+
+vec3 BaryLerp(vec3 a, vec3 b, vec3 c, vec3 barycentrics) {
+  return a * barycentrics.x + b * barycentrics.y + c * barycentrics.z;
+}
+
+vec4 BaryLerp(vec4 a, vec4 b, vec4 c, vec3 barycentrics) {
+  return a * barycentrics.x + b * barycentrics.y + c * barycentrics.z;
 }
 
 #endif //SIMGRAPHICSNATIVE_DIRECT_H

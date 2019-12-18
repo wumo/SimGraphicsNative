@@ -14,7 +14,9 @@ auto main(int argc, const char **argv) -> int {
   Config config{};
   config.sampleCount = 4;
   config.vsync = false;
-  BasicRenderer app{config, {}, {true, false}};
+    FeatureConfig featureConfig{FeatureConfig::Value::Tesselation};
+//  FeatureConfig featureConfig{};
+  BasicRenderer app{config, {}, featureConfig, {true, false}};
 
   auto &mm = app.modelManager();
 
@@ -38,7 +40,7 @@ auto main(int argc, const char **argv) -> int {
   auto &tm = mm.terrrainManager();
   tm.loadSingle(
     "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
-    {{-50, -10, 50}, {50, 10, -50}}, 1000, 1000, 538.33f / 2625);
+    {{-50, -10, 50}, {50, 10, -50}}, 10, 10, 538.33f / 2625);
 
   auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   mm.useEnvironmentMap(envCube);

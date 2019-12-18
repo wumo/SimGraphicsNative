@@ -42,14 +42,14 @@ void BasicRenderer::createTranslucentPipeline(
     shader::eFragment, translucent_frag, __ArraySize__(translucent_frag));
 
   Pipelines.transTri =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.transTri, "translucent tri pipeline");
 
   pipelineMaker.topology(vk::PrimitiveTopology::eLineList)
     .cullMode(vk::CullModeFlagBits::eNone)
     .lineWidth(1.f);
   Pipelines.transLine =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.transLine, "translucent line pipeline");
 }
 }

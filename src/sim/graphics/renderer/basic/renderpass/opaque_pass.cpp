@@ -41,13 +41,13 @@ void BasicRenderer::createOpaquePipeline(
   pipelineMaker.shader(
     shader::eFragment, gbuffer_frag, __ArraySize__(gbuffer_frag), &spInfo);
   Pipelines.opaqueTri =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.opaqueTri, "opaque triangle pipeline");
 
   pipelineMaker.polygonMode(vk::PolygonMode::eLine);
 
   Pipelines.opaqueTriWireframe =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.opaqueTriWireframe, "opaque wireframe pipeline");
 
   pipelineMaker.topology(vk::PrimitiveTopology::eLineList)
@@ -55,7 +55,7 @@ void BasicRenderer::createOpaquePipeline(
     .cullMode(vk::CullModeFlagBits::eNone)
     .lineWidth(1.f);
   Pipelines.opaqueLine =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.opaqueLine, "opaque line pipeline");
 }
 

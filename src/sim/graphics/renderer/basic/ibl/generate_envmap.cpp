@@ -176,8 +176,7 @@ void EnvMapGenerator::generateEnvMap(
           shader::eFragment, prefilterenvmap_frag, __ArraySize__(prefilterenvmap_frag));
         break;
     }
-    pipeline = pipelineMaker.createUnique(
-      device.getDevice(), nullptr, *pipelineLayout, *renderPass);
+    pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout, *renderPass);
   }
 
   // Render cubemap

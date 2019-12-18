@@ -6,19 +6,25 @@
 namespace sim::graphics::renderer::basic {
 using namespace sim::util;
 
-enum class PrimitiveTopology : uint32_t { Triangles, Lines, Procedural, Terrain };
-enum class DynamicType : uint32_t { Static, Dynamic };
+enum class PrimitiveTopology : uint32_t {
+  Triangles = 1u,
+  Lines = 2u,
+  Procedural = 3u,
+  Patches = 4u
+};
+enum class DynamicType : uint32_t { Static = 1u, Dynamic = 2u };
 
 class BasicModelManager;
 
 class Primitive {
   friend class MeshInstance;
-  
+
 public:
   //ref in shaders
   struct alignas(sizeof(glm::vec4)) UBO {
     Range _index, _position, _normal, _uv, _joint0, _weight0;
     AABB _aabb;
+    float _tesselationLevel{64.0f};
     PrimitiveTopology _topology{PrimitiveTopology::Triangles};
     DynamicType _type{DynamicType::Static};
   };
@@ -43,6 +49,8 @@ public:
   const Range &weight0() const;
   const AABB &aabb() const;
   void setAabb(const AABB &aabb);
+  float tesselationLevel() const;
+  void setTesselationLevel(float tesselationLevel);
   PrimitiveTopology topology() const;
 
 private:
@@ -50,6 +58,7 @@ private:
 
   Range _index, _position, _normal, _uv, _joint0, _weight0;
   AABB _aabb;
+  float _tesselationLevel{64.0f};
   PrimitiveTopology _topology{PrimitiveTopology::Triangles};
   DynamicType _type{DynamicType::Static};
 

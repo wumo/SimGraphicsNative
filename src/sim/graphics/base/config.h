@@ -23,7 +23,8 @@ public:
   enum Value : uint32_t {
     DedicatedAllocation = 0b1u,
     DescriptorIndexing = 0b11u,
-    RayTracing = 0b111u
+    RayTracing = 0b111u,
+    Tesselation = 0b1000u
   };
 
   FeatureConfig() = default;

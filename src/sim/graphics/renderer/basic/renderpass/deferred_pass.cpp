@@ -30,7 +30,7 @@ void BasicRenderer::createDeferredPipeline(
     pipelineMaker.shader(shader::eFragment, deferred_frag, __ArraySize__(deferred_frag));
   }
   Pipelines.deferred =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.deferred, "deferred pipeline");
 
   pipelineMaker.clearShaders();
@@ -43,7 +43,7 @@ void BasicRenderer::createDeferredPipeline(
     pipelineMaker.shader(
       shader::eFragment, deferred_ibl_frag, __ArraySize__(deferred_ibl_frag));
   Pipelines.deferredIBL =
-    pipelineMaker.createUnique(vkDevice, *pipelineCache, pipelineLayout, *renderPass);
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.deferredIBL, "deferred IBL pipeline");
 }
 }

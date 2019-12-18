@@ -3,7 +3,7 @@
 #include "sim/graphics/base/glm_common.h"
 
 namespace sim::graphics::renderer::basic {
-struct AABB {
+struct alignas(sizeof(glm::vec4)) AABB {
   glm::vec3 min{std::numeric_limits<float>::infinity()};
   alignas(sizeof(glm::vec4)) glm::vec3 max{-std::numeric_limits<float>::infinity()};
 
@@ -22,7 +22,7 @@ struct AABB {
   glm::vec3 center() const;
 
   glm::vec3 halfRange() const;
-  
+
   glm::vec3 range() const;
 
   friend std::ostream &operator<<(std::ostream &os, const AABB &aabb);

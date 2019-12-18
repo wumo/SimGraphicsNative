@@ -12,7 +12,7 @@ class BasicRenderer: public VulkanBase {
 public:
   explicit BasicRenderer(
     const Config &config = {}, const ModelConfig &modelConfig = {},
-    const DebugConfig &debugConfig = {});
+    const FeatureConfig &featureConfig = {}, const DebugConfig &debugConfig = {});
 
   ~BasicRenderer() override = default;
 
@@ -63,7 +63,7 @@ protected:
     vk::UniquePipeline opaqueTri, opaqueLine, opaqueTriWireframe;
     vk::UniquePipeline deferred, deferredIBL;
     vk::UniquePipeline transTri, transLine;
-    vk::UniquePipeline terrain, terrainWireframe;
+    vk::UniquePipeline terrain, terrainWireframe, terrainTess, terrainTessWireframe;
   } Pipelines;
 
   struct {

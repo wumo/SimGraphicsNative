@@ -78,9 +78,8 @@ public:
     glm::vec3 color = {1.f, 1.f, 1.f}, glm::vec3 location = {0.f, 1.f, 0.f});
 
   PerspectiveCamera &camera();
-  TerrainManager& terrrainManager();
-  
-  
+  TerrainManager &terrrainManager();
+
   Ptr<Primitive> primitive(uint32_t index);
   Ptr<Material> material(uint32_t index);
   Ptr<Model> model(uint32_t index);
@@ -183,12 +182,18 @@ private:
   uPtr<TerrainManager> terrainMgr;
 
   struct BasicSetDef: DescriptorSetDef {
-    __uniform__(cam, shader::eVertex | shader::eFragment);
-    __buffer__(primitives, shader::eVertex);
-    __buffer__(meshInstances, shader::eVertex);
-    __buffer__(transforms, shader::eVertex);
-    __buffer__(material, shader::eVertex | shader::eFragment);
-    __samplers__(textures, flag{}, shader::eVertex | shader::eFragment);
+    __uniform__(
+      cam, shader::eVertex | shader::eFragment | shader::eTessellationControl |
+             shader::eTessellationEvaluation);
+    __buffer__(primitives, shader::eVertex | shader::eTessellationControl);
+    __buffer__(meshInstances, shader::eVertex | shader::eTessellationControl);
+    __buffer__(transforms, shader::eVertex | shader::eTessellationControl);
+    __buffer__(
+      material, shader::eVertex | shader::eFragment | shader::eTessellationControl);
+    __samplers__(
+      textures, flag{},
+      shader::eVertex | shader::eFragment | shader::eTessellationControl |
+        shader::eTessellationEvaluation);
     __uniform__(lighting, shader::eFragment);
     __buffer__(lights, shader::eFragment);
   } basicSetDef;

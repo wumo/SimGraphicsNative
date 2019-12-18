@@ -32,7 +32,7 @@ uint32_t DrawQueue::index(Ptr<Primitive> primitive, Ptr<Material> material) {
   switch(primitive->topology()) {
     case PrimitiveTopology::Triangles: base += 0u; break;
     case PrimitiveTopology::Lines: base += 1u; break;
-    case PrimitiveTopology::Terrain: base = 4u; break;
+    case PrimitiveTopology::Patches: base = 4u; break;
     case PrimitiveTopology::Procedural: error("Not supported"); break;
   }
   return base;

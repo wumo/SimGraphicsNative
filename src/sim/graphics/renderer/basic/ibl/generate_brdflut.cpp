@@ -94,8 +94,7 @@ uPtr<TextureImage2D> EnvMapGenerator::generateBRDFLUT() {
 
     pipelineMaker.shader(shader::eVertex, genbrdflut_vert, __ArraySize__(genbrdflut_vert))
       .shader(shader::eFragment, genbrdflut_frag, __ArraySize__(genbrdflut_frag));
-    pipeline = pipelineMaker.createUnique(
-      device.getDevice(), nullptr, *pipelineLayout, *renderPass);
+    pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout, *renderPass);
   }
 
   // Render

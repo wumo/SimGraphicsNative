@@ -13,7 +13,8 @@ public:
   void loadSingle(
     const std::string &terrainFolder, const std::string &heightMap,
     const std::string &normalMap, const std::string &albedoMap, const AABB &aabb,
-    uint32_t numVertexX, uint32_t numVertexY, float seaLevelRatio);
+    uint32_t numVertexX, uint32_t numVertexY, float seaLevelRatio,
+    float tesselationLevel = 64.0f);
 
 private:
   BasicModelManager &mm;

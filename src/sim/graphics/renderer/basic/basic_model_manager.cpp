@@ -367,10 +367,17 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   debugMarker.end(cb);
 
   debugMarker.begin(cb, "Subpass terrain");
-  if(RenderPass.wireframe)
-    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrainWireframe);
-  else
-    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrain);
+  if(renderer.featureConfig & FeatureConfig::Tesselation) {
+    if(RenderPass.wireframe)
+      cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrainTessWireframe);
+    else
+      cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrainTess);
+  } else {
+    if(RenderPass.wireframe)
+      cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrainWireframe);
+    else
+      cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrain);
+  }
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::Terrain), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::Terrain), stride);

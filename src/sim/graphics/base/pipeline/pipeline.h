@@ -73,8 +73,8 @@ public:
 
   GraphicsPipelineMaker(const vk::Device &device, uint32_t width, uint32_t height);
   vk::UniquePipeline createUnique(
-    const vk::Device &device, const vk::PipelineCache &pipelineCache,
-    const vk::PipelineLayout &pipelineLayout, const vk::RenderPass &renderPass);
+    const vk::PipelineCache &pipelineCache, const vk::PipelineLayout &pipelineLayout,
+    const vk::RenderPass &renderPass);
   GraphicsPipelineMaker &clearShaders();
   GraphicsPipelineMaker &shader(
     const vk::ShaderStageFlagBits &stageFlagBits, const std::string &filename,
@@ -149,6 +149,8 @@ public:
 
   GraphicsPipelineMaker &dynamicState(const vk::DynamicState &value);
 
+  GraphicsPipelineMaker &tesselationState(uint32_t patchControlPoints);
+
   GraphicsPipelineMaker &clearColorBlendAttachments();
   GraphicsPipelineMaker &clearDynamicStates();
   GraphicsPipelineMaker &clearVertexAttributeDescriptions();
@@ -163,6 +165,7 @@ private:
   vk::PipelineMultisampleStateCreateInfo _multisampleState;
   vk::PipelineDepthStencilStateCreateInfo _depthStencilState;
   vk::PipelineColorBlendStateCreateInfo _colorBlendState;
+  vk::PipelineTessellationStateCreateInfo _tesselationState;
   std::vector<vk::PipelineColorBlendAttachmentState> colorBlendAttachments;
   std::vector<vk::PipelineShaderStageCreateInfo> _modules;
   std::vector<vk::VertexInputAttributeDescription> _vertexAttributeDescriptions;

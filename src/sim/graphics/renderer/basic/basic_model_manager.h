@@ -1,22 +1,23 @@
 #pragma once
 #include <functional>
 #include <unordered_map>
-#include <sim/graphics/renderer/basic/model/model_instance.h>
-
 #include "sim/graphics/base/pipeline/pipeline.h"
+
 #include "sim/graphics/base/pipeline/shader.h"
 #include "sim/graphics/base/pipeline/sampler.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/base/resource/images.h"
 #include "sim/graphics/base/resource/buffers.h"
 #include "sim/graphics/base/debug_marker.h"
+#include "model/model_buffer.h"
 #include "model_config.h"
 #include "model/basic_model.h"
 #include "model/draw_queue.h"
-#include "sim/graphics/renderer/basic/model/model_buffer.h"
+#include "model/light.h"
+#include "model/model_instance.h"
 #include "builder/primitive_builder.h"
 #include "perspective_camera.h"
-#include "sim/graphics/renderer/basic/model/light.h"
+#include "terrain/terrain_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -77,7 +78,9 @@ public:
     glm::vec3 color = {1.f, 1.f, 1.f}, glm::vec3 location = {0.f, 1.f, 0.f});
 
   PerspectiveCamera &camera();
-
+  TerrainManager& terrrainManager();
+  
+  
   Ptr<Primitive> primitive(uint32_t index);
   Ptr<Material> material(uint32_t index);
   Ptr<Model> model(uint32_t index);
@@ -176,6 +179,8 @@ private:
     bool wireframe{false};
     std::vector<vk::UniquePipeline> computePipes;
   } RenderPass;
+
+  uPtr<TerrainManager> terrainMgr;
 
   struct BasicSetDef: DescriptorSetDef {
     __uniform__(cam, shader::eVertex | shader::eFragment);

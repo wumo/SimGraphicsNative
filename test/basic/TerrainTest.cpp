@@ -31,48 +31,14 @@ auto main(int argc, const char **argv) -> int {
   auto scale = 1 / std::max(std::max(range.x, range.y), range.z);
   auto center = aabb.center();
   auto halfRange = aabb.halfRange();
-  Transform t{{-center * scale + vec3{0, 1.8, 0}}, glm::vec3{scale}};
+  Transform t{{-center * scale}, glm::vec3{scale}};
   //  t.translation = -center;
   auto instance = mm.newModelInstance(model, t);
 
-  auto horizonPrimitive = mm.newPrimitive(
-    PrimitiveBuilder(mm).box({0, -0.68, 0}, {0, 0, 50}, {50, 0, 0}, 2).newPrimitive());
-
-  auto horizonMaterial = mm.newMaterial(MaterialType::eTranslucent);
-  horizonMaterial->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});
-  auto horizonMesh = mm.newMesh(horizonPrimitive, horizonMaterial);
-  auto horizonNode = mm.newNode();
-  Node::addMesh(horizonNode, horizonMesh);
-  auto horizonModel = mm.newModel({horizonNode});
-  auto horizon = mm.newModelInstance(horizonModel);
-
-  auto gridPrimitive =
-    mm.newPrimitive(PrimitiveBuilder(mm)
-                      .grid(1000, 1000, {0.f, 0.f, 0.f}, {0, 0, 1}, {1, 0, 0}, 0.1, 0.1)
-                      .newPrimitive(PrimitiveTopology::Terrain));
-  gridPrimitive->setAabb({{0, -1, 0}, {0, 10, 0}});
-
-  auto gridMaterial = mm.newMaterial(MaterialType::eNone);
-
-  gridMaterial->setColorFactor({1.f, 1.f, 1.f, 1.f});
-  gridMaterial->setPbrFactor({0, 1, 0, 0});
-  auto gridMesh = mm.newMesh(gridPrimitive, gridMaterial);
-  auto gridNode = mm.newNode();
-  Node::addMesh(gridNode, gridMesh);
-  auto gridModel = mm.newModel({gridNode});
-  auto grid = mm.newModelInstance(gridModel);
-
-  //  auto albedoTex = mm.newTexture("assets/private/terrain/CoastalMountains/Albedo.png");
-  //  auto normalTex = mm.newTexture("assets/private/terrain/CoastalMountains/Normal.png");
-  //  auto heightTex =
-  //    mm.newGrayTexture("assets/private/terrain/CoastalMountains/Height.png");
-  auto albedoTex = mm.newTexture("assets/private/terrain/TreasureIsland/Albedo.png");
-  auto normalTex = mm.newTexture("assets/private/terrain/TreasureIsland/Normal.png");
-  auto heightTex = mm.newGrayTexture("assets/private/terrain/TreasureIsland/Height.png");
-
-  gridMaterial->setColorTex(albedoTex);
-  gridMaterial->setNormalTex(normalTex);
-  gridMaterial->setHeightTex(heightTex);
+  auto &tm = mm.terrrainManager();
+  tm.loadSingle(
+    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
+    {{-50, -10, 50}, {50, 10, -50}}, 1000, 1000, 538.33f / 2625);
 
   auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   mm.useEnvironmentMap(envCube);

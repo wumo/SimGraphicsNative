@@ -37,7 +37,7 @@ void main() {
   PrimitiveUBO primitive = primitives[mesh.primitive];
   mat4 model = transforms[mesh.instance] * transforms[mesh.node];
   MaterialUBO material = materials[mesh.material];
-  float range = primitive.max.y - primitive.min.y;
+  float range = abs(primitive.max.y - primitive.min.y);
   float height = primitive.min.y + texture(textures[material.heightTex], inUV0).r * range;
   vec3 normal =
     material.normalTex >= 0 ? texture(textures[material.normalTex], inUV0).rgb : inNormal;

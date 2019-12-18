@@ -19,9 +19,11 @@ struct AABB {
 
   void merge(AABB other);
 
-  glm::vec3 center();
+  glm::vec3 center() const;
 
-  glm::vec3 halfRange();
+  glm::vec3 halfRange() const;
+  
+  glm::vec3 range() const;
 
   friend std::ostream &operator<<(std::ostream &os, const AABB &aabb);
 };

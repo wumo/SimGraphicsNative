@@ -36,9 +36,10 @@ void AABB::merge(AABB other) {
   max = glm::max(max, other.max);
 }
 
-glm::vec3 AABB::center() { return (min + max) / 2.f; }
+glm::vec3 AABB::center() const { return (min + max) / 2.f; }
 
-glm::vec3 AABB::halfRange() { return (max - min) / 2.f; }
+glm::vec3 AABB::halfRange() const { return glm::abs(max - min) / 2.f; }
+glm::vec3 AABB::range() const { return glm::abs(max - min); }
 
 std::ostream &operator<<(std::ostream &os, const AABB &aabb) {
   os << "min: " << glm::to_string(aabb.min) << " max: " << glm::to_string(aabb.max);

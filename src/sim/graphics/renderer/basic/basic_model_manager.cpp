@@ -124,6 +124,8 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     basicSetDef.update(Sets.basicSet);
   }
 
+  terrainMgr = u<TerrainManager>(*this);
+
   {
     debugMarker.name(Buffer.position->buffer(), "position buffer");
     debugMarker.name(Buffer.normal->buffer(), "normal buffer");
@@ -174,6 +176,8 @@ void BasicModelManager::resize(vk::Extent2D extent) {
 }
 
 PerspectiveCamera &BasicModelManager::camera() { return Scene.camera; }
+
+TerrainManager &BasicModelManager::terrrainManager() { return *terrainMgr; }
 
 Ptr<Primitive> BasicModelManager::newPrimitive(
   const std::vector<Vertex::Position> &positions,

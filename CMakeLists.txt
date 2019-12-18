@@ -106,6 +106,9 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/model/vertex.cpp
   src/sim/graphics/renderer/basic/model/vertex.h
   
+  src/sim/graphics/renderer/basic/terrain/terrain_manager.cpp
+  src/sim/graphics/renderer/basic/terrain/terrain_manager.h
+  
   src/sim/graphics/renderer/basic/loader/gltf_loader.cpp
   src/sim/graphics/renderer/basic/loader/gltf_loader.h
   
@@ -118,7 +121,6 @@ set(basicRendererSrc
   
   src/sim/graphics/renderer/basic/renderpass/infinite_plane.cpp
   src/sim/graphics/renderer/basic/renderpass/infinite_plane.h
-  
   src/sim/graphics/renderer/basic/renderpass/deferred_pass.cpp
   src/sim/graphics/renderer/basic/renderpass/opaque_pass.cpp
   src/sim/graphics/renderer/basic/renderpass/translucent_pass.cpp

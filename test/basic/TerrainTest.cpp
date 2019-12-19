@@ -40,7 +40,7 @@ auto main(int argc, const char **argv) -> int {
   auto &tm = mm.terrrainManager();
   tm.loadSingle(
     "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
-    {{-50, -10, 50}, {50, 10, -50}}, 10, 10, 538.33f / 2625);
+    {{-50, -10, 50}, {50, 10, -50}}, 10, 10, 538.33f / 2625,16.f);
 
   auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   mm.useEnvironmentMap(envCube);

@@ -194,7 +194,7 @@ void SkyModel::Precompute(
   const SkyModel::mat3 &luminance_from_radiance, bool blend,
   unsigned int num_scattering_orders) {
 
-  computeTransmittance(*transmittance_texture);
+  computeTransmittance(*transmittance_texture_);
   computeDirectIrradiance(blend, delta_irradiance_texture, *irradiance_texture_);
   computeSingleScattering();
   computeScatteringDensity();

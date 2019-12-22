@@ -57,7 +57,7 @@ void SkyModel::computeIndirectIrradiance() {
   auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
 
   // Descriptor sets
-  ComputeTransmittanceDescriptorDef setDef;
+  ComputeIndirectIrradianceDescriptorDef setDef;
   setDef.init(this->device.getDevice());
 
   auto pipelineLayout = PipelineLayoutMaker()

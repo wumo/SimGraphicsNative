@@ -57,7 +57,7 @@ void SkyModel::computeMultipleScattering() {
   auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
 
   // Descriptor sets
-  ComputeTransmittanceDescriptorDef setDef;
+  ComputeMultipleScatteringDescriptorDef setDef;
   setDef.init(this->device.getDevice());
 
   auto pipelineLayout = PipelineLayoutMaker()

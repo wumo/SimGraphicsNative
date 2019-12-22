@@ -48,16 +48,16 @@ public:
    */
   explicit Material(BasicModelManager &mm, MaterialType type);
 
-  const Ptr<TextureImage2D> &colorTex() const;
-  Material &setColorTex(const Ptr<TextureImage2D> &colorTex);
-  const Ptr<TextureImage2D> &pbrTex() const;
-  Material &setPbrTex(const Ptr<TextureImage2D> &pbrTex);
-  const Ptr<TextureImage2D> &normalTex() const;
-  Material &setNormalTex(const Ptr<TextureImage2D> &normalTex);
-  const Ptr<TextureImage2D> &occlusionTex() const;
-  Material &setOcclusionTex(const Ptr<TextureImage2D> &occlusionTex);
-  const Ptr<TextureImage2D> &emissiveTex() const;
-  Material &setEmissiveTex(const Ptr<TextureImage2D> &emissiveTex);
+  const Ptr<Texture2D> &colorTex() const;
+  Material &setColorTex(const Ptr<Texture2D> &colorTex);
+  const Ptr<Texture2D> &pbrTex() const;
+  Material &setPbrTex(const Ptr<Texture2D> &pbrTex);
+  const Ptr<Texture2D> &normalTex() const;
+  Material &setNormalTex(const Ptr<Texture2D> &normalTex);
+  const Ptr<Texture2D> &occlusionTex() const;
+  Material &setOcclusionTex(const Ptr<Texture2D> &occlusionTex);
+  const Ptr<Texture2D> &emissiveTex() const;
+  Material &setEmissiveTex(const Ptr<Texture2D> &emissiveTex);
   const glm::vec4 &colorFactor() const;
   Material &setColorFactor(const glm::vec4 &colorFactor);
   const glm::vec4 &pbrFactor() const;
@@ -68,14 +68,14 @@ public:
   Material &setAlphaCutoff(float alphaCutoff);
   const glm::vec4 &emissiveFactor() const;
   Material &setEmissiveFactor(const glm::vec4 &emissiveFactor);
-  const Ptr<TextureImage2D> &heightTex() const;
-  Material &setHeightTex(const Ptr<TextureImage2D> &heightTex);
+  const Ptr<Texture2D> &heightTex() const;
+  Material &setHeightTex(const Ptr<Texture2D> &heightTex);
   MaterialType type() const;
 
 private:
   BasicModelManager &mm;
 
-  Ptr<TextureImage2D> _colorTex{}, _pbrTex{}, _normalTex{}, _occlusionTex{},
+  Ptr<Texture2D> _colorTex{}, _pbrTex{}, _normalTex{}, _occlusionTex{},
     _emissiveTex{}, _heightTex{};
   glm::vec4 _colorFactor{1.f};
   glm::vec4 _pbrFactor{0.f, 1.f, 0.f, 0.f};

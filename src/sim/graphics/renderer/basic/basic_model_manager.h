@@ -40,11 +40,11 @@ public:
   Ptr<Primitive> newPrimitive(const PrimitiveBuilder &primitiveBuilder);
   std::vector<Ptr<Primitive>> newPrimitives(const PrimitiveBuilder &primitiveBuilder);
 
-  Ptr<TextureImage2D> newTexture(
+  Ptr<Texture2D> newTexture(
     const std::string &imagePath, const SamplerDef &samplerDef = {},
     bool generateMipmap = true);
 
-  Ptr<TextureImage2D> newTexture(
+  Ptr<Texture2D> newTexture(
     const unsigned char *bytes, size_t size, uint32_t width, uint32_t height,
     const SamplerDef &samplerDef = {}, bool generateMipmap = true);
 
@@ -52,7 +52,7 @@ public:
     const std::string &imagePath, const SamplerDef &samplerDef = {},
     bool generateMipmap = true);
 
-  Ptr<TextureImage2D> newGrayTexture(
+  Ptr<Texture2D> newGrayTexture(
     const std::string &imagePath, const SamplerDef &samplerDef = {},
     bool generateMipmap = true);
 
@@ -160,11 +160,11 @@ private:
 
   struct {
     std::vector<vk::DescriptorImageInfo> sampler2Ds;
-    std::vector<TextureImage2D> textures;
+    std::vector<Texture2D> textures;
     std::vector<TextureImageCube> cubeTextures;
     uint32_t lastImagesCount{0};
 
-    uPtr<TextureImage2D> brdfLUT;
+    uPtr<Texture2D> brdfLUT;
     uPtr<TextureImageCube> irradiance, preFiltered;
     bool useEnvironmentMap{false};
   } Image;

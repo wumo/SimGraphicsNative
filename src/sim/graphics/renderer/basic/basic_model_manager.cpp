@@ -221,22 +221,22 @@ auto BasicModelManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
   return primitives;
 }
 
-Ptr<TextureImage2D> BasicModelManager::newTexture(
+Ptr<Texture2D> BasicModelManager::newTexture(
   const std::string &imagePath, const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
-  auto t = TextureImage2D::loadFromFile(device, imagePath, generateMipmap);
+  auto t =
+    Texture2D::loadFromFile(device, imagePath, vk::Format::eR8G8B8A8Srgb, generateMipmap);
   t.setSampler(SamplerMaker(samplerDef).createUnique(vkDevice));
-  return Ptr<TextureImage2D>::add(Image.textures, std::move(t));
+  return Ptr<Texture2D>::add(Image.textures, std::move(t));
 }
 
-Ptr<TextureImage2D> BasicModelManager::newTexture(
+Ptr<Texture2D> BasicModelManager::newTexture(
   const unsigned char *bytes, size_t size, uint32_t width, uint32_t height,
   const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
-  auto t =
-    TextureImage2D::loadFromBytes(device, bytes, size, width, height, generateMipmap);
+  auto t = Texture2D::loadFromBytes(device, bytes, size, width, height, generateMipmap);
   t.setSampler(SamplerMaker(samplerDef).createUnique(vkDevice));
-  return Ptr<TextureImage2D>::add(Image.textures, std::move(t));
+  return Ptr<Texture2D>::add(Image.textures, std::move(t));
 }
 
 Ptr<TextureImageCube> BasicModelManager::newCubeTexture(
@@ -252,13 +252,13 @@ Ptr<TextureImageCube> BasicModelManager::newCubeTexture(
   return Ptr<TextureImageCube>::add(Image.cubeTextures, std::move(texture));
 }
 
-Ptr<TextureImage2D> BasicModelManager::newGrayTexture(
+Ptr<Texture2D> BasicModelManager::newGrayTexture(
   const std::string &imagePath, const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
-  auto t = TextureImage2D::loadFromGrayScaleFile(
-    device, imagePath, generateMipmap, vk::Format::eR16Unorm);
+  auto t = Texture2D::loadFromGrayScaleFile(
+    device, imagePath, vk::Format::eR16Unorm, generateMipmap);
   t.setSampler(SamplerMaker(samplerDef).createUnique(vkDevice));
-  return Ptr<TextureImage2D>::add(Image.textures, std::move(t));
+  return Ptr<Texture2D>::add(Image.textures, std::move(t));
 }
 
 Ptr<Material> BasicModelManager::newMaterial(MaterialType type) {

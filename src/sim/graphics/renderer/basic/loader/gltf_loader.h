@@ -33,7 +33,7 @@ private:
   std::vector<Animation> animations;
 
   std::vector<SamplerDef> samplerDefs;
-  std::vector<Ptr<TextureImage2D>> textures;
+  std::vector<Ptr<Texture2D>> textures;
   std::vector<Ptr<Material>> materials;
 };
 }

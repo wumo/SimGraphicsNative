@@ -11,7 +11,7 @@ void TerrainManager::loadPatches(
   uint32_t patchNumX, uint32_t patchNumY, glm::vec3 origin, float patchScale,
   float minHeight, float maxHeight, float seaLevel) {
 
-  std::vector<std::vector<Ptr<TextureImage2D>>> heightTexes, normalTexes, albedoTexes;
+  std::vector<std::vector<Ptr<Texture2D>>> heightTexes, normalTexes, albedoTexes;
   heightTexes.resize(patchNumX);
   normalTexes.resize(patchNumX);
   albedoTexes.resize(patchNumX);

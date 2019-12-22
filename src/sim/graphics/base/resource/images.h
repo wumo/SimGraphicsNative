@@ -195,25 +195,39 @@ private:
     vk::SampleCountFlagBits sampleCount);
 };
 
-class TextureImage2D: public ImageBase {
+class Texture2D: public ImageBase {
 public:
-  static TextureImage2D loadFromFile(
-    Device &device, const std::string &file, bool generateMipmap = false,
-    vk::Format format = vk::Format::eR8G8B8A8Srgb);
-  static TextureImage2D loadFromGrayScaleFile(
-    Device &device, const std::string &file, bool generateMipmap = false,
-    vk::Format format = vk::Format::eR16Sfloat);
-  static TextureImage2D loadFromBytes(
+  static Texture2D loadFromFile(
+    Device &device, const std::string &file,
+    vk::Format format = vk::Format::eR8G8B8A8Srgb, bool generateMipmap = false);
+  static Texture2D loadFromGrayScaleFile(
+    Device &device, const std::string &file, vk::Format format = vk::Format::eR16Sfloat,
+    bool generateMipmap = false);
+  static Texture2D loadFromBytes(
     Device &device, const unsigned char *bytes, size_t size, uint32_t texWidth,
     uint32_t texHeight, bool generateMipmap = false);
-  TextureImage2D(
-    Device &device, uint32_t width, uint32_t height, bool useMipmap = false,
-    vk::Format format = vk::Format::eR8G8B8A8Srgb, bool attachment = false);
+  Texture2D(
+    Device &device, uint32_t width, uint32_t height,
+    vk::Format format = vk::Format::eR8G8B8A8Srgb, bool useMipmap = false,
+    bool attachment = false);
 
 private:
   void _generateMipmap(Device &device);
   static vk::ImageCreateInfo info(
     uint32_t width, uint32_t height, bool useMipmap, vk::Format format, bool attachment);
+};
+
+class Texture3D: public ImageBase {
+public:
+  Texture3D(
+    Device &device, uint32_t width, uint32_t height, uint32_t depth,
+    vk::Format format = vk::Format::eR8G8B8A8Srgb, bool useMipmap = false,
+    bool attachment = false);
+
+private:
+  static vk::ImageCreateInfo info(
+    uint32_t width, uint32_t height, uint32_t depth, bool useMipmap, vk::Format format,
+    bool attachment);
 };
 
 class TextureImageCube: public ImageBase {

@@ -119,6 +119,16 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/ibl/generate_brdflut.cpp
   src/sim/graphics/renderer/basic/ibl/generate_envmap.cpp
   
+  src/sim/graphics/renderer/basic/sky/sky.h
+  src/sim/graphics/renderer/basic/sky/sky.cpp
+  src/sim/graphics/renderer/basic/sky/constants.h
+  src/sim/graphics/renderer/basic/sky/compute_transmittance.cpp
+  src/sim/graphics/renderer/basic/sky/compute_direct_irradiance.cpp
+  src/sim/graphics/renderer/basic/sky/compute_indirect_irradiance.cpp
+  src/sim/graphics/renderer/basic/sky/compute_multiple_scattering.cpp
+  src/sim/graphics/renderer/basic/sky/compute_scattering_density.cpp
+  src/sim/graphics/renderer/basic/sky/compute_single_scattering.cpp
+  
   src/sim/graphics/renderer/basic/renderpass/infinite_plane.cpp
   src/sim/graphics/renderer/basic/renderpass/infinite_plane.h
   src/sim/graphics/renderer/basic/renderpass/deferred_pass.cpp

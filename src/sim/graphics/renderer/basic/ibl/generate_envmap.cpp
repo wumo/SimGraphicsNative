@@ -102,7 +102,7 @@ void EnvMapGenerator::generateEnvMap(
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
   vk::UniqueRenderPass renderPass = maker.createUnique(device.getDevice());
 
-  TextureImage2D offscreen{device, dim, dim, false, format, true};
+  Texture2D offscreen{device, dim, dim, format, false, true};
 
   vk::FramebufferCreateInfo info{{}, *renderPass, 1, &offscreen.imageView(), dim, dim, 1};
   auto framebuffer = device.getDevice().createFramebufferUnique(info);

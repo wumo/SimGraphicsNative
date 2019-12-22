@@ -20,7 +20,7 @@ public:
   explicit EnvMapGenerator(Device &device, BasicModelManager &mm)
     : device{device}, mm{mm} {}
 
-  uPtr<TextureImage2D> generateBRDFLUT();
+  uPtr<Texture2D> generateBRDFLUT();
   EnvMaps generateEnvMap(TextureImageCube &envCube);
 
 private:

@@ -122,7 +122,7 @@ protected:
 
   struct {
     std::vector<vk::DescriptorImageInfo> sampler2Ds;
-    std::vector<TextureImage2D> textures;
+    std::vector<Texture2D> textures;
     std::vector<TextureImageCube> cubeTextures;
     uint32_t lastImagesCount{0};
     std::unordered_map<std::string, uint32_t> files;

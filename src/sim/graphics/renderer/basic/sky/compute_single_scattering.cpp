@@ -1,10 +1,10 @@
-#include "envmap_generator.h"
-#include "../basic_model_manager.h"
+#include "sky.h"
+#include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/envmap/genbrdflut_vert.h"
-#include "sim/graphics/compiledShaders/envmap/genbrdflut_frag.h"
+#include "sim/graphics/compiledShaders/basic/quad_vert.h"
+#include "sim/graphics/compiledShaders/basic/sky/computeSingleScattering_frag.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -18,30 +18,16 @@ using flag = vk::DescriptorBindingFlagBitsEXT;
 using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
+namespace {
+struct ComputeSingleScatteringDescriptorDef: DescriptorSetDef {};
+}
 
-struct BRDFLUTDescriptorDef: DescriptorSetDef {};
-
-uPtr<Texture2D> EnvMapGenerator::generateBRDFLUT() {
-  auto tStart = std::chrono::high_resolution_clock::now();
-
-  auto brdfLUT = u<Texture2D>(device, 512, 512, vk::Format::eR16G16Sfloat, false, true);
-  {
-    SamplerMaker maker{};
-    maker.addressModeU(vk::SamplerAddressMode::eClampToEdge)
-      .addressModeV(vk::SamplerAddressMode::eClampToEdge)
-      .addressModeW(vk::SamplerAddressMode::eClampToEdge)
-      .maxLod(1.f)
-      .maxAnisotropy(1.f)
-      .borderColor(vk::BorderColor::eFloatOpaqueWhite);
-    brdfLUT->setSampler(maker.createUnique(device.getDevice()));
-  }
-
-  vk::Format format = brdfLUT->getInfo().format;
-  uint32_t dim = brdfLUT->getInfo().extent.width;
+void SkyModel::computeSingleScattering() {
+  auto dim = this->transmittance_texture_->extent();
 
   // Renderpass
   RenderPassMaker maker;
-  auto color = maker.attachment(format)
+  auto color = maker.attachment(this->transmittance_texture_->format())
                  .samples(vk::SampleCountFlagBits::e1)
                  .loadOp(loadOp::eClear)
                  .storeOp(storeOp::eStore)
@@ -63,21 +49,24 @@ uPtr<Texture2D> EnvMapGenerator::generateBRDFLUT() {
     .srcAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
     .dstAccessMask(access::eMemoryRead)
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  vk::UniqueRenderPass renderPass = maker.createUnique(device.getDevice());
+  vk::UniqueRenderPass renderPass = maker.createUnique(this->device.getDevice());
 
-  vk::FramebufferCreateInfo info{{}, *renderPass, 1, &brdfLUT->imageView(), dim, dim, 1};
-  auto framebuffer = device.getDevice().createFramebufferUnique(info);
+  vk::FramebufferCreateInfo info{
+    {},        *renderPass, 1, &this->transmittance_texture_->imageView(),
+    dim.width, dim.height,  1};
+  auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
 
   // Descriptor sets
-  BRDFLUTDescriptorDef brdfLUTDef;
-  brdfLUTDef.init(device.getDevice());
+  ComputeTransmittanceDescriptorDef setDef;
+  setDef.init(this->device.getDevice());
 
   auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*brdfLUTDef.descriptorSetLayout)
-                          .createUnique(device.getDevice());
+                          .descriptorSetLayout(*setDef.descriptorSetLayout)
+                          .createUnique(this->device.getDevice());
+
   vk::UniquePipeline pipeline;
   { // Pipeline
-    GraphicsPipelineMaker pipelineMaker{device.getDevice(), dim, dim};
+    GraphicsPipelineMaker pipelineMaker{this->device.getDevice(), dim.width, dim.height};
     pipelineMaker.subpass(subpass)
       .topology(vk::PrimitiveTopology::eTriangleList)
       .polygonMode(vk::PolygonMode::eFill)
@@ -91,8 +80,10 @@ uPtr<Texture2D> EnvMapGenerator::generateBRDFLUT() {
       .rasterizationSamples(vk::SampleCountFlagBits::e1)
       .blendColorAttachment(false);
 
-    pipelineMaker.shader(shader::eVertex, genbrdflut_vert, __ArraySize__(genbrdflut_vert))
-      .shader(shader::eFragment, genbrdflut_frag, __ArraySize__(genbrdflut_frag));
+    pipelineMaker.shader(shader::eVertex, quad_vert, __ArraySize__(quad_vert))
+      .shader(
+        shader::eFragment, computeSingleScattering_frag,
+        __ArraySize__(computeSingleScattering_frag));
     pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout, *renderPass);
   }
 
@@ -100,11 +91,11 @@ uPtr<Texture2D> EnvMapGenerator::generateBRDFLUT() {
   std::array<vk::ClearValue, 1> clearValues{
     vk::ClearColorValue{std::array{0.0f, 0.0f, 0.0f, 1.0f}}};
   vk::RenderPassBeginInfo renderPassBeginInfo{
-    *renderPass, *framebuffer, vk::Rect2D{{0, 0}, {dim, dim}},
+    *renderPass, *framebuffer, vk::Rect2D{{0, 0}, {dim.width, dim.height}},
     uint32_t(clearValues.size()), clearValues.data()};
-  vk::Viewport viewport{0, 0, float(dim), float(dim), 0.0f, 1.0f};
-  vk::Rect2D scissor{{0, 0}, {dim, dim}};
-  device.executeImmediately([&](vk::CommandBuffer cb) {
+  vk::Viewport viewport{0, 0, float(dim.width), float(dim.height), 0.0f, 1.0f};
+  vk::Rect2D scissor{{0, 0}, {dim.width, dim.height}};
+  this->device.executeImmediately([&](vk::CommandBuffer cb) {
     cb.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     cb.setViewport(0, viewport);
     cb.setScissor(0, scissor);
@@ -112,10 +103,5 @@ uPtr<Texture2D> EnvMapGenerator::generateBRDFLUT() {
     cb.draw(3, 1, 0, 0);
     cb.endRenderPass();
   });
-
-  auto tEnd = std::chrono::high_resolution_clock::now();
-  auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
-  debugLog("Generating BRDF LUT took ", tDiff, " ms");
-  return std::move(brdfLUT);
 }
 }

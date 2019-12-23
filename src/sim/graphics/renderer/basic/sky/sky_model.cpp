@@ -78,7 +78,7 @@ void ComputeSpectralRadianceToLuminanceFactors(
 }
 
 SkyModel::SkyModel(
-  Device &device, const std::vector<double> &wavelengths,
+  Device &device, DebugMarker &debugMarker, const std::vector<double> &wavelengths,
   const std::vector<double> &solar_irradiance, double sun_angular_radius,
   double bottom_radius, double top_radius,
   const std::vector<DensityProfileLayer> &rayleigh_density,
@@ -88,9 +88,10 @@ SkyModel::SkyModel(
   double mie_phase_function_g, const std::vector<DensityProfileLayer> &absorption_density,
   const std::vector<double> &absorption_extinction,
   const std::vector<double> &ground_albedo, double max_sun_zenith_angle,
-  double length_unit_in_meters, unsigned int num_precomputed_wavelengths,
+  float length_unit_in_meters, unsigned int num_precomputed_wavelengths,
   bool half_precision)
   : device{device},
+    debugMarker{debugMarker},
     num_precomputed_wavelengths_(num_precomputed_wavelengths),
     half_precision_(half_precision) {
   // Compute the values for the SKY_RADIANCE_TO_LUMINANCE constant. In theory
@@ -113,34 +114,104 @@ SkyModel::SkyModel(
   ComputeSpectralRadianceToLuminanceFactors(
     wavelengths, solar_irradiance, 0 /* lambda_power */, &sun_k_r, &sun_k_g, &sun_k_b);
 
+  ubo.transmittance_texture_width = TRANSMITTANCE_TEXTURE_WIDTH;
+  ubo.transmittance_texture_height = TRANSMITTANCE_TEXTURE_HEIGHT;
+  ubo.scattering_texture_r_size = SCATTERING_TEXTURE_R_SIZE;
+  ubo.scattering_texture_mu_size = SCATTERING_TEXTURE_MU_SIZE;
+  ubo.scattering_texture_mu_s_size = SCATTERING_TEXTURE_MU_S_SIZE;
+  ubo.scattering_texture_nu_size = SCATTERING_TEXTURE_NU_SIZE;
+  ubo.irradiance_texture_width = IRRADIANCE_TEXTURE_WIDTH;
+  ubo.irradiance_texture_height = IRRADIANCE_TEXTURE_HEIGHT;
+
+  ubo.sky_spectral_radiance_to_luminance = {sky_k_r, sky_k_g, sky_k_b, 0.0};
+  ubo.sun_spectral_radiance_to_luminance = {sun_k_r, sun_k_g, sun_k_b, 0.0};
+
+  auto spectrum =
+    [&wavelengths](const std::vector<double> &v, const glm::vec3 &lambdas, double scale) {
+      double r = Interpolate(wavelengths, v, lambdas[0]) * scale;
+      double g = Interpolate(wavelengths, v, lambdas[1]) * scale;
+      double b = Interpolate(wavelengths, v, lambdas[2]) * scale;
+      return glm::vec3{r, g, b};
+    };
+
+  auto density_layer = [length_unit_in_meters](const DensityProfileLayer &layer) {
+    return DensityProfileLayer{layer.width / length_unit_in_meters, layer.exp_term,
+                               layer.exp_scale * length_unit_in_meters,
+                               layer.linear_term * length_unit_in_meters,
+                               layer.constant_term};
+  };
+
+  auto density_profile = [density_layer](std::vector<DensityProfileLayer> layers) {
+    constexpr int kLayerCount = 2;
+    while(layers.size() < kLayerCount) {
+      layers.insert(layers.begin(), DensityProfileLayer());
+    }
+    DensityProfile result{};
+    for(int i = 0; i < kLayerCount; ++i) {
+      result.layers[i] = density_layer(layers[i]);
+    }
+    return result;
+  };
+
+  calcAtmosphereParams = [=](const glm::vec3 &lambdas) {
+    return AtmosphereParameters{
+      spectrum(solar_irradiance, lambdas, 1.0),
+      float(sun_angular_radius),
+      spectrum(rayleigh_scattering, lambdas, length_unit_in_meters),
+      float(bottom_radius / length_unit_in_meters),
+      spectrum(mie_scattering, lambdas, length_unit_in_meters),
+      float(top_radius / length_unit_in_meters),
+      spectrum(mie_extinction, lambdas, length_unit_in_meters),
+      float(mie_phase_function_g),
+      spectrum(absorption_extinction, lambdas, length_unit_in_meters),
+      float(std::cos(max_sun_zenith_angle)),
+      spectrum(ground_albedo, lambdas, 1.0),
+      0,
+      density_profile(rayleigh_density),
+      density_profile(mie_density),
+      density_profile(absorption_density),
+    };
+  };
+
+  uboBuffer = u<HostUniformBuffer>(device.allocator(), ubo);
+
   transmittance_texture_ = u<Texture2D>(
     device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
-    vk::Format::eR32G32B32A32Sfloat);
+    vk::Format::eR32G32B32A32Sfloat, false, true);
   scattering_texture_ = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
-    half_precision ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat);
+    half_precision ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
+    false, true);
   irradiance_texture_ = u<Texture2D>(
     device, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT,
-    vk::Format::eR32G32B32A32Sfloat);
+    vk::Format::eR32G32B32A32Sfloat, false, true);
+
+  debugMarker.name(uboBuffer->buffer(), "AtmosphereUniform");
+  debugMarker.name(transmittance_texture_->image(), "transmittance_texture_");
+  debugMarker.name(scattering_texture_->image(), "scattering_texture_");
+  debugMarker.name(irradiance_texture_->image(), "irradiance_texture_");
 }
 
 void SkyModel::Init(unsigned int num_scattering_orders) {
-  auto delta_irradiance_texture = u<Texture2D>(
+  delta_irradiance_texture = u<Texture2D>(
     device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
-    vk::Format::eR32G32B32A32Sfloat);
-  auto delta_rayleigh_scattering_texture = u<Texture3D>(
+    vk::Format::eR32G32B32A32Sfloat, false, true);
+  delta_rayleigh_scattering_texture = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
-    half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat);
-  auto delta_mie_scattering_texture = u<Texture3D>(
+    half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
+    false, true);
+  delta_mie_scattering_texture = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
-    half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat);
-  auto delta_scattering_density_texture = u<Texture3D>(
+    half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
+    false, true);
+  delta_scattering_density_texture = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
-    half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat);
+    half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
+    false, true);
   Texture3D &delta_multiple_scattering_texture = *delta_rayleigh_scattering_texture;
 
   if(num_precomputed_wavelengths_ <= 3) {
-    vec3 lambdas{kLambdaR, kLambdaG, kLambdaB};
+    glm::vec3 lambdas{kLambdaR, kLambdaG, kLambdaB};
     mat3 luminance_from_radiance{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
     Precompute(
       *delta_irradiance_texture, *delta_rayleigh_scattering_texture,
@@ -153,9 +224,9 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
     int num_iterations = (int(num_precomputed_wavelengths_) + 2) / 3;
     double dlambda = (_kLambdaMax - _kLambdaMin) / (3 * num_iterations);
     for(int i = 0; i < num_iterations; ++i) {
-      vec3 lambdas{_kLambdaMin + (3 * i + 0.5) * dlambda,
-                   _kLambdaMin + (3 * i + 1.5) * dlambda,
-                   _kLambdaMin + (3 * i + 2.5) * dlambda};
+      glm::vec3 lambdas{_kLambdaMin + (3 * i + 0.5) * dlambda,
+                        _kLambdaMin + (3 * i + 1.5) * dlambda,
+                        _kLambdaMin + (3 * i + 2.5) * dlambda};
       auto coeff = [dlambda](double lambda, int component) {
         // Note that we don't include MAX_LUMINOUS_EFFICACY here, to avoid
         // artefacts due to too large values when using half precision on GPU.
@@ -190,16 +261,19 @@ void SkyModel::ConvertSpectrumToLinearSrgb(
 void SkyModel::Precompute(
   Texture2D &delta_irradiance_texture, Texture3D &delta_rayleigh_scattering_texture,
   Texture3D &delta_mie_scattering_texture, Texture3D &delta_scattering_density_texture,
-  Texture3D &delta_multiple_scattering_texture, const SkyModel::vec3 &lambdas,
+  Texture3D &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
   const SkyModel::mat3 &luminance_from_radiance, bool blend,
   unsigned int num_scattering_orders) {
 
+  ubo.atmosphere = calcAtmosphereParams(lambdas);
+  uboBuffer->updateSingle(ubo);
+
   computeTransmittance(*transmittance_texture_);
   computeDirectIrradiance(blend, delta_irradiance_texture, *irradiance_texture_);
-  computeSingleScattering();
-  computeScatteringDensity();
-  computeIndirectIrradiance();
-  computeMultipleScattering();
+  //  computeSingleScattering();
+  //  computeScatteringDensity();
+  //  computeIndirectIrradiance();
+  //  computeMultipleScattering();
 }
 
 }

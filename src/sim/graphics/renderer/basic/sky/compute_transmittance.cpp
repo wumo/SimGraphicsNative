@@ -19,7 +19,9 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 namespace {
-struct ComputeTransmittanceDescriptorDef: DescriptorSetDef {};
+struct ComputeTransmittanceDescriptorDef: DescriptorSetDef {
+  __uniform__(atmosphere, shader::eFragment);
+};
 }
 
 void SkyModel::computeTransmittance(Texture2D &transmittanceTexture) {
@@ -55,9 +57,19 @@ void SkyModel::computeTransmittance(Texture2D &transmittanceTexture) {
     {}, *renderPass, 1, &transmittanceTexture.imageView(), dim.width, dim.height, 1};
   auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
 
+  // Descriptor Pool
+  std::vector<vk::DescriptorPoolSize> poolSizes{
+    {vk::DescriptorType::eUniformBuffer, 1},
+  };
+  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
+    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
+  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
   // Descriptor sets
   ComputeTransmittanceDescriptorDef setDef;
   setDef.init(this->device.getDevice());
+  auto set = setDef.createSet(*descriptorPool);
+  setDef.atmosphere(uboBuffer->buffer());
+  setDef.update(set);
 
   auto pipelineLayout = PipelineLayoutMaker()
                           .descriptorSetLayout(*setDef.descriptorSetLayout)
@@ -99,6 +111,7 @@ void SkyModel::computeTransmittance(Texture2D &transmittanceTexture) {
     cb.setViewport(0, viewport);
     cb.setScissor(0, scissor);
     cb.bindPipeline(bindpoint::eGraphics, *pipeline);
+    cb.bindDescriptorSets(bindpoint::eGraphics, *pipelineLayout, 0, set, nullptr);
     cb.draw(3, 1, 0, 0);
     cb.endRenderPass();
   });

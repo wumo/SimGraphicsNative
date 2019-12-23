@@ -223,18 +223,20 @@ public:
   static constexpr double kLambdaB = 440.0;
 
 private:
-  typedef std::array<double, 3> vec3;
-  typedef std::array<float, 9> mat3;
-
   void Precompute(
     Texture2D &delta_irradiance_texture, Texture3D &delta_rayleigh_scattering_texture,
     Texture3D &delta_mie_scattering_texture, Texture3D &delta_scattering_density_texture,
     Texture3D &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
-    const mat3 &luminance_from_radiance, bool blend, unsigned int num_scattering_orders);
+    const glm::mat3 &luminance_from_radiance, bool blend,
+    unsigned int num_scattering_orders);
   void computeTransmittance(Texture2D &transmittanceTexture);
   void computeDirectIrradiance(
-    bool blend, Texture2D &deltaIrradianceTexture, Texture2D &irradianceTexture_);
-  void computeSingleScattering();
+    bool blend, Texture2D &deltaIrradianceTexture, Texture2D &irradianceTexture,
+    Texture2D &transmittanceTexture);
+  void computeSingleScattering(
+    bool blend, Texture3D &deltaRayleighScatteringTexture,
+    Texture3D &deltaMieScatteringTexture, Texture3D &scatteringTexture,
+    Texture2D &transmittanceTexture);
   void computeScatteringDensity();
   void computeIndirectIrradiance();
   void computeMultipleScattering();
@@ -259,5 +261,8 @@ private:
   AtmosphereUniform ubo;
 
   std::function<AtmosphereParameters(const glm::vec3 &)> calcAtmosphereParams;
+
+  uPtr<HostUniformBuffer> layerBuffer;
+  uPtr<HostUniformBuffer> LFRUniformBuffer;
 };
 }

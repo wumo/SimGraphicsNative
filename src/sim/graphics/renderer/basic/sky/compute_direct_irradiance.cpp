@@ -26,21 +26,32 @@ struct ComputeDirectIrradianceDescriptorDef: DescriptorSetDef {
 }
 
 void SkyModel::computeDirectIrradiance(
-  bool blend, Texture2D &deltaIrradianceTexture, Texture2D &irradianceTexture) {
+  bool blend, Texture2D &deltaIrradianceTexture, Texture2D &irradianceTexture,
+  Texture2D &transmittanceTexture) {
   auto dim = irradianceTexture.extent();
+
+  this->device.executeImmediately([&](vk::CommandBuffer cb) {
+    ImageBase::setLayout(
+      cb, deltaIrradianceTexture.image(), layout::eUndefined,
+      layout::eColorAttachmentOptimal, {}, {});
+    ImageBase::setLayout(
+      cb, irradianceTexture.image(), layout::eUndefined, layout::eColorAttachmentOptimal,
+      {}, {});
+  });
 
   // Renderpass
   RenderPassMaker maker;
   auto deltaIrradiance = maker.attachment(deltaIrradianceTexture.format())
                            .samples(vk::SampleCountFlagBits::e1)
-                           .loadOp(loadOp::eClear)
+                           .loadOp(loadOp::eDontCare)
                            .storeOp(storeOp::eStore)
                            .stencilLoadOp(loadOp::eDontCare)
                            .stencilStoreOp(storeOp::eDontCare)
-                           .initialLayout(layout::eUndefined)
+                           .initialLayout(layout::eColorAttachmentOptimal)
                            .finalLayout(layout::eShaderReadOnlyOptimal)
                            .index();
-  auto irradiance = maker.attachment(irradianceTexture.format()).index();
+  auto irradiance =
+    maker.attachment(irradianceTexture.format()).loadOp(loadOp::eLoad).index();
 
   auto subpass =
     maker.subpass(bindpoint::eGraphics).color(deltaIrradiance).color(irradiance).index();
@@ -65,9 +76,21 @@ void SkyModel::computeDirectIrradiance(
     {}, *renderPass, attachments.size(), attachments.data(), dim.width, dim.height, 1};
   auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
 
+  // Descriptor Pool
+  std::vector<vk::DescriptorPoolSize> poolSizes{
+    {vk::DescriptorType::eUniformBuffer, 1},
+    {vk::DescriptorType::eCombinedImageSampler, 1},
+  };
+  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
+    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
+  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
   // Descriptor sets
   ComputeDirectIrradianceDescriptorDef setDef;
   setDef.init(this->device.getDevice());
+  auto set = setDef.createSet(*descriptorPool);
+  setDef.atmosphere(uboBuffer->buffer());
+  setDef.transmittance(transmittanceTexture);
+  setDef.update(set);
 
   auto pipelineLayout = PipelineLayoutMaker()
                           .descriptorSetLayout(*setDef.descriptorSetLayout)
@@ -112,7 +135,8 @@ void SkyModel::computeDirectIrradiance(
   }
 
   // Render
-  std::array<vk::ClearValue, 1> clearValues{
+  std::array<vk::ClearValue, 2> clearValues{
+    vk::ClearColorValue{std::array{0.0f, 0.0f, 0.0f, 1.0f}},
     vk::ClearColorValue{std::array{0.0f, 0.0f, 0.0f, 1.0f}}};
   vk::RenderPassBeginInfo renderPassBeginInfo{
     *renderPass, *framebuffer, vk::Rect2D{{0, 0}, {dim.width, dim.height}},
@@ -124,6 +148,7 @@ void SkyModel::computeDirectIrradiance(
     cb.setViewport(0, viewport);
     cb.setScissor(0, scissor);
     cb.bindPipeline(bindpoint::eGraphics, *pipeline);
+    cb.bindDescriptorSets(bindpoint::eGraphics, *pipelineLayout, 0, set, nullptr);
     cb.draw(3, 1, 0, 0);
     cb.endRenderPass();
   });

@@ -175,16 +175,29 @@ SkyModel::SkyModel(
 
   uboBuffer = u<HostUniformBuffer>(device.allocator(), ubo);
 
+  layerBuffer = u<HostUniformBuffer>(device.allocator(), sizeof(int));
+  LFRUniformBuffer = u<HostUniformBuffer>(device.allocator(), sizeof(glm::mat3));
+
+  SamplerMaker maker{};
+  maker.addressModeU(vk::SamplerAddressMode::eClampToEdge)
+    .addressModeV(vk::SamplerAddressMode::eClampToEdge)
+    .addressModeW(vk::SamplerAddressMode::eClampToEdge);
+
   transmittance_texture_ = u<Texture2D>(
     device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
     vk::Format::eR32G32B32A32Sfloat, false, true);
+  transmittance_texture_->setSampler(maker.createUnique(device.getDevice()));
+
   scattering_texture_ = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
     half_precision ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
     false, true);
+  scattering_texture_->setSampler(maker.createUnique(device.getDevice()));
+
   irradiance_texture_ = u<Texture2D>(
     device, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT,
     vk::Format::eR32G32B32A32Sfloat, false, true);
+  irradiance_texture_->setSampler(maker.createUnique(device.getDevice()));
 
   debugMarker.name(uboBuffer->buffer(), "AtmosphereUniform");
   debugMarker.name(transmittance_texture_->image(), "transmittance_texture_");
@@ -193,26 +206,45 @@ SkyModel::SkyModel(
 }
 
 void SkyModel::Init(unsigned int num_scattering_orders) {
+  SamplerMaker maker{};
+  maker.addressModeU(vk::SamplerAddressMode::eClampToEdge)
+    .addressModeV(vk::SamplerAddressMode::eClampToEdge)
+    .addressModeW(vk::SamplerAddressMode::eClampToEdge);
   delta_irradiance_texture = u<Texture2D>(
-    device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
+    device, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT,
     vk::Format::eR32G32B32A32Sfloat, false, true);
+  delta_irradiance_texture->setSampler(maker.createUnique(device.getDevice()));
+
   delta_rayleigh_scattering_texture = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
     half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
     false, true);
+  delta_rayleigh_scattering_texture->setSampler(maker.createUnique(device.getDevice()));
+
   delta_mie_scattering_texture = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
     half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
     false, true);
+  delta_mie_scattering_texture->setSampler(maker.createUnique(device.getDevice()));
+
   delta_scattering_density_texture = u<Texture3D>(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
     half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat,
     false, true);
+  delta_scattering_density_texture->setSampler(maker.createUnique(device.getDevice()));
+
+  debugMarker.name(delta_irradiance_texture->image(), "delta_irradiance_texture");
+  debugMarker.name(
+    delta_rayleigh_scattering_texture->image(), "delta_rayleigh_scattering_texture");
+  debugMarker.name(delta_mie_scattering_texture->image(), "delta_mie_scattering_texture");
+  debugMarker.name(
+    delta_scattering_density_texture->image(), "delta_scattering_density_texture");
+
   Texture3D &delta_multiple_scattering_texture = *delta_rayleigh_scattering_texture;
 
   if(num_precomputed_wavelengths_ <= 3) {
     glm::vec3 lambdas{kLambdaR, kLambdaG, kLambdaB};
-    mat3 luminance_from_radiance{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
+    glm::mat3 luminance_from_radiance{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
     Precompute(
       *delta_irradiance_texture, *delta_rayleigh_scattering_texture,
       *delta_mie_scattering_texture, *delta_scattering_density_texture,
@@ -241,7 +273,7 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
            XYZ_TO_SRGB[component * 3 + 2] * z) *
           dlambda);
       };
-      mat3 luminance_from_radiance{
+      glm::mat3 luminance_from_radiance{
         coeff(lambdas[0], 0), coeff(lambdas[1], 0), coeff(lambdas[2], 0),
         coeff(lambdas[0], 1), coeff(lambdas[1], 1), coeff(lambdas[2], 1),
         coeff(lambdas[0], 2), coeff(lambdas[1], 2), coeff(lambdas[2], 2)};
@@ -262,15 +294,21 @@ void SkyModel::Precompute(
   Texture2D &delta_irradiance_texture, Texture3D &delta_rayleigh_scattering_texture,
   Texture3D &delta_mie_scattering_texture, Texture3D &delta_scattering_density_texture,
   Texture3D &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
-  const SkyModel::mat3 &luminance_from_radiance, bool blend,
+  const glm::mat3 &luminance_from_radiance, bool blend,
   unsigned int num_scattering_orders) {
 
   ubo.atmosphere = calcAtmosphereParams(lambdas);
   uboBuffer->updateSingle(ubo);
 
   computeTransmittance(*transmittance_texture_);
-  computeDirectIrradiance(blend, delta_irradiance_texture, *irradiance_texture_);
-  //  computeSingleScattering();
+
+  computeDirectIrradiance(
+    blend, delta_irradiance_texture, *irradiance_texture_, *transmittance_texture_);
+
+  LFRUniformBuffer->updateSingle(luminance_from_radiance);
+//  computeSingleScattering(
+//    blend, delta_rayleigh_scattering_texture, delta_mie_scattering_texture,
+//    *scattering_texture_, *transmittance_texture_);
   //  computeScatteringDensity();
   //  computeIndirectIrradiance();
   //  computeMultipleScattering();

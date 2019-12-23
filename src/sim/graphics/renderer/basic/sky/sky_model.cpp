@@ -1,4 +1,4 @@
-#include "sky.h"
+#include "sky_model.h"
 #include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"

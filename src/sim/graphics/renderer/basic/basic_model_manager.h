@@ -18,6 +18,7 @@
 #include "builder/primitive_builder.h"
 #include "perspective_camera.h"
 #include "terrain/terrain_manager.h"
+#include "sky/sky_renderer.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -71,6 +72,8 @@ public:
 
   void useEnvironmentMap(Ptr<TextureImageCube> envMap);
 
+  void useSky();
+  
   void computeMesh(const std::string &imagePath, Ptr<Primitive> primitive);
 
   Ptr<Light> addLight(
@@ -180,6 +183,8 @@ private:
   } RenderPass;
 
   uPtr<TerrainManager> terrainMgr;
+
+  uPtr<SkyRenderer> skyRenderer;
 
   struct BasicSetDef: DescriptorSetDef {
     __uniform__(

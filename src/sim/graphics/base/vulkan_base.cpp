@@ -187,7 +187,8 @@ bool VulkanBase::createVkInstance() {
   VkSurfaceKHR _surface;
   glfwCreateWindowSurface(*vkInstance, window, nullptr, &_surface);
   surface = vk::UniqueSurfaceKHR{
-    _surface, vk::ObjectDestroy<vk::Instance, vk::DispatchLoaderDynamic>{*vkInstance}};
+    _surface, vk::ObjectDestroy<vk::Instance, vk::DispatchLoaderDynamic>{
+                *vkInstance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER}};
   return true;
 }
 

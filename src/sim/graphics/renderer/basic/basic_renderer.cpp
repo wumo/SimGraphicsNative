@@ -65,9 +65,11 @@ void BasicRenderer::createRenderPass() {
                         .index();
   auto color = maker.attachment(swapchain->getImageFormat())
                  .samples(sampleCount)
-                 .storeOp(vk::AttachmentStoreOp::eDontCare)
+                 .storeOp(vk::AttachmentStoreOp::eStore)
                  .index();
-  auto position = maker.attachment(vk::Format::eR32G32B32A32Sfloat).index();
+  auto position = maker.attachment(vk::Format::eR32G32B32A32Sfloat)
+                    .storeOp(vk::AttachmentStoreOp::eDontCare)
+                    .index();
   auto normal = maker.attachment(vk::Format::eR32G32B32A32Sfloat).index();
   auto albedo = maker.attachment(vk::Format::eR8G8B8A8Unorm).index();
   auto pbr = maker.attachment(vk::Format::eR8G8B8A8Unorm).index();
@@ -233,9 +235,18 @@ void BasicRenderer::updateFrame(
 
   cb.endQuery(*queryPool, 0);
 
+  auto &swapchainImage = swapchain->getImage(imageIndex);
+  if(config.sampleCount == 1) {
+    ImageBase::setLayout(
+      cb, swapchainImage, layout::eUndefined, layout::eTransferDstOptimal, {},
+      access::eTransferWrite);
+    ImageBase::setLayout(
+      cb, attachments.offscreenImage->image(), layout::eUndefined,
+      layout::eTransferSrcOptimal, {}, access::eTransferRead);
+    ImageBase::copy(cb, *attachments.offscreenImage, swapchainImage);
+  }
   ImageBase::setLayout(
-    cb, swapchain->getImage(imageIndex), layout::eUndefined, layout::ePresentSrcKHR, {},
-    {});
+    cb, swapchainImage, layout::eUndefined, layout::ePresentSrcKHR, {}, {});
 
   vkDevice.getQueryPoolResults(
     *queryPool, 0, 1, pipelineStats.size() * sizeof(uint64_t), pipelineStats.data(),

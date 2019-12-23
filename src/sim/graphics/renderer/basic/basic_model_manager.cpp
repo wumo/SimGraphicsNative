@@ -126,6 +126,8 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
 
   terrainMgr = u<TerrainManager>(*this);
 
+  skyRenderer=u<SkyRenderer>(*this);
+  
   {
     debugMarker.name(Buffer.position->buffer(), "position buffer");
     debugMarker.name(Buffer.normal->buffer(), "normal buffer");
@@ -305,6 +307,10 @@ void BasicModelManager::useEnvironmentMap(Ptr<TextureImageCube> envMap) {
   iblSetDef.prefiltered(*Image.preFiltered);
   iblSetDef.brdfLUT(*Image.brdfLUT);
   iblSetDef.update(Sets.iblSet);
+}
+
+void BasicModelManager::useSky(){
+  skyRenderer->initModel();
 }
 
 void BasicModelManager::computeMesh(

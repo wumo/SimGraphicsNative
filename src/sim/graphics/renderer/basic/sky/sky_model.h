@@ -224,19 +224,19 @@ public:
 
 private:
   void Precompute(
-    Texture2D &delta_irradiance_texture, Texture3D &delta_rayleigh_scattering_texture,
-    Texture3D &delta_mie_scattering_texture, Texture3D &delta_scattering_density_texture,
-    Texture3D &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
+    Texture &delta_irradiance_texture, Texture &delta_rayleigh_scattering_texture,
+    Texture &delta_mie_scattering_texture, Texture &delta_scattering_density_texture,
+    Texture &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
     const glm::mat3 &luminance_from_radiance, bool blend,
     unsigned int num_scattering_orders);
-  void computeTransmittance(Texture2D &transmittanceTexture);
+  void computeTransmittance(Texture &transmittanceTexture);
   void computeDirectIrradiance(
-    bool blend, Texture2D &deltaIrradianceTexture, Texture2D &irradianceTexture,
-    Texture2D &transmittanceTexture);
+    bool blend, Texture &deltaIrradianceTexture, Texture &irradianceTexture,
+    Texture &transmittanceTexture);
   void computeSingleScattering(
-    bool blend, Texture3D &deltaRayleighScatteringTexture,
-    Texture3D &deltaMieScatteringTexture, Texture3D &scatteringTexture,
-    Texture2D &transmittanceTexture);
+    bool blend, Texture &deltaRayleighScatteringTexture,
+    Texture &deltaMieScatteringTexture, Texture &scatteringTexture,
+    Texture &transmittanceTexture);
   void computeScatteringDensity();
   void computeIndirectIrradiance();
   void computeMultipleScattering();
@@ -249,12 +249,12 @@ private:
   bool half_precision_;
   //  bool rgb_format_supported_;
   //  std::function<std::string(const vec3 &)> glsl_header_factory_;
-  uPtr<Texture2D> transmittance_texture_;
-  uPtr<Texture3D> scattering_texture_;
-  uPtr<Texture2D> irradiance_texture_;
+  uPtr<Texture> transmittance_texture_;
+  uPtr<Texture> scattering_texture_;
+  uPtr<Texture> irradiance_texture_;
 
-  uPtr<Texture2D> delta_irradiance_texture;
-  uPtr<Texture3D> delta_rayleigh_scattering_texture, delta_mie_scattering_texture,
+  uPtr<Texture> delta_irradiance_texture;
+  uPtr<Texture> delta_rayleigh_scattering_texture, delta_mie_scattering_texture,
     delta_scattering_density_texture;
 
   uPtr<HostUniformBuffer> uboBuffer;

@@ -3,7 +3,7 @@
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/quad_vert.h"
+#include "sim/graphics/compiledShaders/basic/sky/quad_vert.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeIndirectIrradiance_frag.h"
 
 namespace sim::graphics::renderer::basic {

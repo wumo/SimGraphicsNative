@@ -109,6 +109,10 @@ void ImageBase::createImageView(
   _imageView = device.createImageViewUnique(viewCreateInfo);
 }
 
+void ImageBase::createImageView(const vk::Device &device, vk::ImageViewCreateInfo info) {
+  _imageView = device.createImageViewUnique(info);
+}
+
 void ImageBase::setSampler(vk::UniqueSampler &&sampler) { _sampler = std::move(sampler); }
 
 void ImageBase::clear(const vk::CommandBuffer &cb, const std::array<float, 4> &color) {
@@ -412,6 +416,9 @@ vk::ImageCreateInfo TransientColorInputAttachmentImage::info(
     image::eColorAttachment | image::eInputAttachment | image::eTransientAttachment};
 }
 
+Texture::Texture(Device &device, vk::ImageCreateInfo info)
+  : ImageBase{device.allocator(), info, VMA_MEMORY_USAGE_GPU_ONLY} {}
+
 Texture2D Texture2D::loadFromFile(
   Device &device, const std::string &file, vk::Format format, bool generateMipmap) {
   if(endWith(file, ".dds") || endWith(file, ".kmg") || endWith(file, ".ktx")) {
@@ -475,9 +482,9 @@ Texture2D Texture2D::loadFromBytes(
 Texture2D::Texture2D(
   Device &device, uint32_t width, uint32_t height, vk::Format format, bool useMipmap,
   bool attachment)
-  : ImageBase{device.allocator(), info(width, height, useMipmap, format, attachment),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
+  : Texture{device, info(width, height, useMipmap, format, attachment)} {
+  createImageView(
+    device.getDevice(), vk::ImageViewType::e2D, vk::ImageAspectFlagBits::eColor);
 }
 
 vk::ImageCreateInfo Texture2D::info(
@@ -532,10 +539,9 @@ void Texture2D::_generateMipmap(Device &device) {
 Texture3D::Texture3D(
   Device &device, uint32_t width, uint32_t height, uint32_t depth, vk::Format format,
   bool useMipmap, bool attachment)
-  : ImageBase{device.allocator(),
-              info(width, height, depth, useMipmap, format, attachment),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
-  createImageView(device.getDevice(), vk::ImageViewType::e3D, aspect::eColor);
+  : Texture{device, info(width, height, depth, useMipmap, format, attachment)} {
+  createImageView(
+    device.getDevice(), vk::ImageViewType::e3D, vk::ImageAspectFlagBits::eColor);
 }
 
 vk::ImageCreateInfo Texture3D::info(
@@ -591,9 +597,9 @@ TextureImageCube TextureImageCube::loadFromFile(
 
 TextureImageCube::TextureImageCube(
   Device &device, uint32_t width, uint32_t height, uint32_t mipLevels, vk::Format format)
-  : ImageBase{device.allocator(), info(width, height, mipLevels, format),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
-  createImageView(device.getDevice(), vk::ImageViewType::eCube, aspect::eColor);
+  : Texture{device, info(width, height, mipLevels, format)} {
+  createImageView(
+    device.getDevice(), vk::ImageViewType::eCube, vk::ImageAspectFlagBits::eColor);
 }
 
 vk::ImageCreateInfo TextureImageCube::info(

@@ -3,7 +3,7 @@
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/quad_vert.h"
+#include "sim/graphics/compiledShaders/basic/sky/quad_vert.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeTransmittance_frag.h"
 
 namespace sim::graphics::renderer::basic {
@@ -24,7 +24,7 @@ struct ComputeTransmittanceDescriptorDef: DescriptorSetDef {
 };
 }
 
-void SkyModel::computeTransmittance(Texture2D &transmittanceTexture) {
+void SkyModel::computeTransmittance(Texture &transmittanceTexture) {
   auto dim = transmittanceTexture.extent();
 
   // Renderpass

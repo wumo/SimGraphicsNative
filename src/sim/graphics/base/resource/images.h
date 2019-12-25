@@ -77,7 +77,9 @@ public:
   void createImageView(
     const vk::Device &device, vk::ImageViewType viewType,
     vk::ImageAspectFlags aspectMask);
-
+  void createImageView(
+    const vk::Device &device, vk::ImageViewCreateInfo info);
+  
   const vk::ImageCreateInfo &getInfo() const;
   const vk::Format &format() const;
   const vk::Extent3D &extent() const;
@@ -195,7 +197,12 @@ private:
     vk::SampleCountFlagBits sampleCount);
 };
 
-class Texture2D: public ImageBase {
+class Texture: public ImageBase {
+public:
+  Texture(Device &device, vk::ImageCreateInfo info);
+};
+
+class Texture2D: public Texture {
 public:
   static Texture2D loadFromFile(
     Device &device, const std::string &file,
@@ -217,7 +224,7 @@ private:
     uint32_t width, uint32_t height, bool useMipmap, vk::Format format, bool attachment);
 };
 
-class Texture3D: public ImageBase {
+class Texture3D: public Texture {
 public:
   Texture3D(
     Device &device, uint32_t width, uint32_t height, uint32_t depth,
@@ -230,7 +237,7 @@ private:
     bool attachment);
 };
 
-class TextureImageCube: public ImageBase {
+class TextureImageCube: public Texture {
 public:
   static TextureImageCube loadFromFile(
     Device &device, const std::string &file, bool generateMipmap = false);

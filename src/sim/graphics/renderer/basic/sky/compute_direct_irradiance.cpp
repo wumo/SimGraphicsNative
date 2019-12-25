@@ -3,7 +3,7 @@
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/quad_vert.h"
+#include "sim/graphics/compiledShaders/basic/sky/quad_vert.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeDirectIrradiance_frag.h"
 
 namespace sim::graphics::renderer::basic {
@@ -26,11 +26,11 @@ struct ComputeDirectIrradianceDescriptorDef: DescriptorSetDef {
 }
 
 void SkyModel::computeDirectIrradiance(
-  bool blend, Texture2D &deltaIrradianceTexture, Texture2D &irradianceTexture,
-  Texture2D &transmittanceTexture) {
+  bool blend, Texture &deltaIrradianceTexture, Texture &irradianceTexture,
+  Texture &transmittanceTexture) {
   auto dim = irradianceTexture.extent();
 
-  this->device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.executeImmediately([&](vk::CommandBuffer cb) {
     ImageBase::setLayout(
       cb, deltaIrradianceTexture.image(), layout::eUndefined,
       layout::eColorAttachmentOptimal, {}, {});
@@ -68,13 +68,13 @@ void SkyModel::computeDirectIrradiance(
     .srcAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
     .dstAccessMask(access::eMemoryRead)
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  vk::UniqueRenderPass renderPass = maker.createUnique(this->device.getDevice());
+  vk::UniqueRenderPass renderPass = maker.createUnique(device.getDevice());
 
   std::array<vk::ImageView, 2> attachments{deltaIrradianceTexture.imageView(),
                                            irradianceTexture.imageView()};
   vk::FramebufferCreateInfo info{
     {}, *renderPass, attachments.size(), attachments.data(), dim.width, dim.height, 1};
-  auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
+  auto framebuffer = device.getDevice().createFramebufferUnique(info);
 
   // Descriptor Pool
   std::vector<vk::DescriptorPoolSize> poolSizes{
@@ -86,7 +86,7 @@ void SkyModel::computeDirectIrradiance(
   auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
   // Descriptor sets
   ComputeDirectIrradianceDescriptorDef setDef;
-  setDef.init(this->device.getDevice());
+  setDef.init(device.getDevice());
   auto set = setDef.createSet(*descriptorPool);
   setDef.atmosphere(uboBuffer->buffer());
   setDef.transmittance(transmittanceTexture);
@@ -94,11 +94,11 @@ void SkyModel::computeDirectIrradiance(
 
   auto pipelineLayout = PipelineLayoutMaker()
                           .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(this->device.getDevice());
+                          .createUnique(device.getDevice());
 
   vk::UniquePipeline pipeline;
   { // Pipeline
-    GraphicsPipelineMaker pipelineMaker{this->device.getDevice(), dim.width, dim.height};
+    GraphicsPipelineMaker pipelineMaker{device.getDevice(), dim.width, dim.height};
     pipelineMaker.subpass(subpass)
       .topology(vk::PrimitiveTopology::eTriangleList)
       .polygonMode(vk::PolygonMode::eFill)
@@ -143,7 +143,7 @@ void SkyModel::computeDirectIrradiance(
     uint32_t(clearValues.size()), clearValues.data()};
   vk::Viewport viewport{0, 0, float(dim.width), float(dim.height), 0.0f, 1.0f};
   vk::Rect2D scissor{{0, 0}, {dim.width, dim.height}};
-  this->device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.executeImmediately([&](vk::CommandBuffer cb) {
     cb.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     cb.setViewport(0, viewport);
     cb.setScissor(0, scissor);

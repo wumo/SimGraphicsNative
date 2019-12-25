@@ -2,8 +2,6 @@
 #extension GL_GOOGLE_include_directive : require
 #include "sky.h"
 
-layout(location = 0) in fs { vec2 inUV; };
-
 layout(location = 0) out vec3 delta_rayleigh;
 layout(location = 1) out vec3 delta_mie;
 layout(location = 2) out vec4 scattering;

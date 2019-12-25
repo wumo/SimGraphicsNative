@@ -1,10 +1,8 @@
 #include "sky_model.h"
-#include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/sky/quad_vert.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeScatteringDensity_frag.h"
+#include "sim/graphics/compiledShaders/basic/sky/computeScatteringDensity_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -19,89 +17,78 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 namespace {
-struct ComputeScatteringDensityDescriptorDef: DescriptorSetDef {};
+struct ComputeScatteringDensityDescriptorDef: DescriptorSetDef {
+  __uniform__(atmosphere, shader::eCompute);
+  __uniform__(scattering_order, shader::eCompute);
+  __sampler__(transmittance, shader::eCompute);
+  __sampler__(delta_rayleigh, shader::eCompute);
+  __sampler__(delta_mie, shader::eCompute);
+  __sampler__(multpli_scattering, shader::eCompute);
+  __sampler__(irradiance, shader::eCompute);
+  __storageImage__(scattering_density, shader::eCompute);
+};
 }
 
-void SkyModel::computeScatteringDensity() {
-  auto dim = this->transmittance_texture_->extent();
+void SkyModel::computeScatteringDensity(
+  Texture &deltaScatteringDensityTexture, Texture &transmittanceTexture,
+  Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
+  Texture &deltaMultipleScatteringTexture, Texture &deltaIrradianceTexture) {
+  auto dim = deltaScatteringDensityTexture.extent();
 
-  // Renderpass
-  RenderPassMaker maker;
-  auto color = maker.attachment(this->transmittance_texture_->format())
-                 .samples(vk::SampleCountFlagBits::e1)
-                 .loadOp(loadOp::eClear)
-                 .storeOp(storeOp::eStore)
-                 .stencilLoadOp(loadOp::eDontCare)
-                 .stencilStoreOp(storeOp::eDontCare)
-                 .initialLayout(layout::eUndefined)
-                 .finalLayout(layout::eShaderReadOnlyOptimal)
-                 .index();
-  auto subpass = maker.subpass(bindpoint::eGraphics).color(color).index();
-  maker.dependency(VK_SUBPASS_EXTERNAL, subpass)
-    .srcStageMask(stage::eBottomOfPipe)
-    .dstStageMask(stage::eColorAttachmentOutput)
-    .srcAccessMask(access::eMemoryRead)
-    .dstAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
-    .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  maker.dependency(subpass, VK_SUBPASS_EXTERNAL)
-    .srcStageMask(stage::eColorAttachmentOutput)
-    .dstStageMask(stage::eBottomOfPipe)
-    .srcAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
-    .dstAccessMask(access::eMemoryRead)
-    .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  vk::UniqueRenderPass renderPass = maker.createUnique(this->device.getDevice());
-
-  vk::FramebufferCreateInfo info{
-    {},        *renderPass, 1, &this->transmittance_texture_->imageView(),
-    dim.width, dim.height,  1};
-  auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
-
+  // Descriptor Pool
+  std::vector<vk::DescriptorPoolSize> poolSizes{
+    {vk::DescriptorType::eUniformBuffer, 2},
+    {vk::DescriptorType::eCombinedImageSampler, 5},
+    {vk::DescriptorType::eStorageImage, 1},
+  };
+  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
+    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
+  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
   // Descriptor sets
   ComputeScatteringDensityDescriptorDef setDef;
-  setDef.init(this->device.getDevice());
+  setDef.init(device.getDevice());
+  auto set = setDef.createSet(*descriptorPool);
+  setDef.atmosphere(uboBuffer->buffer());
+  setDef.scattering_order(ScatterOrderBuffer->buffer());
+  setDef.transmittance(transmittanceTexture);
+  setDef.delta_rayleigh(deltaRayleighScatteringTexture);
+  setDef.delta_mie(deltaMieScatteringTexture);
+  setDef.multpli_scattering(deltaMultipleScatteringTexture);
+  setDef.irradiance(deltaIrradianceTexture);
+  setDef.scattering_density(deltaScatteringDensityTexture);
+  setDef.update(set);
 
   auto pipelineLayout = PipelineLayoutMaker()
                           .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(this->device.getDevice());
+                          .createUnique(device.getDevice());
 
-  vk::UniquePipeline pipeline;
-  { // Pipeline
-    GraphicsPipelineMaker pipelineMaker{this->device.getDevice(), dim.width, dim.height};
-    pipelineMaker.subpass(subpass)
-      .topology(vk::PrimitiveTopology::eTriangleList)
-      .polygonMode(vk::PolygonMode::eFill)
-      .cullMode(vk::CullModeFlagBits::eNone)
-      .frontFace(vk::FrontFace::eCounterClockwise)
-      .depthTestEnable(false)
-      .depthWriteEnable(false)
-      .depthCompareOp(vk::CompareOp::eLessOrEqual)
-      .dynamicState(vk::DynamicState::eViewport)
-      .dynamicState(vk::DynamicState::eScissor)
-      .rasterizationSamples(vk::SampleCountFlagBits::e1)
-      .blendColorAttachment(false);
+  ComputePipelineMaker pipelineMaker{device.getDevice()};
+  pipelineMaker.shader(
+    computeScatteringDensity_comp, __ArraySize__(computeScatteringDensity_comp));
+  auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
-    pipelineMaker.shader(shader::eVertex, quad_vert, __ArraySize__(quad_vert))
-      .shader(
-        shader::eFragment, computeScatteringDensity_frag,
-        __ArraySize__(computeScatteringDensity_frag));
-    pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout, *renderPass);
-  }
+  device.computeImmediately([&](vk::CommandBuffer cb) {
+    deltaScatteringDensityTexture.setLayout(
+      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
+      stage::eComputeShader, stage::eComputeShader);
 
-  // Render
-  std::array<vk::ClearValue, 1> clearValues{
-    vk::ClearColorValue{std::array{0.0f, 0.0f, 0.0f, 1.0f}}};
-  vk::RenderPassBeginInfo renderPassBeginInfo{
-    *renderPass, *framebuffer, vk::Rect2D{{0, 0}, {dim.width, dim.height}},
-    uint32_t(clearValues.size()), clearValues.data()};
-  vk::Viewport viewport{0, 0, float(dim.width), float(dim.height), 0.0f, 1.0f};
-  vk::Rect2D scissor{{0, 0}, {dim.width, dim.height}};
-  this->device.executeImmediately([&](vk::CommandBuffer cb) {
-    cb.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-    cb.setViewport(0, viewport);
-    cb.setScissor(0, scissor);
-    cb.bindPipeline(bindpoint::eGraphics, *pipeline);
-    cb.draw(3, 1, 0, 0);
-    cb.endRenderPass();
+    cb.bindPipeline(bindpoint::eCompute, *pipeline);
+    cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
+    cb.dispatch(dim.width, dim.height, dim.depth);
+
+    {
+      vk::ImageMemoryBarrier barrier{
+        access::eShaderWrite,
+        access::eShaderRead,
+        layout::eGeneral,
+        layout::eShaderReadOnlyOptimal,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        deltaScatteringDensityTexture.image(),
+        deltaScatteringDensityTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
+      cb.pipelineBarrier(
+        stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr, barrier);
+    }
   });
 }
 }

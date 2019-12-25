@@ -237,9 +237,17 @@ private:
     bool blend, Texture &deltaRayleighScatteringTexture,
     Texture &deltaMieScatteringTexture, Texture &scatteringTexture,
     Texture &transmittanceTexture);
-  void computeScatteringDensity();
-  void computeIndirectIrradiance();
-  void computeMultipleScattering();
+  void computeScatteringDensity(
+    Texture &deltaScatteringDensityTexture, Texture &transmittanceTexture,
+    Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
+    Texture &deltaMultipleScatteringTexture, Texture &deltaIrradianceTexture);
+  void computeIndirectIrradiance(
+    Texture &deltaIrradianceTexture, Texture &irradianceTexture,
+    Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
+    Texture &deltaMultipleScatteringTexture);
+  void computeMultipleScattering(
+    Texture &deltaMultipleScatteringTexture, Texture &scatteringTexture,
+    Texture &transmittanceTexture, Texture &deltaScatteringDensityTexture);
 
 private:
   Device &device;
@@ -262,7 +270,7 @@ private:
 
   std::function<AtmosphereParameters(const glm::vec3 &)> calcAtmosphereParams;
 
-  uPtr<HostUniformBuffer> layerBuffer;
   uPtr<HostUniformBuffer> LFRUniformBuffer;
+  uPtr<HostUniformBuffer> ScatterOrderBuffer;
 };
 }

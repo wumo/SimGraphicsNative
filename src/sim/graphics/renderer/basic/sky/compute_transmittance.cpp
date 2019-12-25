@@ -25,13 +25,10 @@ struct ComputeTransmittanceDescriptorDef: DescriptorSetDef {
 }
 
 void SkyModel::computeTransmittance(Texture &transmittanceTexture) {
-  SpecializationMaker sp;
-  auto spInfo = sp.entry<uint32_t>(1u).entry<uint32_t>(1u).create();
-
   ComputePipelineMaker pipelineMaker{device.getDevice()};
 
   pipelineMaker.shader(
-    computeTransmittance_comp, __ArraySize__(computeTransmittance_comp), &spInfo);
+    computeTransmittance_comp, __ArraySize__(computeTransmittance_comp));
 
   auto dim = transmittanceTexture.extent();
 
@@ -58,13 +55,25 @@ void SkyModel::computeTransmittance(Texture &transmittanceTexture) {
   auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
-    transmittance_texture_->setLayout(
-      cb, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
+    transmittanceTexture.setLayout(
+      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
       stage::eComputeShader, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
     cb.dispatch(dim.width, dim.height, 1);
+
+    vk::ImageMemoryBarrier barrier{
+      access::eShaderWrite,
+      access::eShaderRead,
+      layout::eGeneral,
+      layout::eShaderReadOnlyOptimal,
+      VK_QUEUE_FAMILY_IGNORED,
+      VK_QUEUE_FAMILY_IGNORED,
+      transmittanceTexture.image(),
+      transmittanceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
+    cb.pipelineBarrier(
+      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr, barrier);
   });
 }
 }

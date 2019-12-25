@@ -3,8 +3,7 @@
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/sky/quad_vert.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeIndirectIrradiance_frag.h"
+#include "sim/graphics/compiledShaders/basic/sky/computeIndirectIrradiance_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -19,89 +18,92 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 namespace {
-struct ComputeIndirectIrradianceDescriptorDef: DescriptorSetDef {};
+struct ComputeIndirectIrradianceDescriptorDef: DescriptorSetDef {
+  __uniform__(atmosphere, shader::eCompute);
+  __uniform__(luminance_from_radiance, shader::eCompute);
+  __uniform__(scattering_order, shader::eCompute);
+  __sampler__(delta_rayleigh, shader::eCompute);
+  __sampler__(delta_mie, shader::eCompute);
+  __sampler__(multpli_scattering, shader::eCompute);
+  __storageImage__(delta_irradiance, shader::eCompute);
+  __storageImage__(irradiance, shader::eCompute);
+};
 }
 
-void SkyModel::computeIndirectIrradiance() {
-  auto dim = this->transmittance_texture_->extent();
+void SkyModel::computeIndirectIrradiance(
+  Texture &deltaIrradianceTexture, Texture &irradianceTexture,
+  Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
+  Texture &deltaMultipleScatteringTexture) {
+  auto dim = irradianceTexture.extent();
 
-  // Renderpass
-  RenderPassMaker maker;
-  auto color = maker.attachment(this->transmittance_texture_->format())
-                 .samples(vk::SampleCountFlagBits::e1)
-                 .loadOp(loadOp::eClear)
-                 .storeOp(storeOp::eStore)
-                 .stencilLoadOp(loadOp::eDontCare)
-                 .stencilStoreOp(storeOp::eDontCare)
-                 .initialLayout(layout::eUndefined)
-                 .finalLayout(layout::eShaderReadOnlyOptimal)
-                 .index();
-  auto subpass = maker.subpass(bindpoint::eGraphics).color(color).index();
-  maker.dependency(VK_SUBPASS_EXTERNAL, subpass)
-    .srcStageMask(stage::eBottomOfPipe)
-    .dstStageMask(stage::eColorAttachmentOutput)
-    .srcAccessMask(access::eMemoryRead)
-    .dstAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
-    .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  maker.dependency(subpass, VK_SUBPASS_EXTERNAL)
-    .srcStageMask(stage::eColorAttachmentOutput)
-    .dstStageMask(stage::eBottomOfPipe)
-    .srcAccessMask(access::eColorAttachmentRead | access::eColorAttachmentWrite)
-    .dstAccessMask(access::eMemoryRead)
-    .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  vk::UniqueRenderPass renderPass = maker.createUnique(this->device.getDevice());
-
-  vk::FramebufferCreateInfo info{
-    {},        *renderPass, 1, &this->transmittance_texture_->imageView(),
-    dim.width, dim.height,  1};
-  auto framebuffer = this->device.getDevice().createFramebufferUnique(info);
-
+  // Descriptor Pool
+  std::vector<vk::DescriptorPoolSize> poolSizes{
+    {vk::DescriptorType::eUniformBuffer, 3},
+    {vk::DescriptorType::eCombinedImageSampler, 3},
+    {vk::DescriptorType::eStorageImage, 2},
+  };
+  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
+    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
+  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
   // Descriptor sets
   ComputeIndirectIrradianceDescriptorDef setDef;
-  setDef.init(this->device.getDevice());
+  setDef.init(device.getDevice());
+  auto set = setDef.createSet(*descriptorPool);
+  setDef.atmosphere(uboBuffer->buffer());
+  setDef.luminance_from_radiance(LFRUniformBuffer->buffer());
+  setDef.scattering_order(ScatterOrderBuffer->buffer());
+  setDef.delta_rayleigh(deltaRayleighScatteringTexture);
+  setDef.delta_mie(deltaMieScatteringTexture);
+  setDef.multpli_scattering(deltaMultipleScatteringTexture);
+  setDef.delta_irradiance(deltaIrradianceTexture);
+  setDef.irradiance(irradianceTexture);
+  setDef.update(set);
 
   auto pipelineLayout = PipelineLayoutMaker()
                           .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(this->device.getDevice());
+                          .createUnique(device.getDevice());
 
-  vk::UniquePipeline pipeline;
-  { // Pipeline
-    GraphicsPipelineMaker pipelineMaker{this->device.getDevice(), dim.width, dim.height};
-    pipelineMaker.subpass(subpass)
-      .topology(vk::PrimitiveTopology::eTriangleList)
-      .polygonMode(vk::PolygonMode::eFill)
-      .cullMode(vk::CullModeFlagBits::eNone)
-      .frontFace(vk::FrontFace::eCounterClockwise)
-      .depthTestEnable(false)
-      .depthWriteEnable(false)
-      .depthCompareOp(vk::CompareOp::eLessOrEqual)
-      .dynamicState(vk::DynamicState::eViewport)
-      .dynamicState(vk::DynamicState::eScissor)
-      .rasterizationSamples(vk::SampleCountFlagBits::e1)
-      .blendColorAttachment(false);
+  ComputePipelineMaker pipelineMaker{device.getDevice()};
+  pipelineMaker.shader(
+    computeIndirectIrradiance_comp, __ArraySize__(computeIndirectIrradiance_comp));
+  auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
-    pipelineMaker.shader(shader::eVertex, quad_vert, __ArraySize__(quad_vert))
-      .shader(
-        shader::eFragment, computeIndirectIrradiance_frag,
-        __ArraySize__(computeIndirectIrradiance_frag));
-    pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout, *renderPass);
-  }
+  device.computeImmediately([&](vk::CommandBuffer cb) {
+    deltaIrradianceTexture.setLayout(
+      cb, layout::eShaderReadOnlyOptimal, layout::eGeneral, access::eShaderRead,
+      access::eShaderWrite, stage::eComputeShader, stage::eComputeShader);
 
-  // Render
-  std::array<vk::ClearValue, 1> clearValues{
-    vk::ClearColorValue{std::array{0.0f, 0.0f, 0.0f, 1.0f}}};
-  vk::RenderPassBeginInfo renderPassBeginInfo{
-    *renderPass, *framebuffer, vk::Rect2D{{0, 0}, {dim.width, dim.height}},
-    uint32_t(clearValues.size()), clearValues.data()};
-  vk::Viewport viewport{0, 0, float(dim.width), float(dim.height), 0.0f, 1.0f};
-  vk::Rect2D scissor{{0, 0}, {dim.width, dim.height}};
-  this->device.executeImmediately([&](vk::CommandBuffer cb) {
-    cb.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-    cb.setViewport(0, viewport);
-    cb.setScissor(0, scissor);
-    cb.bindPipeline(bindpoint::eGraphics, *pipeline);
-    cb.draw(3, 1, 0, 0);
-    cb.endRenderPass();
+    irradianceTexture.setLayout(
+      cb, layout::eShaderReadOnlyOptimal, layout::eGeneral, access::eShaderRead,
+      access::eShaderWrite, stage::eComputeShader, stage::eComputeShader);
+
+    cb.bindPipeline(bindpoint::eCompute, *pipeline);
+    cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
+    cb.dispatch(dim.width, dim.height, dim.depth);
+
+    {
+      vk::ImageMemoryBarrier deltaIrradianceBarrier{
+        access::eShaderWrite,
+        access::eShaderRead,
+        layout::eGeneral,
+        layout::eShaderReadOnlyOptimal,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        deltaIrradianceTexture.image(),
+        deltaIrradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
+      vk::ImageMemoryBarrier irradianceBarrier{
+        access::eShaderWrite,
+        access::eShaderRead,
+        layout::eGeneral,
+        layout::eShaderReadOnlyOptimal,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        irradianceTexture.image(),
+        irradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
+      cb.pipelineBarrier(
+        stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+        {deltaIrradianceBarrier, irradianceBarrier});
+    }
   });
 }
 }

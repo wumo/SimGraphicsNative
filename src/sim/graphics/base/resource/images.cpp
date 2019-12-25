@@ -65,13 +65,15 @@ void ImageBase::resolve(
 
 ImageBase::ImageBase(
   const VmaAllocator &allocator, vk::ImageCreateInfo info, VmaMemoryUsage memoryUsage,
-  const vk::MemoryPropertyFlags &flags)
-  : ImageBase{
-      allocator, std::move(info), {{}, memoryUsage, VkMemoryPropertyFlags(flags)}} {}
+  const vk::MemoryPropertyFlags &flags, std::string name)
+  : ImageBase{allocator,
+              std::move(info),
+              {{}, memoryUsage, VkMemoryPropertyFlags(flags)},
+              name} {}
 
 ImageBase::ImageBase(
   const VmaAllocator &allocator, vk::ImageCreateInfo info,
-  VmaAllocationCreateInfo allocInfo) {
+  VmaAllocationCreateInfo allocInfo, std::string name) {
   currentLayout = info.initialLayout;
   _info = info;
   vmaImage = UniquePtr(new VmaImage{allocator}, [](VmaImage *ptr) {
@@ -85,7 +87,7 @@ ImageBase::ImageBase(
     &allocationInfo);
   errorIf(result != VK_SUCCESS, "failed to allocate buffer!");
   debugLog(
-    "allocate image:", vmaImage->image, "[", allocationInfo.deviceMemory, "+",
+    "allocate image: ", name, " ", vmaImage->image, "[", allocationInfo.deviceMemory, "+",
     allocationInfo.offset, "]");
   VkMemoryPropertyFlags memFlags;
   vmaGetMemoryTypeProperties(vmaImage->allocator, allocationInfo.memoryType, &memFlags);
@@ -198,6 +200,15 @@ void ImageBase::setLayout(
   setLayout(
     cb, currentLayout, newLayout, srcAccessMask, dstAccessMask, 0, _info.mipLevels,
     srcStageMask, dstStageMask, true);
+}
+
+void ImageBase::setLayout(
+  const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
+  vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask,
+  vk::PipelineStageFlagBits srcStageMask, vk::PipelineStageFlagBits dstStageMask) {
+  setLayout(
+    cb, currentLayout, newLayout, srcAccessMask, dstAccessMask, 0, _info.mipLevels,
+    srcStageMask, dstStageMask, false);
 }
 
 void ImageBase::setLayout(
@@ -420,8 +431,8 @@ vk::ImageCreateInfo TransientColorInputAttachmentImage::info(
     image::eColorAttachment | image::eInputAttachment | image::eTransientAttachment};
 }
 
-Texture::Texture(Device &device, vk::ImageCreateInfo info)
-  : ImageBase{device.allocator(), info, VMA_MEMORY_USAGE_GPU_ONLY} {}
+Texture::Texture(Device &device, vk::ImageCreateInfo info, std::string name)
+  : ImageBase{device.allocator(), info, VMA_MEMORY_USAGE_GPU_ONLY, {}, name} {}
 
 Texture2D Texture2D::loadFromFile(
   Device &device, const std::string &file, vk::Format format, bool generateMipmap) {

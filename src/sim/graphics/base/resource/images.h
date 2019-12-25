@@ -28,10 +28,10 @@ public:
   __only_move__(ImageBase);
   ImageBase(
     const VmaAllocator &allocator, vk::ImageCreateInfo info, VmaMemoryUsage memoryUsage,
-    const vk::MemoryPropertyFlags &flags = {});
+    const vk::MemoryPropertyFlags &flags = {}, std::string name = "");
   ImageBase(
     const VmaAllocator &allocator, vk::ImageCreateInfo info,
-    VmaAllocationCreateInfo allocInfo);
+    VmaAllocationCreateInfo allocInfo, std::string name = "");
   void clear(
     const vk::CommandBuffer &cb, const std::array<float, 4> &color = {1, 1, 1, 1});
   void copy(const vk::CommandBuffer &cb, ImageBase &srcImage);
@@ -55,6 +55,11 @@ public:
   void setLayout(
     const vk::CommandBuffer &cb, vk::ImageLayout newLayout, vk::AccessFlags srcAccessMask,
     vk::AccessFlags dstAccessMask,
+    vk::PipelineStageFlagBits srcStageMask = vk::PipelineStageFlagBits::eAllCommands,
+    vk::PipelineStageFlagBits dstStageMask = vk::PipelineStageFlagBits::eAllCommands);
+  void setLayout(
+    const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
+    vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask,
     vk::PipelineStageFlagBits srcStageMask = vk::PipelineStageFlagBits::eAllCommands,
     vk::PipelineStageFlagBits dstStageMask = vk::PipelineStageFlagBits::eAllCommands);
   void setLayout(
@@ -199,7 +204,7 @@ private:
 
 class Texture: public ImageBase {
 public:
-  Texture(Device &device, vk::ImageCreateInfo info);
+  Texture(Device &device, vk::ImageCreateInfo info, std::string name = "");
 };
 
 class Texture2D: public Texture {

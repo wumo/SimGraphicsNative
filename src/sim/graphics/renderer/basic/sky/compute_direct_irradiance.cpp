@@ -29,13 +29,11 @@ struct ComputeDirectIrradianceDescriptorDef: DescriptorSetDef {
 void SkyModel::computeDirectIrradiance(
   bool blend, Texture &deltaIrradianceTexture, Texture &irradianceTexture,
   Texture &transmittanceTexture) {
-  SpecializationMaker sp;
-  auto spInfo = sp.entry<uint32_t>(1u).entry<uint32_t>(1u).create();
 
   ComputePipelineMaker pipelineMaker{device.getDevice()};
 
   pipelineMaker.shader(
-    computeDirectIrradiance_comp, __ArraySize__(computeDirectIrradiance_comp), &spInfo);
+    computeDirectIrradiance_comp, __ArraySize__(computeDirectIrradiance_comp));
 
   auto dim = irradianceTexture.extent();
 
@@ -66,18 +64,37 @@ void SkyModel::computeDirectIrradiance(
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
     deltaIrradianceTexture.setLayout(
-      cb, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
+      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
       stage::eComputeShader, stage::eComputeShader);
-    irradiance_texture_->setLayout(
-      cb, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
-    transmittance_texture_->setLayout(
-      cb, layout::eShaderReadOnlyOptimal, access::eShaderWrite, access::eShaderRead,
+    irradianceTexture.setLayout(
+      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
       stage::eComputeShader, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
     cb.dispatch(dim.width, dim.height, 1);
+
+    vk::ImageMemoryBarrier deltaIrradianceBarrier{
+      access::eShaderWrite,
+      access::eShaderRead,
+      layout::eGeneral,
+      layout::eShaderReadOnlyOptimal,
+      VK_QUEUE_FAMILY_IGNORED,
+      VK_QUEUE_FAMILY_IGNORED,
+      deltaIrradianceTexture.image(),
+      deltaIrradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
+    vk::ImageMemoryBarrier irradianceBarrier{
+      access::eShaderWrite,
+      access::eShaderRead,
+      layout::eGeneral,
+      layout::eShaderReadOnlyOptimal,
+      VK_QUEUE_FAMILY_IGNORED,
+      VK_QUEUE_FAMILY_IGNORED,
+      irradianceTexture.image(),
+      irradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
+    cb.pipelineBarrier(
+      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+      {deltaIrradianceBarrier, irradianceBarrier});
   });
 }
 }

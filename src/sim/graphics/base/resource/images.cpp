@@ -301,6 +301,10 @@ const vk::Extent3D &ImageBase::extent() const { return _info.extent; }
 const vk::ImageCreateInfo &ImageBase::info() const { return _info; }
 const vk::Image &ImageBase::image() const { return vmaImage->image; }
 const vk::ImageView &ImageBase::imageView() const { return *_imageView; }
+const vk::ImageSubresourceRange ImageBase::subresourceRange(
+  vk::ImageAspectFlags aspectMask) const {
+  return {aspectMask, 0, _info.mipLevels, 0, _info.arrayLayers};
+}
 const vk::Sampler &ImageBase::sampler() const { return *_sampler; }
 const vk::ImageCreateInfo &ImageBase::getInfo() const { return _info; }
 

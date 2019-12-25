@@ -77,6 +77,16 @@ void ComputeSpectralRadianceToLuminanceFactors(
 
 using imageUsage = vk::ImageUsageFlagBits;
 using imageCreate = vk::ImageCreateFlagBits;
+using address = vk::SamplerAddressMode;
+using loadOp = vk::AttachmentLoadOp;
+using storeOp = vk::AttachmentStoreOp;
+using layout = vk::ImageLayout;
+using bindpoint = vk::PipelineBindPoint;
+using stage = vk::PipelineStageFlagBits;
+using access = vk::AccessFlagBits;
+using flag = vk::DescriptorBindingFlagBitsEXT;
+using shader = vk::ShaderStageFlagBits;
+using aspect = vk::ImageAspectFlagBits;
 
 uPtr<Texture> newTexture2D(
   Device &device, uint32_t width, uint32_t height, vk::Format format) {
@@ -89,7 +99,7 @@ uPtr<Texture> newTexture2D(
                                 1,
                                 vk::SampleCountFlagBits::e1,
                                 vk::ImageTiling::eOptimal,
-                                imageUsage::eSampled | imageUsage::eColorAttachment});
+                                imageUsage::eSampled | imageUsage::eStorage});
   texture->createImageView(
     device.getDevice(), vk::ImageViewType::e2D, vk::ImageAspectFlagBits::eColor);
   SamplerMaker maker{};
@@ -103,7 +113,7 @@ uPtr<Texture> newTexture2D(
 uPtr<Texture> newTexture3D(
   Device &device, uint32_t width, uint32_t height, uint32_t depth, vk::Format format) {
   auto texture = u<Texture>(
-    device, vk::ImageCreateInfo{imageCreate::e2DArrayCompatible,
+    device, vk::ImageCreateInfo{{},
                                 vk::ImageType::e3D,
                                 format,
                                 {width, height, depth},
@@ -111,15 +121,9 @@ uPtr<Texture> newTexture3D(
                                 1,
                                 vk::SampleCountFlagBits::e1,
                                 vk::ImageTiling::eOptimal,
-                                imageUsage::eSampled | imageUsage::eColorAttachment});
+                                imageUsage::eSampled | imageUsage::eStorage});
   texture->createImageView(
-    device.getDevice(), {{},
-                         texture->image(),
-                         vk::ImageViewType::e2D,
-                         texture->format(),
-                         {vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG,
-                          vk::ComponentSwizzle::eB, vk::ComponentSwizzle::eA},
-                         {vk::ImageAspectFlagBits::eColor, 0, 1, 1, 1}});
+    device.getDevice(), vk::ImageViewType::e3D, vk::ImageAspectFlagBits::eColor);
   SamplerMaker maker{};
   maker.addressModeU(vk::SamplerAddressMode::eClampToEdge)
     .addressModeV(vk::SamplerAddressMode::eClampToEdge)
@@ -268,14 +272,14 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
     half_precision_ ? vk::Format::eR16G16B16A16Sfloat : vk::Format::eR32G32B32A32Sfloat);
 
+  Texture &delta_multiple_scattering_texture = *delta_rayleigh_scattering_texture;
+
   debugMarker.name(delta_irradiance_texture->image(), "delta_irradiance_texture");
   debugMarker.name(
     delta_rayleigh_scattering_texture->image(), "delta_rayleigh_scattering_texture");
   debugMarker.name(delta_mie_scattering_texture->image(), "delta_mie_scattering_texture");
   debugMarker.name(
     delta_scattering_density_texture->image(), "delta_scattering_density_texture");
-
-  Texture &delta_multiple_scattering_texture = *delta_rayleigh_scattering_texture;
 
   if(num_precomputed_wavelengths_ <= 3) {
     glm::vec3 lambdas{kLambdaR, kLambdaG, kLambdaB};
@@ -337,13 +341,13 @@ void SkyModel::Precompute(
 
   computeTransmittance(*transmittance_texture_);
 
-  //  computeDirectIrradiance(
-  //    blend, deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
-  //
-  //  LFRUniformBuffer->updateSingle(luminance_from_radiance);
-  //  computeSingleScattering(
-  //    blend, deltaRayleighScatteringTexture, deltaMieScatteringTexture,
-  //    *scattering_texture_, *transmittance_texture_);
+  computeDirectIrradiance(
+    blend, deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
+
+  LFRUniformBuffer->updateSingle(luminance_from_radiance);
+  computeSingleScattering(
+    blend, deltaRayleighScatteringTexture, deltaMieScatteringTexture,
+    *scattering_texture_, *transmittance_texture_);
   //  computeScatteringDensity();
   //  computeIndirectIrradiance();
   //  computeMultipleScattering();

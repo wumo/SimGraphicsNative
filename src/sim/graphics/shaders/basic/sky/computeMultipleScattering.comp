@@ -1,0 +1,25 @@
+#version 450
+#extension GL_GOOGLE_include_directive : require
+#include "sky.h"
+
+layout(set = 0, binding = 1) uniform LayerUniform { int layer; };
+layout(set = 0, binding = 2) uniform LRRUniform { mat3 luminance_from_radiance; };
+layout(set = 0, binding = 3) uniform sampler2D transmittance_texture;
+layout(set = 0, binding = 4) uniform sampler3D scattering_density_texture;
+
+layout(set = 0, binding = 5, rgba16f) uniform image2D delta_multiple_scattering;
+layout(set = 0, binding = 6, rgba16f) uniform image2D scattering;
+
+void main() {
+  ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+  float nu;
+  vec3 deltaMultipleScatteringResult = ComputeMultipleScatteringTexture(
+    ATMOSPHERE, transmittance_texture, scattering_density_texture,
+    vec3(coord, layer + 0.5), nu);
+  vec4 scatteringResult = vec4(
+    luminance_from_radiance * deltaMultipleScatteringResult / RayleighPhaseFunction(nu),
+    0.0);
+
+  imageStore(delta_multiple_scattering, coord, vec4(deltaMultipleScatteringResult, 0));
+  imageStore(scattering, coord, scatteringResult);
+}

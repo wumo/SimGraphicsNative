@@ -493,6 +493,8 @@ auto GraphicsPipelineMaker::clearVertexBindingDescriptions() -> GraphicsPipeline
   return *this;
 }
 
+ComputePipelineMaker::ComputePipelineMaker(const vk::Device &device): device(device) {}
+
 auto ComputePipelineMaker::shader(
   ShaderModule &shader, const vk::SpecializationInfo *pSpecializationInfo) -> void {
   _stage.module = shader.module();
@@ -501,18 +503,24 @@ auto ComputePipelineMaker::shader(
   _stage.pSpecializationInfo = pSpecializationInfo;
 }
 
-auto ComputePipelineMaker::module(const vk::PipelineShaderStageCreateInfo &value)
-  -> ComputePipelineMaker & {
-  _stage = value;
-  return *this;
+void ComputePipelineMaker::shader(
+  const uint32_t *opcodes, size_t size,
+  const vk::SpecializationInfo *pSpecializationInfo) {
+  _shader = u<ShaderModule>(device, opcodes, size, pSpecializationInfo);
+
+  _stage.module = _shader->module();
+  _stage.pName = "main";
+  _stage.stage = vk::ShaderStageFlagBits::eCompute;
+  _stage.pSpecializationInfo = _shader->specialization();
 }
 
 auto ComputePipelineMaker::createUnique(
-  const vk::Device &device, const vk::PipelineCache &pipelineCache,
-  const vk::PipelineLayout &pipelineLayout) const -> vk::UniquePipeline {
+  const vk::PipelineCache &pipelineCache, const vk::PipelineLayout &pipelineLayout) const
+  -> vk::UniquePipeline {
   vk::ComputePipelineCreateInfo pipelineInfo;
   pipelineInfo.stage = _stage;
   pipelineInfo.layout = pipelineLayout;
   return device.createComputePipelineUnique(pipelineCache, pipelineInfo);
 }
+
 }

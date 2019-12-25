@@ -77,15 +77,15 @@ public:
   void createImageView(
     const vk::Device &device, vk::ImageViewType viewType,
     vk::ImageAspectFlags aspectMask);
-  void createImageView(
-    const vk::Device &device, vk::ImageViewCreateInfo info);
-  
+  void createImageView(const vk::Device &device, vk::ImageViewCreateInfo info);
+
   const vk::ImageCreateInfo &getInfo() const;
   const vk::Format &format() const;
   const vk::Extent3D &extent() const;
   const vk::ImageCreateInfo &info() const;
   const vk::Image &image() const;
   const vk::ImageView &imageView() const;
+  const vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlags aspectMask) const;
   const vk::Sampler &sampler() const;
 
 protected:

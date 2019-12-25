@@ -177,13 +177,20 @@ private:
 
 class ComputePipelineMaker {
 public:
+  ComputePipelineMaker(const vk::Device &device);
+
   void shader(ShaderModule &shader, const vk::SpecializationInfo *pSpecializationInfo);
-  ComputePipelineMaker &module(const vk::PipelineShaderStageCreateInfo &value);
+  void shader(
+    const uint32_t *opcodes, size_t size,
+    const vk::SpecializationInfo *pSpecializationInfo = nullptr);
   vk::UniquePipeline createUnique(
-    const vk::Device &device, const vk::PipelineCache &pipelineCache,
+    const vk::PipelineCache &pipelineCache,
     const vk::PipelineLayout &pipelineLayout) const;
 
 private:
+  const vk::Device &device;
+
+  uPtr<ShaderModule> _shader;
   vk::PipelineShaderStageCreateInfo _stage;
 };
 }

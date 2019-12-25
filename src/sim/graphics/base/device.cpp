@@ -205,6 +205,26 @@ void Device::executeImmediately(
   device->freeCommandBuffers(*graphicsCmdPool, cmdBuffers);
 }
 
+void Device::computeImmediately(
+  const std::function<void(vk::CommandBuffer cb)> &func, uint64_t timeout) {
+  vk::CommandBufferAllocateInfo cmdBufferInfo{*computeCmdPool,
+                                              vk::CommandBufferLevel::ePrimary, 1};
+  auto cmdBuffers = device->allocateCommandBuffers(cmdBufferInfo);
+  cmdBuffers[0].begin(
+    vk::CommandBufferBeginInfo{vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
+  func(cmdBuffers[0]);
+  cmdBuffers[0].end();
+
+  vk::SubmitInfo submit;
+  submit.commandBufferCount = uint32_t(cmdBuffers.size());
+  submit.pCommandBuffers = cmdBuffers.data();
+  auto fence = device->createFenceUnique(vk::FenceCreateInfo{});
+  compute.queue.submit(submit, *fence);
+  device->waitForFences(*fence, VK_TRUE, timeout);
+
+  device->freeCommandBuffers(*computeCmdPool, cmdBuffers);
+}
+
 const VmaAllocator &Device::allocator() const { return *_allocator; }
 
 const vk::PhysicalDevice &Device::getPhysicalDevice() const { return physicalDevice; }

@@ -41,6 +41,10 @@ public:
     const std::function<void(vk::CommandBuffer cb)> &func,
     uint64_t timeout = std::numeric_limits<uint64_t>::max());
 
+  void computeImmediately(
+    const std::function<void(vk::CommandBuffer cb)> &func,
+    uint64_t timeout = std::numeric_limits<uint64_t>::max());
+
 private:
   vk::PhysicalDevice physicalDevice;
   vk::PhysicalDeviceMemoryProperties memProps;

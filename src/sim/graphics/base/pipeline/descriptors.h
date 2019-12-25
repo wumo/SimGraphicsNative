@@ -265,6 +265,11 @@ struct DescriptorStorageImageUpdater: DescriptorUpdater {
     updater.storageImage(binding, imageView);
     return *this;
   }
+
+  DescriptorStorageImageUpdater &operator()(ImageBase &image) {
+    updater.storageImage(binding, image.imageView());
+    return *this;
+  }
 };
 
 struct DescriptorSampler2DUpdater: DescriptorUpdater {

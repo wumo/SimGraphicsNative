@@ -21,6 +21,7 @@ using namespace glm;
 namespace {
 struct ComputeTransmittanceDescriptorDef: DescriptorSetDef {
   __uniform__(atmosphere, shader::eFragment);
+  __sampler__(transmittance, shader::eCompute);
 };
 }
 

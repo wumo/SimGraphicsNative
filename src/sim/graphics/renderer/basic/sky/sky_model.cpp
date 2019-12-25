@@ -337,13 +337,13 @@ void SkyModel::Precompute(
 
   computeTransmittance(*transmittance_texture_);
 
-  computeDirectIrradiance(
-    blend, deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
-
-  LFRUniformBuffer->updateSingle(luminance_from_radiance);
-  computeSingleScattering(
-    blend, deltaRayleighScatteringTexture, deltaMieScatteringTexture,
-    *scattering_texture_, *transmittance_texture_);
+  //  computeDirectIrradiance(
+  //    blend, deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
+  //
+  //  LFRUniformBuffer->updateSingle(luminance_from_radiance);
+  //  computeSingleScattering(
+  //    blend, deltaRayleighScatteringTexture, deltaMieScatteringTexture,
+  //    *scattering_texture_, *transmittance_texture_);
   //  computeScatteringDensity();
   //  computeIndirectIrradiance();
   //  computeMultipleScattering();

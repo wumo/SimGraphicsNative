@@ -124,6 +124,13 @@ public:
     : UploadBuffer{allocator, vk::BufferUsageFlagBits::eTransferSrc, size} {}
 };
 
+class ReadBackBuffer: public HostCoherentBuffer {
+public:
+  ReadBackBuffer(
+    const VmaAllocator &allocator, vk::BufferUsageFlags usageFlags, vk::DeviceSize size)
+    : HostCoherentBuffer{allocator, usageFlags, size, VMA_MEMORY_USAGE_GPU_TO_CPU} {}
+};
+
 class HostBuffer: public HostCoherentBuffer {
 public:
   HostBuffer(

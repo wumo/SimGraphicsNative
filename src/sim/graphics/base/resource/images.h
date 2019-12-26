@@ -85,7 +85,7 @@ public:
   void upload(
     Device &device, std::vector<unsigned char> &bytes, bool transitToShaderRead = true);
 
-  void saveToFile(std::string path);
+  void saveToFile(const vk::CommandBuffer &cb, std::string path);
 
   const vk::ImageCreateInfo &getInfo() const;
   const vk::Format &format() const;

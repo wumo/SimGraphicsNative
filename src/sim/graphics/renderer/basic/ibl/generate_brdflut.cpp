@@ -104,7 +104,7 @@ uPtr<Texture2D> EnvMapGenerator::generateBRDFLUT() {
     uint32_t(clearValues.size()), clearValues.data()};
   vk::Viewport viewport{0, 0, float(dim), float(dim), 0.0f, 1.0f};
   vk::Rect2D scissor{{0, 0}, {dim, dim}};
-  device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.graphicsImmediately([&](vk::CommandBuffer cb) {
     cb.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     cb.setViewport(0, viewport);
     cb.setScissor(0, scissor);

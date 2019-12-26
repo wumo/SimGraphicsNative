@@ -75,5 +75,6 @@ void SkyModel::computeTransmittance(Texture &transmittanceTexture) {
     cb.pipelineBarrier(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr, barrier);
   });
+  transmittanceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
 }
 }

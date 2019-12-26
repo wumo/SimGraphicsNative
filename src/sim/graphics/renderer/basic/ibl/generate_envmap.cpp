@@ -202,13 +202,13 @@ void EnvMapGenerator::generateEnvMap(
   vk::Viewport viewport{0, 0, float(dim), float(dim), 0.0f, 1.0f};
   vk::Rect2D scissor{{0, 0}, {dim, dim}};
 
-  device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.graphicsImmediately([&](vk::CommandBuffer cb) {
     offscreen.setLayout(cb, layout::eColorAttachmentOptimal);
     cubeMap.setLayout(cb, layout::eTransferDstOptimal);
   });
   for(auto m = 0u; m < mipLevels; m++)
     for(auto f = 0u; f < 6; f++) {
-      device.executeImmediately([&](vk::CommandBuffer cb) {
+      device.graphicsImmediately([&](vk::CommandBuffer cb) {
         // Render scene from cube face's point of view
         cb.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
         viewport.width = static_cast<float>(dim * std::pow(0.5f, m));
@@ -259,7 +259,7 @@ void EnvMapGenerator::generateEnvMap(
           cb, layout::eTransferSrcOptimal, layout::eColorAttachmentOptimal);
       });
     }
-  device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.graphicsImmediately([&](vk::CommandBuffer cb) {
     cubeMap.setLayout(cb, layout::eTransferDstOptimal, layout::eShaderReadOnlyOptimal);
   });
 

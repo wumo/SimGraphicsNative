@@ -266,7 +266,7 @@ struct DescriptorStorageImageUpdater: DescriptorUpdater {
     return *this;
   }
 
-  DescriptorStorageImageUpdater &operator()(ImageBase &image) {
+  DescriptorStorageImageUpdater &operator()(Texture &image) {
     updater.storageImage(binding, image.imageView());
     return *this;
   }
@@ -279,7 +279,7 @@ struct DescriptorSampler2DUpdater: DescriptorUpdater {
     : DescriptorUpdater(layout, updater, binding, descriptorCount) {}
 
   DescriptorSampler2DUpdater &operator()(
-    ImageBase &image, vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal) {
+    Texture &image, vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal) {
     updater.image(
       binding, 0, vk::DescriptorType::eCombinedImageSampler, image.sampler(),
       image.imageView(), layout);

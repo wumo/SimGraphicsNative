@@ -89,17 +89,18 @@ uPtr<Texture> newTexture2D(
   Device &device, uint32_t width, uint32_t height, vk::Format format,
   const std::string &name) {
   auto texture = u<Texture>(
-    device,
-    vk::ImageCreateInfo{{},
-                        vk::ImageType::e2D,
-                        format,
-                        {width, height, 1U},
-                        1,
-                        1,
-                        vk::SampleCountFlagBits::e1,
-                        vk::ImageTiling::eOptimal,
-                        imageUsage::eSampled | imageUsage::eStorage},
-    name);
+    device.allocator(),
+    vk::ImageCreateInfo{
+      {},
+      vk::ImageType::e2D,
+      format,
+      {width, height, 1U},
+      1,
+      1,
+      vk::SampleCountFlagBits::e1,
+      vk::ImageTiling::eOptimal,
+      imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eStorage},
+    VMA_MEMORY_USAGE_GPU_ONLY, vk::MemoryPropertyFlags{}, name);
   texture->createImageView(
     device.getDevice(), vk::ImageViewType::e2D, vk::ImageAspectFlagBits::eColor);
   SamplerMaker maker{};
@@ -114,17 +115,18 @@ uPtr<Texture> newTexture3D(
   Device &device, uint32_t width, uint32_t height, uint32_t depth, vk::Format format,
   const std::string &name) {
   auto texture = u<Texture>(
-    device,
-    vk::ImageCreateInfo{{},
-                        vk::ImageType::e3D,
-                        format,
-                        {width, height, depth},
-                        1,
-                        1,
-                        vk::SampleCountFlagBits::e1,
-                        vk::ImageTiling::eOptimal,
-                        imageUsage::eSampled | imageUsage::eStorage},
-    name);
+    device.allocator(),
+    vk::ImageCreateInfo{
+      {},
+      vk::ImageType::e3D,
+      format,
+      {width, height, depth},
+      1,
+      1,
+      vk::SampleCountFlagBits::e1,
+      vk::ImageTiling::eOptimal,
+      imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eStorage},
+    VMA_MEMORY_USAGE_GPU_ONLY, vk::MemoryPropertyFlags{}, name);
   texture->createImageView(
     device.getDevice(), vk::ImageViewType::e3D, vk::ImageAspectFlagBits::eColor);
   SamplerMaker maker{};
@@ -349,6 +351,9 @@ void SkyModel::Precompute(
 
   computeTransmittance(*transmittance_texture_);
 
+  transmittance_texture_->saveToFile(
+    device, device.getComputeCmdPool(), device.computeQueue(), "./");
+
   computeDirectIrradiance(
     blend, deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
 
@@ -357,22 +362,22 @@ void SkyModel::Precompute(
     blend, deltaRayleighScatteringTexture, deltaMieScatteringTexture,
     *scattering_texture_, *transmittance_texture_);
 
-  //  auto scatteringOrder = 2u;
-  for(auto scatteringOrder = 2u; scatteringOrder <= num_scattering_orders;
-      ++scatteringOrder) {
-    ScatterOrderBuffer->updateSingle(scatteringOrder);
-    computeScatteringDensity(
-      deltaScatteringDensityTexture, *transmittance_texture_,
-      deltaRayleighScatteringTexture, deltaMieScatteringTexture,
-      deltaMultipleScatteringTexture, deltaIrradianceTexture);
+  auto scatteringOrder = 2u;
+  //  for(auto scatteringOrder = 2u; scatteringOrder <= num_scattering_orders;
+  //      ++scatteringOrder) {
+  ScatterOrderBuffer->updateSingle(scatteringOrder);
+  computeScatteringDensity(
+    deltaScatteringDensityTexture, *transmittance_texture_,
+    deltaRayleighScatteringTexture, deltaMieScatteringTexture,
+    deltaMultipleScatteringTexture, deltaIrradianceTexture);
 
-    ScatterOrderBuffer->updateSingle(scatteringOrder - 1);
-    computeIndirectIrradiance(
-      deltaIrradianceTexture, *irradiance_texture_, deltaRayleighScatteringTexture,
-      deltaMieScatteringTexture, deltaMultipleScatteringTexture);
-    computeMultipleScattering(
-      deltaMultipleScatteringTexture, *scattering_texture_, *transmittance_texture_,
-      deltaScatteringDensityTexture);
-  }
+  ScatterOrderBuffer->updateSingle(scatteringOrder - 1);
+  computeIndirectIrradiance(
+    deltaIrradianceTexture, *irradiance_texture_, deltaRayleighScatteringTexture,
+    deltaMieScatteringTexture, deltaMultipleScatteringTexture);
+  computeMultipleScattering(
+    deltaMultipleScatteringTexture, *scattering_texture_, *transmittance_texture_,
+    deltaScatteringDensityTexture);
+  //  }
 }
 }

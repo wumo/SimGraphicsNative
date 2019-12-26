@@ -237,15 +237,15 @@ void BasicRenderer::updateFrame(
 
   auto &swapchainImage = swapchain->getImage(imageIndex);
   if(config.sampleCount == 1) {
-    ImageBase::setLayout(
+    Texture::setLayout(
       cb, swapchainImage, layout::eUndefined, layout::eTransferDstOptimal, {},
       access::eTransferWrite);
-    ImageBase::setLayout(
+    Texture::setLayout(
       cb, attachments.offscreenImage->image(), layout::eUndefined,
       layout::eTransferSrcOptimal, {}, access::eTransferRead);
-    ImageBase::copy(cb, *attachments.offscreenImage, swapchainImage);
+    Texture::copy(cb, *attachments.offscreenImage, swapchainImage);
   }
-  ImageBase::setLayout(
+  Texture::setLayout(
     cb, swapchainImage, layout::eUndefined, layout::ePresentSrcKHR, {}, {});
 
   vkDevice.getQueryPoolResults(

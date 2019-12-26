@@ -11,7 +11,7 @@ using stage = vk::PipelineStageFlagBits;
 using imageUsage = vk::ImageUsageFlagBits;
 using buffer = vk::BufferUsageFlagBits;
 
-void ImageBase::setLayout(
+void Texture::setLayout(
   const vk::CommandBuffer &cb, vk::Image image, vk::ImageLayout oldLayout,
   vk::ImageLayout newLayout, vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask,
   vk::PipelineStageFlagBits srcStageMask, vk::PipelineStageFlagBits dstStageMask) {
@@ -29,7 +29,7 @@ void ImageBase::setLayout(
     srcStageMask, dstStageMask, {}, nullptr, nullptr, imageMemoryBarrier);
 }
 
-void ImageBase::setLayout(
+void Texture::setLayout(
   const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
   vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask, uint32_t baseMipLevel,
   uint32_t levelCount, stage srcStageMask, stage dstStageMask, bool record) {
@@ -55,7 +55,7 @@ void ImageBase::setLayout(
     srcStageMask, dstStageMask, {}, nullptr, nullptr, imageMemoryBarrier);
 }
 
-void ImageBase::setLayout(
+void Texture::setLayout(
   const vk::CommandBuffer &cb, vk::ImageLayout newLayout, vk::AccessFlags srcAccessMask,
   vk::AccessFlags dstAccessMask, stage srcStageMask, stage dstStageMask) {
   setLayout(
@@ -63,7 +63,7 @@ void ImageBase::setLayout(
     srcStageMask, dstStageMask, true);
 }
 
-void ImageBase::setLayout(
+void Texture::setLayout(
   const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
   vk::AccessFlags srcAccessMask, vk::AccessFlags dstAccessMask,
   vk::PipelineStageFlagBits srcStageMask, vk::PipelineStageFlagBits dstStageMask) {
@@ -72,7 +72,7 @@ void ImageBase::setLayout(
     srcStageMask, dstStageMask, false);
 }
 
-void ImageBase::setLayout(
+void Texture::setLayout(
   const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
   vk::PipelineStageFlagBits srcStageMask, vk::PipelineStageFlagBits dstStageMask) {
   setLayout(
@@ -80,13 +80,13 @@ void ImageBase::setLayout(
     _info.mipLevels, srcStageMask, dstStageMask, true);
 }
 
-void ImageBase::setLayout(
+void Texture::setLayout(
   const vk::CommandBuffer &cb, vk::ImageLayout newLayout, stage srcStageMask,
   stage dstStageMask) {
   setLayout(cb, currentLayout, newLayout, srcStageMask, dstStageMask);
 }
 
-void ImageBase::setLevelLayout(
+void Texture::setLevelLayout(
   const vk::CommandBuffer &cb, uint32_t baseMipLevel, vk::ImageLayout oldLayout,
   vk::ImageLayout newLayout, vk::PipelineStageFlagBits srcStageMask,
   vk::PipelineStageFlagBits dstStageMask) {
@@ -95,7 +95,7 @@ void ImageBase::setLevelLayout(
     baseMipLevel, 1, srcStageMask, dstStageMask, true);
 }
 
-vk::AccessFlags ImageBase::guessSrcAccess(const vk::ImageLayout &oldLayout) {
+vk::AccessFlags Texture::guessSrcAccess(const vk::ImageLayout &oldLayout) {
   vk::AccessFlags srcAccessMask;
   switch(oldLayout) {
     case layout::eUndefined: break;
@@ -131,7 +131,7 @@ vk::AccessFlags ImageBase::guessSrcAccess(const vk::ImageLayout &oldLayout) {
   return srcAccessMask;
 }
 
-vk::AccessFlags ImageBase::guessDstAccess(const vk::ImageLayout &newLayout) {
+vk::AccessFlags Texture::guessDstAccess(const vk::ImageLayout &newLayout) {
   vk::AccessFlags dstAccessMask;
 
   switch(newLayout) {
@@ -166,6 +166,6 @@ vk::AccessFlags ImageBase::guessDstAccess(const vk::ImageLayout &newLayout) {
   return dstAccessMask;
 }
 
-void ImageBase::setCurrentLayout(vk::ImageLayout oldLayout) { currentLayout = oldLayout; }
+void Texture::setCurrentLayout(vk::ImageLayout oldLayout) { currentLayout = oldLayout; }
 
 }

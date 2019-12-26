@@ -58,7 +58,7 @@ void DeviceBuffer::upload(
   using pfb = vk::MemoryPropertyFlagBits;
   auto tmp = HostBuffer{vmaBuffer->allocator, buf::eTransferSrc, sizeInBytes};
   tmp.updateRaw(value, sizeInBytes);
-  device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.graphicsImmediately([&](vk::CommandBuffer cb) {
     vk::BufferCopy copy{0, dstOffsetInBytes, sizeInBytes};
     cb.copyBuffer(tmp.buffer(), vmaBuffer->buffer, copy);
   });

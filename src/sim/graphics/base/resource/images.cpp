@@ -19,8 +19,8 @@ using stage = vk::PipelineStageFlagBits;
 using imageUsage = vk::ImageUsageFlagBits;
 using buffer = vk::BufferUsageFlagBits;
 
-void ImageBase::resolve(
-  const vk::CommandBuffer &cb, ImageBase &srcImage, vk::Image &dstImage) {
+void Texture::resolve(
+  const vk::CommandBuffer &cb, Texture &srcImage, vk::Image &dstImage) {
   vk::ImageResolve region;
   region.srcSubresource = {aspect::eColor, 0, 0, 1};
   region.dstSubresource = {aspect::eColor, 0, 0, 1};
@@ -30,15 +30,15 @@ void ImageBase::resolve(
     region);
 }
 
-ImageBase::ImageBase(
+Texture::Texture(
   const VmaAllocator &allocator, vk::ImageCreateInfo info, VmaMemoryUsage memoryUsage,
   const vk::MemoryPropertyFlags &flags, std::string name)
-  : ImageBase{allocator,
-              std::move(info),
-              {{}, memoryUsage, VkMemoryPropertyFlags(flags)},
-              name} {}
+  : Texture{allocator,
+            std::move(info),
+            {{}, memoryUsage, VkMemoryPropertyFlags(flags)},
+            name} {}
 
-ImageBase::ImageBase(
+Texture::Texture(
   const VmaAllocator &allocator, vk::ImageCreateInfo info,
   VmaAllocationCreateInfo allocInfo, std::string name) {
   currentLayout = info.initialLayout;
@@ -65,7 +65,7 @@ ImageBase::ImageBase(
   }
 }
 
-void ImageBase::createImageView(
+void Texture::createImageView(
   const vk::Device &device, vk::ImageViewType viewType, vk::ImageAspectFlags aspectMask) {
   vk::ImageViewCreateInfo viewCreateInfo{
     {},
@@ -78,13 +78,13 @@ void ImageBase::createImageView(
   _imageView = device.createImageViewUnique(viewCreateInfo);
 }
 
-void ImageBase::createImageView(const vk::Device &device, vk::ImageViewCreateInfo info) {
+void Texture::createImageView(const vk::Device &device, vk::ImageViewCreateInfo info) {
   _imageView = device.createImageViewUnique(info);
 }
 
-void ImageBase::setSampler(vk::UniqueSampler &&sampler) { _sampler = std::move(sampler); }
+void Texture::setSampler(vk::UniqueSampler &&sampler) { _sampler = std::move(sampler); }
 
-void ImageBase::clear(const vk::CommandBuffer &cb, const std::array<float, 4> &color) {
+void Texture::clear(const vk::CommandBuffer &cb, const std::array<float, 4> &color) {
   setLayout(cb, layout::eTransferDstOptimal);
   vk::ClearColorValue clearColorValue{color};
   vk::ImageSubresourceRange range{aspect::eColor, 0, 1, 0, 1};
@@ -92,18 +92,16 @@ void ImageBase::clear(const vk::CommandBuffer &cb, const std::array<float, 4> &c
     vmaImage->image, layout::eTransferDstOptimal, clearColorValue, range);
 }
 
-const vk::Format &ImageBase::format() const { return _info.format; }
-const vk::Extent3D &ImageBase::extent() const { return _info.extent; }
-const vk::ImageCreateInfo &ImageBase::info() const { return _info; }
-const vk::Image &ImageBase::image() const { return vmaImage->image; }
-const vk::ImageView &ImageBase::imageView() const { return *_imageView; }
-vk::ImageSubresourceRange ImageBase::subresourceRange(
+const vk::Format &Texture::format() const { return _info.format; }
+const vk::Extent3D &Texture::extent() const { return _info.extent; }
+const vk::ImageCreateInfo &Texture::info() const { return _info; }
+const vk::Image &Texture::image() const { return vmaImage->image; }
+const vk::ImageView &Texture::imageView() const { return *_imageView; }
+vk::ImageSubresourceRange Texture::subresourceRange(
   const vk::ImageAspectFlags &aspectMask) const {
   return {aspectMask, 0, _info.mipLevels, 0, _info.arrayLayers};
 }
-const vk::Sampler &ImageBase::sampler() const { return *_sampler; }
-const vk::ImageCreateInfo &ImageBase::getInfo() const { return _info; }
+const vk::Sampler &Texture::sampler() const { return *_sampler; }
+const vk::ImageCreateInfo &Texture::getInfo() const { return _info; }
 
-Texture::Texture(Device &device, const vk::ImageCreateInfo &info, std::string name)
-  : ImageBase{device.allocator(), info, VMA_MEMORY_USAGE_GPU_ONLY, {}, name} {}
 }

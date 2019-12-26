@@ -12,7 +12,7 @@ uint32_t calcMipLevels(uint32_t dim);
 	 * Vulkan images need a memory object to hold the data and a view object for
 	 * the GPU to access the data.
 	 */
-class ImageBase {
+class Texture {
 public:
   static void setLayout(
     const vk::CommandBuffer &cb, vk::Image image, vk::ImageLayout oldLayout,
@@ -20,16 +20,17 @@ public:
     vk::AccessFlags dstAccessMask,
     vk::PipelineStageFlagBits srcStageMask = vk::PipelineStageFlagBits::eAllCommands,
     vk::PipelineStageFlagBits dstStageMask = vk::PipelineStageFlagBits::eAllCommands);
-  static void copy(const vk::CommandBuffer &cb, ImageBase &srcImage, vk::Image &dstImage);
+  static void copy(const vk::CommandBuffer &cb, Texture &srcImage, vk::Image &dstImage);
   static void resolve(
-    const vk::CommandBuffer &cb, ImageBase &srcImage, vk::Image &dstImage);
+    const vk::CommandBuffer &cb, Texture &srcImage, vk::Image &dstImage);
 
 public:
-  __only_move__(ImageBase);
-  ImageBase(
-    const VmaAllocator &allocator, vk::ImageCreateInfo info, VmaMemoryUsage memoryUsage,
+  __only_move__(Texture);
+  Texture(
+    const VmaAllocator &allocator, vk::ImageCreateInfo info,
+    VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
     const vk::MemoryPropertyFlags &flags = {}, std::string name = "");
-  ImageBase(
+  Texture(
     const VmaAllocator &allocator, vk::ImageCreateInfo info,
     VmaAllocationCreateInfo allocInfo, std::string name = "");
 
@@ -74,7 +75,7 @@ public:
 
   void clear(
     const vk::CommandBuffer &cb, const std::array<float, 4> &color = {1, 1, 1, 1});
-  void copy(const vk::CommandBuffer &cb, ImageBase &srcImage);
+  void copy(const vk::CommandBuffer &cb, Texture &srcImage);
   void copy(
     const vk::CommandBuffer &cb, vk::Buffer buffer, uint32_t mipLevel,
     uint32_t arrayLayer, uint32_t width, uint32_t height, uint32_t depth,
@@ -85,7 +86,11 @@ public:
   void upload(
     Device &device, std::vector<unsigned char> &bytes, bool transitToShaderRead = true);
 
-  void saveToFile(const vk::CommandBuffer &cb, std::string path);
+  void saveToFile(
+    Device &device, vk::CommandPool cmdPool, vk::Queue queue, std::string path);
+
+  vk::SubresourceLayout subresourceLayout(
+    const vk::Device &device, const vk::ImageSubresource &subresource);
 
   const vk::ImageCreateInfo &getInfo() const;
   const vk::Format &format() const;
@@ -96,6 +101,11 @@ public:
   vk::ImageSubresourceRange subresourceRange(
     const vk::ImageAspectFlags &aspectMask) const;
   const vk::Sampler &sampler() const;
+
+  template<class T = void>
+  T *ptr() {
+    return static_cast<T *>(allocationInfo.pMappedData);
+  }
 
 protected:
   struct VmaImage {
@@ -117,11 +127,6 @@ protected:
   static vk::AccessFlags guessDstAccess(const vk::ImageLayout &newLayout);
 };
 
-class Texture: public ImageBase {
-public:
-  Texture(Device &device, const vk::ImageCreateInfo &info, std::string name = "");
-};
-
 namespace image {
 
 uPtr<Texture> depthStencilUnique(
@@ -137,6 +142,9 @@ uPtr<Texture> colorInputAttachmentUnique(
 uPtr<Texture> storageAttachmentUnique(
   Device &device, uint32_t width, uint32_t height, vk::Format format,
   vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
+
+uPtr<Texture> linearHostUnique(
+  Device &device, uint32_t width, uint32_t height, vk::Format format);
 
 }
 

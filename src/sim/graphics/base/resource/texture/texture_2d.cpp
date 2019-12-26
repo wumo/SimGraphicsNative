@@ -76,7 +76,7 @@ Texture2D Texture2D::loadFromBytes(
 Texture2D::Texture2D(
   Device &device, uint32_t width, uint32_t height, vk::Format format, bool useMipmap,
   bool attachment)
-  : Texture{device, info(width, height, useMipmap, format, attachment)} {
+  : Texture{device.allocator(), info(width, height, useMipmap, format, attachment)} {
   createImageView(
     device.getDevice(), vk::ImageViewType::e2D, vk::ImageAspectFlagBits::eColor);
 }
@@ -106,7 +106,7 @@ void Texture2D::_generateMipmap(Device &device) {
     !(formatProp.optimalTilingFeatures &
       vk::FormatFeatureFlagBits ::eSampledImageFilterLinear),
     "texture image format does not support linear blitting!");
-  device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.graphicsImmediately([&](vk::CommandBuffer cb) {
     int32_t mipWidth = _info.extent.width;
     int32_t mipHeight = _info.extent.height;
     for(uint32_t level = 1; level < _info.mipLevels; level++) {

@@ -15,6 +15,12 @@ class VulkanBase;
 
 class Device {
 public:
+  static void executeImmediately(
+    const vk::Device &device, const vk::CommandPool cmdPool, const vk::Queue queue,
+    const std::function<void(vk::CommandBuffer cb)> &func,
+    uint64_t timeout = std::numeric_limits<uint64_t>::max());
+
+public:
   __only_move__(Device);
 
   explicit Device(VulkanBase &framework);
@@ -37,7 +43,7 @@ public:
   const VmaAllocator &allocator() const;
   const vk::PhysicalDeviceRayTracingPropertiesNV &getRayTracingProperties() const;
 
-  void executeImmediately(
+  void graphicsImmediately(
     const std::function<void(vk::CommandBuffer cb)> &func,
     uint64_t timeout = std::numeric_limits<uint64_t>::max());
 

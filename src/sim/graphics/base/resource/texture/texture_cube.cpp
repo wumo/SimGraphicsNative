@@ -29,7 +29,7 @@ TextureImageCube TextureImageCube::loadFromFile(
                            static_cast<vk::DeviceSize>(tex.size())};
   stagingBuffer.updateRaw(tex.data(), tex.size());
 
-  device.executeImmediately([&](vk::CommandBuffer cb) {
+  device.graphicsImmediately([&](vk::CommandBuffer cb) {
     auto buf = stagingBuffer.buffer();
 
     texture.setLayout(cb, layout::eTransferDstOptimal);
@@ -50,7 +50,7 @@ TextureImageCube TextureImageCube::loadFromFile(
 
 TextureImageCube::TextureImageCube(
   Device &device, uint32_t width, uint32_t height, uint32_t mipLevels, vk::Format format)
-  : Texture{device, info(width, height, mipLevels, format)} {
+  : Texture{device.allocator(), info(width, height, mipLevels, format)} {
   createImageView(
     device.getDevice(), vk::ImageViewType::eCube, vk::ImageAspectFlagBits::eColor);
 }

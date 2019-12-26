@@ -10,8 +10,7 @@ using stage = vk::PipelineStageFlagBits;
 using imageUsage = vk::ImageUsageFlagBits;
 using buffer = vk::BufferUsageFlagBits;
 
-void ImageBase::copy(
-  const vk::CommandBuffer &cb, ImageBase &srcImage, vk::Image &dstImage) {
+void Texture::copy(const vk::CommandBuffer &cb, Texture &srcImage, vk::Image &dstImage) {
   //  srcImage.setLayout(cb, layout::eTransferSrcOptimal);
   //  ImageBase::setLayout(cb, dstImage, layout::eUndefined,
   //                       layout::eTransferDstOptimal, {}, access::eTransferWrite);
@@ -24,7 +23,7 @@ void ImageBase::copy(
     region);
 }
 
-void ImageBase::copy(const vk::CommandBuffer &cb, ImageBase &srcImage) {
+void Texture::copy(const vk::CommandBuffer &cb, Texture &srcImage) {
   srcImage.setLayout(cb, layout::eTransferSrcOptimal);
   setLayout(cb, layout::eTransferDstOptimal);
   for(uint32_t mipLevel = 0; mipLevel < info().mipLevels; ++mipLevel) {
@@ -38,7 +37,7 @@ void ImageBase::copy(const vk::CommandBuffer &cb, ImageBase &srcImage) {
   }
 }
 
-void ImageBase::copy(
+void Texture::copy(
   const vk::CommandBuffer &cb, vk::Buffer buffer, uint32_t mipLevel, uint32_t arrayLayer,
   uint32_t width, uint32_t height, uint32_t depth, uint32_t offset) {
   setLayout(cb, layout::eTransferDstOptimal, stage::eTopOfPipe, stage::eTransfer);

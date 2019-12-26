@@ -185,31 +185,22 @@ void Device::createAllocator() {
   errorIf(result != VK_SUCCESS, "failed to create Allocator");
 }
 
-void Device::executeImmediately(
+void Device::graphicsImmediately(
   const std::function<void(vk::CommandBuffer cb)> &func, uint64_t timeout) {
-  vk::CommandBufferAllocateInfo cmdBufferInfo{*graphicsCmdPool,
-                                              vk::CommandBufferLevel::ePrimary, 1};
-  auto cmdBuffers = device->allocateCommandBuffers(cmdBufferInfo);
-  cmdBuffers[0].begin(
-    vk::CommandBufferBeginInfo{vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
-  func(cmdBuffers[0]);
-  cmdBuffers[0].end();
-
-  vk::SubmitInfo submit;
-  submit.commandBufferCount = uint32_t(cmdBuffers.size());
-  submit.pCommandBuffers = cmdBuffers.data();
-  auto fence = device->createFenceUnique(vk::FenceCreateInfo{});
-  graphics.queue.submit(submit, *fence);
-  device->waitForFences(*fence, VK_TRUE, timeout);
-
-  device->freeCommandBuffers(*graphicsCmdPool, cmdBuffers);
+  executeImmediately(*device, *graphicsCmdPool, graphics.queue, func, timeout);
 }
 
 void Device::computeImmediately(
   const std::function<void(vk::CommandBuffer cb)> &func, uint64_t timeout) {
-  vk::CommandBufferAllocateInfo cmdBufferInfo{*computeCmdPool,
-                                              vk::CommandBufferLevel::ePrimary, 1};
-  auto cmdBuffers = device->allocateCommandBuffers(cmdBufferInfo);
+  executeImmediately(*device, *computeCmdPool, compute.queue, func, timeout);
+}
+
+void Device::executeImmediately(
+  const vk::Device &device, const vk::CommandPool cmdPool, const vk::Queue queue,
+  const std::function<void(vk::CommandBuffer cb)> &func, uint64_t timeout) {
+  vk::CommandBufferAllocateInfo cmdBufferInfo{cmdPool, vk::CommandBufferLevel::ePrimary,
+                                              1};
+  auto cmdBuffers = device.allocateCommandBuffers(cmdBufferInfo);
   cmdBuffers[0].begin(
     vk::CommandBufferBeginInfo{vk::CommandBufferUsageFlagBits::eOneTimeSubmit});
   func(cmdBuffers[0]);
@@ -218,11 +209,11 @@ void Device::computeImmediately(
   vk::SubmitInfo submit;
   submit.commandBufferCount = uint32_t(cmdBuffers.size());
   submit.pCommandBuffers = cmdBuffers.data();
-  auto fence = device->createFenceUnique(vk::FenceCreateInfo{});
-  compute.queue.submit(submit, *fence);
-  device->waitForFences(*fence, VK_TRUE, timeout);
+  auto fence = device.createFenceUnique(vk::FenceCreateInfo{});
+  queue.submit(submit, *fence);
+  device.waitForFences(*fence, VK_TRUE, timeout);
 
-  device->freeCommandBuffers(*computeCmdPool, cmdBuffers);
+  device.freeCommandBuffers(cmdPool, cmdBuffers);
 }
 
 const VmaAllocator &Device::allocator() const { return *_allocator; }

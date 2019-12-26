@@ -90,7 +90,8 @@ public:
   const vk::ImageCreateInfo &info() const;
   const vk::Image &image() const;
   const vk::ImageView &imageView() const;
-  const vk::ImageSubresourceRange subresourceRange(vk::ImageAspectFlags aspectMask) const;
+  vk::ImageSubresourceRange subresourceRange(
+    const vk::ImageAspectFlags &aspectMask) const;
   const vk::Sampler &sampler() const;
 
 protected:
@@ -113,7 +114,12 @@ protected:
   static vk::AccessFlags guessDstAccess(const vk::ImageLayout &newLayout);
 };
 
-class DepthStencilImage: public ImageBase {
+class Texture: public ImageBase {
+public:
+  Texture(Device &device, const vk::ImageCreateInfo &info, std::string name = "");
+};
+
+class DepthStencilImage: public Texture {
 public:
   DepthStencilImage(
     Device &device, uint32_t width, uint32_t height,
@@ -126,33 +132,7 @@ private:
     vk::SampleCountFlagBits sampleCount);
 };
 
-class TransientDepthStencilImage: public ImageBase {
-public:
-  TransientDepthStencilImage(
-    Device &device, uint32_t width, uint32_t height,
-    vk::Format format = vk::Format::eD24UnormS8Uint,
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
-
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount);
-};
-
-class ColorAttachmentImage: public ImageBase {
-public:
-  ColorAttachmentImage(
-    Device &device, uint32_t width, uint32_t height,
-    vk::Format format = vk::Format::eR8G8B8A8Unorm,
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
-
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount);
-};
-
-class ColorInputAttachmentImage: public ImageBase {
+class ColorInputAttachmentImage: public Texture {
 public:
   ColorInputAttachmentImage(
     Device &device, uint32_t width, uint32_t height,
@@ -165,20 +145,7 @@ private:
     vk::SampleCountFlagBits sampleCount);
 };
 
-class TransientColorInputAttachmentImage: public ImageBase {
-public:
-  TransientColorInputAttachmentImage(
-    Device &device, uint32_t width, uint32_t height,
-    vk::Format format = vk::Format::eR8G8B8A8Unorm,
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
-
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount);
-};
-
-class StorageAttachmentImage: public ImageBase {
+class StorageAttachmentImage: public Texture {
 public:
   StorageAttachmentImage(
     Device &device, uint32_t width, uint32_t height, vk::Format format,
@@ -188,23 +155,6 @@ private:
   static vk::ImageCreateInfo info(
     uint32_t width, uint32_t height, vk::Format format,
     vk::SampleCountFlagBits sampleCount);
-};
-
-class StorageImage: public ImageBase {
-public:
-  StorageImage(
-    Device &device, uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
-
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount);
-};
-
-class Texture: public ImageBase {
-public:
-  Texture(Device &device, const vk::ImageCreateInfo& info, std::string name = "");
 };
 
 class Texture2D: public Texture {
@@ -227,19 +177,6 @@ private:
   void _generateMipmap(Device &device);
   static vk::ImageCreateInfo info(
     uint32_t width, uint32_t height, bool useMipmap, vk::Format format, bool attachment);
-};
-
-class Texture3D: public Texture {
-public:
-  Texture3D(
-    Device &device, uint32_t width, uint32_t height, uint32_t depth,
-    vk::Format format = vk::Format::eR8G8B8A8Srgb, bool useMipmap = false,
-    bool attachment = false);
-
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, uint32_t depth, bool useMipmap, vk::Format format,
-    bool attachment);
 };
 
 class TextureImageCube: public Texture {

@@ -312,8 +312,8 @@ const vk::Extent3D &ImageBase::extent() const { return _info.extent; }
 const vk::ImageCreateInfo &ImageBase::info() const { return _info; }
 const vk::Image &ImageBase::image() const { return vmaImage->image; }
 const vk::ImageView &ImageBase::imageView() const { return *_imageView; }
-const vk::ImageSubresourceRange ImageBase::subresourceRange(
-  vk::ImageAspectFlags aspectMask) const {
+vk::ImageSubresourceRange ImageBase::subresourceRange(
+  const vk::ImageAspectFlags &aspectMask) const {
   return {aspectMask, 0, _info.mipLevels, 0, _info.arrayLayers};
 }
 const vk::Sampler &ImageBase::sampler() const { return *_sampler; }
@@ -322,8 +322,7 @@ const vk::ImageCreateInfo &ImageBase::getInfo() const { return _info; }
 DepthStencilImage::DepthStencilImage(
   Device &device, uint32_t width, uint32_t height, vk::Format format,
   vk::SampleCountFlagBits sampleCount)
-  : ImageBase{device.allocator(), info(width, height, format, sampleCount),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
+  : Texture{device, info(width, height, format, sampleCount)} {
   createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
 }
 
@@ -341,55 +340,10 @@ vk::ImageCreateInfo DepthStencilImage::info(
           image::eDepthStencilAttachment | image::eTransferSrc | image::eSampled};
 }
 
-TransientDepthStencilImage::TransientDepthStencilImage(
-  Device &device, uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount)
-  : ImageBase{device.allocator(), info(width, height, format, sampleCount),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
-}
-
-vk::ImageCreateInfo TransientDepthStencilImage::info(
-  uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount) {
-  return {{},
-          vk::ImageType::e2D,
-          format,
-          {width, height, 1U},
-          1,
-          1,
-          sampleCount,
-          vk::ImageTiling::eOptimal,
-          image::eDepthStencilAttachment | image::eTransientAttachment};
-}
-
-ColorAttachmentImage::ColorAttachmentImage(
-  Device &device, uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount)
-  : ImageBase{device.allocator(), info(width, height, format, sampleCount),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
-}
-
-vk::ImageCreateInfo ColorAttachmentImage::info(
-  uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount) {
-  return {{},
-          vk::ImageType::e2D,
-          format,
-          {width, height, 1U},
-          1,
-          1,
-          sampleCount,
-          vk::ImageTiling::eOptimal,
-          image::eColorAttachment | image::eTransferSrc | image::eSampled};
-}
-
 ColorInputAttachmentImage::ColorInputAttachmentImage(
   Device &device, uint32_t width, uint32_t height, vk::Format format,
   vk::SampleCountFlagBits sampleCount)
-  : ImageBase{device.allocator(), info(width, height, format, sampleCount),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
+  : Texture{device, info(width, height, format, sampleCount)} {
   createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
 }
 
@@ -408,27 +362,27 @@ vk::ImageCreateInfo ColorInputAttachmentImage::info(
             image::eSampled};
 }
 
-TransientColorInputAttachmentImage::TransientColorInputAttachmentImage(
+StorageAttachmentImage::StorageAttachmentImage(
   Device &device, uint32_t width, uint32_t height, vk::Format format,
   vk::SampleCountFlagBits sampleCount)
-  : ImageBase{device.allocator(), info(width, height, format, sampleCount),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
+  : Texture{device, info(width, height, format, sampleCount)} {
   createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
 }
 
-vk::ImageCreateInfo TransientColorInputAttachmentImage::info(
+vk::ImageCreateInfo StorageAttachmentImage::info(
   uint32_t width, uint32_t height, vk::Format format,
   vk::SampleCountFlagBits sampleCount) {
-  return {
+  vk::ImageCreateInfo info{
     {},
     vk::ImageType::e2D,
     format,
-    {width, height, 1U},
+    {width, height, 1},
     1,
     1,
     sampleCount,
     vk::ImageTiling::eOptimal,
-    image::eColorAttachment | image::eInputAttachment | image::eTransientAttachment};
+    image::eColorAttachment | image::eSampled | image::eStorage | image::eTransferSrc};
+  return info;
 }
 
 Texture::Texture(Device &device, const vk::ImageCreateInfo &info, std::string name)
@@ -551,30 +505,6 @@ void Texture2D::_generateMipmap(Device &device) {
   });
 }
 
-Texture3D::Texture3D(
-  Device &device, uint32_t width, uint32_t height, uint32_t depth, vk::Format format,
-  bool useMipmap, bool attachment)
-  : Texture{device, info(width, height, depth, useMipmap, format, attachment)} {
-  createImageView(
-    device.getDevice(), vk::ImageViewType::e3D, vk::ImageAspectFlagBits::eColor);
-}
-
-vk::ImageCreateInfo Texture3D::info(
-  uint32_t width, uint32_t height, uint32_t depth, bool useMipmap, vk::Format format,
-  bool attachment) {
-  auto flag = image::eSampled | image::eTransferSrc | image::eTransferDst;
-  if(attachment) flag |= image::eColorAttachment;
-  return {{},
-          vk::ImageType::e3D,
-          format,
-          {width, height, depth},
-          useMipmap ? calcMipLevels(std::max(width, height)) : 1,
-          1,
-          vk::SampleCountFlagBits::e1,
-          vk::ImageTiling::eOptimal,
-          flag};
-}
-
 TextureImageCube TextureImageCube::loadFromFile(
   Device &device, const std::string &file, bool generateMipmap) {
   errorIf(
@@ -632,53 +562,6 @@ vk::ImageCreateInfo TextureImageCube::info(
           0,
           nullptr,
           vk::ImageLayout::ePreinitialized};
-}
-
-StorageImage::StorageImage(
-  Device &device, uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount)
-  : ImageBase{device.allocator(), info(width, height, format, sampleCount),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
-}
-
-vk::ImageCreateInfo StorageImage::info(
-  uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount) {
-  vk::ImageCreateInfo info{{},
-                           vk::ImageType::e2D,
-                           format,
-                           {width, height, 1},
-                           1,
-                           1,
-                           sampleCount,
-                           vk::ImageTiling::eOptimal,
-                           image::eStorage | image::eTransferSrc};
-  return info;
-}
-
-StorageAttachmentImage::StorageAttachmentImage(
-  Device &device, uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount)
-  : ImageBase{device.allocator(), info(width, height, format, sampleCount),
-              VMA_MEMORY_USAGE_GPU_ONLY} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
-}
-
-vk::ImageCreateInfo StorageAttachmentImage::info(
-  uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount) {
-  vk::ImageCreateInfo info{
-    {},
-    vk::ImageType::e2D,
-    format,
-    {width, height, 1},
-    1,
-    1,
-    sampleCount,
-    vk::ImageTiling::eOptimal,
-    image::eColorAttachment | image::eSampled | image::eStorage | image::eTransferSrc};
-  return info;
 }
 
 SamplerMaker::SamplerMaker() {

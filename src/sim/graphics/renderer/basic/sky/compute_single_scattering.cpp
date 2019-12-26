@@ -3,8 +3,6 @@
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeSingleScattering_comp.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeDebug_comp.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeDebug3D_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;

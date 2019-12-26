@@ -1,6 +1,6 @@
 #include "basic_model_manager.h"
 #include "basic_renderer.h"
-#include "sim/graphics/util/materials.h"
+#include "sim/graphics/util/colors.h"
 #include "loader/gltf_loader.h"
 #include "ibl/envmap_generator.h"
 

@@ -15,9 +15,6 @@ conan_cmake_run(BASIC_SETUP CONANFILE conanfile.py BUILD missing)
 
 option(BUILD_TEST "Build test" ON)
 option(BUILD_SHARED "Build shared lib" ON)
-option(BUILD_BASIC_RENDERER "Build basic renderer" ON)
-option(BUILD_DEFERRED_RENDERER "Build deferred renderer" OFF)
-option(BUILD_RAYTRACING_RENDERER "Build raytracing renderer" OFF)
 
 set(sources
   src/sim/util/range.h
@@ -50,19 +47,10 @@ set(sources
   
   src/sim/graphics/util/fps_meter.cpp
   src/sim/graphics/util/fps_meter.h
-  src/sim/graphics/util/materials.h
+  src/sim/graphics/util/colors.h
   
   src/sim/util/syntactic_sugar.h
   src/sim/util/syntactic_sugar.cpp
-  )
-
-set(renderpassSrc
-  src/sim/graphics/renderpass/gui_pass.cpp
-  src/sim/graphics/renderpass/gui_pass.h
-  src/sim/graphics/renderpass/imgui_impl_glfw.cpp
-  src/sim/graphics/renderpass/imgui_impl_glfw.h
-  src/sim/graphics/renderpass/imgui_impl_vulkan.cpp
-  src/sim/graphics/renderpass/imgui_impl_vulkan.h
   )
 
 set(oceanFFT
@@ -139,67 +127,7 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/renderpass/terrain_pass.cpp
   )
 
-set(defaultRendererSrc
-  src/sim/graphics/renderer/default/renderer.h
-  src/sim/graphics/renderer/default/renderer.cpp
-  
-  src/sim/graphics/renderer/default/util/panning_camera.cpp
-  src/sim/graphics/renderer/default/util/panning_camera.h
-  
-  src/sim/graphics/renderer/default/model/builder/mesh_builder.cpp
-  src/sim/graphics/renderer/default/model/builder/mesh_builder.h
-  src/sim/graphics/renderer/default/model/builder/model_builder.cpp
-  src/sim/graphics/renderer/default/model/builder/model_builder.h
-  src/sim/graphics/renderer/default/model/builder/model_glTF.cpp
-  src/sim/graphics/renderer/default/model/builder/model_glTF.h
-  
-  src/sim/graphics/renderer/default/model/default_model_manager.cpp
-  src/sim/graphics/renderer/default/model/default_model_manager.h
-  
-  src/sim/graphics/renderer/default/model/camera.h
-  src/sim/graphics/renderer/default/model/light.h
-  src/sim/graphics/renderer/default/model/model.h
-  src/sim/graphics/renderer/default/model/model_limit.h
-  src/sim/graphics/renderer/default/model/model_manager.cpp
-  src/sim/graphics/renderer/default/model/model_manager.h
-  )
-
-set(deferredRendererSrc
-  src/sim/graphics/renderer/default/deferred/deferred.h
-  src/sim/graphics/renderer/default/deferred/deferred_generate_brdflut.cpp
-  src/sim/graphics/renderer/default/deferred/deferred_generate_envmap.cpp
-  src/sim/graphics/renderer/default/deferred/deferred_init.cpp
-  src/sim/graphics/renderer/default/deferred/deferred_model.cpp
-  src/sim/graphics/renderer/default/deferred/deferred_model.h
-  src/sim/graphics/renderer/default/deferred/deferred_update.cpp
-  )
-
-set(raytracingRendererSrc
-  src/sim/graphics/renderer/default/raytracing/raytracing.cpp
-  src/sim/graphics/renderer/default/raytracing/raytracing.h
-  src/sim/graphics/renderer/default/raytracing/raytracing_deferred.cpp
-  src/sim/graphics/renderer/default/raytracing/raytracing_model.cpp
-  src/sim/graphics/renderer/default/raytracing/raytracing_model.h
-  src/sim/graphics/renderer/default/raytracing/raytracing_pipeline.cpp
-  src/sim/graphics/renderer/default/raytracing/raytracing_pipeline.h
-  src/sim/graphics/renderer/default/raytracing/raytracing_update.cpp
-  )
-
-if(BUILD_BASIC_RENDERER)
-  list(APPEND sources ${basicRendererSrc})
-endif()
-
-if(BUILD_DEFERRED_RENDERER OR BUILD_RAYTRACING)
-  list(APPEND sources ${defaultRendererSrc})
-endif()
-
-if(BUILD_DEFERRED_RENDERER)
-  list(APPEND sources ${deferredRendererSrc})
-endif()
-
-if(BUILD_RAYTRACING_RENDERER)
-  list(APPEND sources ${raytracingRendererSrc})
-endif()
+list(APPEND sources ${basicRendererSrc})
 
 if(BUILD_SHARED)
   add_library(SimGraphicsNative SHARED ${sources})

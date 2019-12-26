@@ -1,10 +1,7 @@
 #include "sky_model.h"
 #include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
-#include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/quad_vert.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeTransmittance_frag.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -89,7 +86,8 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 
 uPtr<Texture> newTexture2D(
-  Device &device, uint32_t width, uint32_t height, vk::Format format, std::string name) {
+  Device &device, uint32_t width, uint32_t height, vk::Format format,
+  const std::string &name) {
   auto texture = u<Texture>(
     device,
     vk::ImageCreateInfo{{},
@@ -114,7 +112,7 @@ uPtr<Texture> newTexture2D(
 
 uPtr<Texture> newTexture3D(
   Device &device, uint32_t width, uint32_t height, uint32_t depth, vk::Format format,
-  std::string name) {
+  const std::string &name) {
   auto texture = u<Texture>(
     device,
     vk::ImageCreateInfo{{},

@@ -2,7 +2,7 @@
 #include "sim/graphics/renderer/basic/basic_renderer.h"
 #include "sim/graphics/renderer/basic/util/panning_camera.h"
 #include "sim/graphics/util/fps_meter.h"
-#include "sim/graphics/util/materials.h"
+#include "sim/graphics/util/colors.h"
 
 using namespace sim;
 using namespace sim::graphics;

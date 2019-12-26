@@ -204,7 +204,7 @@ private:
 
 class Texture: public ImageBase {
 public:
-  Texture(Device &device, vk::ImageCreateInfo info, std::string name = "");
+  Texture(Device &device, const vk::ImageCreateInfo& info, std::string name = "");
 };
 
 class Texture2D: public Texture {

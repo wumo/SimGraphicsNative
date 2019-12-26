@@ -26,24 +26,15 @@ class SimGraphicsNativeConan(ConanFile):
   }
   options = {
     "shared": [True, False],
-    "basic": [True, False],
-    "deferred": [True, False],
-    "raytracing": [True, False],
   }
   default_options = {
     "shared": True,
-    "basic": True,
-    "deferred": False,
-    "raytracing": False,
   }
 
   def build(self):
     cmake = CMake(self)
     cmake.definitions["BUILD_TEST"] = False
     cmake.definitions["BUILD_SHARED"] = self.options.shared
-    cmake.definitions["BUILD_BASIC_RENDERER"] = self.options.basic
-    cmake.definitions["BUILD_DEFERRED_RENDERER"] = self.options.deferred
-    cmake.definitions["BUILD_RAYTRACING_RENDERER"] = self.options.raytracing
     cmake.configure(source_folder=self.name)
     cmake.build()
 

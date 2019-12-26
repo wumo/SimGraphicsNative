@@ -431,7 +431,7 @@ vk::ImageCreateInfo TransientColorInputAttachmentImage::info(
     image::eColorAttachment | image::eInputAttachment | image::eTransientAttachment};
 }
 
-Texture::Texture(Device &device, vk::ImageCreateInfo info, std::string name)
+Texture::Texture(Device &device, const vk::ImageCreateInfo &info, std::string name)
   : ImageBase{device.allocator(), info, VMA_MEMORY_USAGE_GPU_ONLY, {}, name} {}
 
 Texture2D Texture2D::loadFromFile(

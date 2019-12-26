@@ -76,15 +76,6 @@ void SkyModel::computeMultipleScattering(
     cb.dispatch(dim.width, dim.height, dim.depth);
 
     {
-      vk::ImageMemoryBarrier deltaScatterBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        deltaScatteringDensityTexture.image(),
-        deltaScatteringDensityTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
       vk::ImageMemoryBarrier deltaMultipleScatterBarrier{
         access::eShaderWrite,
         access::eShaderRead,
@@ -94,9 +85,20 @@ void SkyModel::computeMultipleScattering(
         VK_QUEUE_FAMILY_IGNORED,
         deltaMultipleScatteringTexture.image(),
         deltaMultipleScatteringTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
+      vk::ImageMemoryBarrier deltaScatterBarrier{
+        access::eShaderWrite,
+        access::eShaderRead,
+        layout::eGeneral,
+        layout::eShaderReadOnlyOptimal,
+        VK_QUEUE_FAMILY_IGNORED,
+        VK_QUEUE_FAMILY_IGNORED,
+        scatteringTexture.image(),
+        scatteringTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
       cb.pipelineBarrier(
         stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-        {deltaMultipleScatterBarrier});
+        {deltaMultipleScatterBarrier, deltaScatterBarrier});
+      deltaScatteringDensityTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+      scatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
     }
   });
 }

@@ -32,7 +32,6 @@ private:
   bool use_constant_solar_spectrum_{false};
   bool use_ozone_{true};
   bool use_combined_textures_{true};
-  bool use_half_precision_{true};
   Luminance use_luminance_{NONE};
   bool do_white_balance_{true};
 

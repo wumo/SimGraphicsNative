@@ -6,8 +6,8 @@ layout(set = 0, binding = 1) uniform LRRUniform { mat3 luminance_from_radiance; 
 layout(set = 0, binding = 2) uniform sampler2D transmittance_texture;
 layout(set = 0, binding = 3) uniform sampler3D scattering_density_texture;
 
-layout(set = 0, binding = 4, rgba16f) uniform image3D delta_multiple_scattering;
-layout(set = 0, binding = 5, rgba16f) uniform image3D scattering;
+layout(set = 0, binding = 4, rgba32f) uniform image3D delta_multiple_scattering;
+layout(set = 0, binding = 5, rgba32f) uniform image3D scattering;
 
 void main() {
   ivec3 coord = ivec3(gl_GlobalInvocationID.xyz);

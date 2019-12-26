@@ -95,6 +95,9 @@ void SkyModel::computeDirectIrradiance(
     cb.pipelineBarrier(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
       {deltaIrradianceBarrier, irradianceBarrier});
+
+    deltaIrradianceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+    irradianceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
   });
 }
 }

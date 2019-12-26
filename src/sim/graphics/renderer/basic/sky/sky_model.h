@@ -201,11 +201,7 @@ public:
     // (rounded up to a multiple of 3), integrated with the CIE color matching
     // functions, and stored as illuminance values. Then only the
     // luminance-based API functions are provided (see the above note).
-    unsigned int num_precomputed_wavelengths,
-    // Whether to use half precision floats (16 bits) or single precision floats
-    // (32 bits) for the precomputed textures. Half precision is sufficient for
-    // most cases, except for very high exposure values.
-    bool half_precision);
+    unsigned int num_precomputed_wavelengths);
 
   void Init(unsigned int num_scattering_orders = 4);
 
@@ -227,7 +223,7 @@ private:
     Texture &delta_irradiance_texture, Texture &delta_rayleigh_scattering_texture,
     Texture &delta_mie_scattering_texture, Texture &delta_scattering_density_texture,
     Texture &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
-    const glm::mat3 &luminance_from_radiance, bool blend,
+    const glm::mat4 &luminance_from_radiance, bool blend,
     unsigned int num_scattering_orders);
   void computeTransmittance(Texture &transmittanceTexture);
   void computeDirectIrradiance(
@@ -254,7 +250,6 @@ private:
   DebugMarker &debugMarker;
 
   unsigned int num_precomputed_wavelengths_;
-  bool half_precision_;
   //  bool rgb_format_supported_;
   //  std::function<std::string(const vec3 &)> glsl_header_factory_;
   uPtr<Texture> transmittance_texture_;

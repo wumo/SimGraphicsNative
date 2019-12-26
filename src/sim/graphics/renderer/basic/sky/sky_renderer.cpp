@@ -59,7 +59,7 @@ void SkyRenderer::initModel() {
   constexpr double kMieSingleScatteringAlbedo = 0.9;
   constexpr double kMiePhaseFunctionG = 0.8;
   constexpr double kGroundAlbedo = 0.1;
-  const double max_sun_zenith_angle = (use_half_precision_ ? 102.0 : 120.0) / 180.0 * kPi;
+  const double max_sun_zenith_angle = 120.0 / 180.0 * kPi;
 
   DensityProfileLayer rayleigh_layer(0.0, 1.0, -1.0 / kRayleighScaleHeight, 0.0, 0.0);
   DensityProfileLayer mie_layer(0.0, 1.0, -1.0 / kMieScaleHeight, 0.0, 0.0);
@@ -103,7 +103,7 @@ void SkyRenderer::initModel() {
     kTopRadius, rayleigh_density, rayleigh_scattering, mie_density, mie_scattering,
     mie_extinction, kMiePhaseFunctionG, ozone_density, absorption_extinction,
     ground_albedo, max_sun_zenith_angle, kLengthUnitInMeters,
-    use_luminance_ == PRECOMPUTED ? 15 : 3, use_half_precision_);
+    use_luminance_ == PRECOMPUTED ? 15 : 3);
 
   _model->Init();
 

@@ -108,6 +108,9 @@ void SkyModel::computeSingleScattering(
       cb.pipelineBarrier(
         stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
         {deltaRayBarrier, deltaMieBarrier, scatteringBarrier});
+      deltaRayleighScatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+      deltaMieScatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+      scatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
     }
   });
 }

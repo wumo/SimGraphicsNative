@@ -5,9 +5,9 @@
 layout(set = 0, binding = 1) uniform LFRUniform { mat3 luminance_from_radiance; };
 layout(set = 0, binding = 2) uniform sampler2D transmittance;
 
-layout(set = 0, binding = 3, rgba16f) uniform image3D delta_rayleigh;
-layout(set = 0, binding = 4, rgba16f) uniform image3D delta_mie;
-layout(set = 0, binding = 5, rgba16f) uniform image3D scattering;
+layout(set = 0, binding = 3, rgba32f) uniform image3D delta_rayleigh;
+layout(set = 0, binding = 4, rgba32f) uniform image3D delta_mie;
+layout(set = 0, binding = 5, rgba32f) uniform image3D scattering;
 
 void main() {
   ivec3 coord = ivec3(gl_GlobalInvocationID.xyz);
@@ -15,8 +15,7 @@ void main() {
   vec3 deltaRayleighResult;
   vec3 deltaMie;
   ComputeSingleScatteringTexture(
-    ATMOSPHERE, transmittance, vec3(coord.x + 0.5, coord.y + 0.5, coord.z + 1),
-    deltaRayleighResult, deltaMie);
+    ATMOSPHERE, transmittance, coord + vec3(0.5, 0.5, 0), deltaRayleighResult, deltaMie);
   vec4 scatteringResult = vec4(
     luminance_from_radiance * deltaRayleighResult,
     (luminance_from_radiance * deltaMie).r);

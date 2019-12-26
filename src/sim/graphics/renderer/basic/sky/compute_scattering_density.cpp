@@ -88,6 +88,7 @@ void SkyModel::computeScatteringDensity(
         deltaScatteringDensityTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
       cb.pipelineBarrier(
         stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr, barrier);
+      deltaScatteringDensityTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
     }
   });
 }

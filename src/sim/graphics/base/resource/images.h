@@ -87,7 +87,8 @@ public:
     Device &device, std::vector<unsigned char> &bytes, bool transitToShaderRead = true);
 
   void saveToFile(
-    Device &device, vk::CommandPool cmdPool, vk::Queue queue, std::string path);
+    Device &device, vk::CommandPool cmdPool, vk::Queue queue, std::string path,
+    float scale = 1.f);
 
   vk::SubresourceLayout subresourceLayout(
     const vk::Device &device, const vk::ImageSubresource &subresource);

@@ -32,18 +32,6 @@ public:
   ImageBase(
     const VmaAllocator &allocator, vk::ImageCreateInfo info,
     VmaAllocationCreateInfo allocInfo, std::string name = "");
-  void clear(
-    const vk::CommandBuffer &cb, const std::array<float, 4> &color = {1, 1, 1, 1});
-  void copy(const vk::CommandBuffer &cb, ImageBase &srcImage);
-  void copy(
-    const vk::CommandBuffer &cb, vk::Buffer buffer, uint32_t mipLevel,
-    uint32_t arrayLayer, uint32_t width, uint32_t height, uint32_t depth,
-    uint32_t offset);
-  void upload(
-    Device &device, const unsigned char *bytes, size_t sizeInBytes,
-    bool transitToShaderRead = true);
-  void upload(
-    Device &device, std::vector<unsigned char> &bytes, bool transitToShaderRead = true);
 
   void setLayout(
     const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
@@ -83,6 +71,21 @@ public:
     const vk::Device &device, vk::ImageViewType viewType,
     vk::ImageAspectFlags aspectMask);
   void createImageView(const vk::Device &device, vk::ImageViewCreateInfo info);
+
+  void clear(
+    const vk::CommandBuffer &cb, const std::array<float, 4> &color = {1, 1, 1, 1});
+  void copy(const vk::CommandBuffer &cb, ImageBase &srcImage);
+  void copy(
+    const vk::CommandBuffer &cb, vk::Buffer buffer, uint32_t mipLevel,
+    uint32_t arrayLayer, uint32_t width, uint32_t height, uint32_t depth,
+    uint32_t offset);
+  void upload(
+    Device &device, const unsigned char *bytes, size_t sizeInBytes,
+    bool transitToShaderRead = true);
+  void upload(
+    Device &device, std::vector<unsigned char> &bytes, bool transitToShaderRead = true);
+
+  void saveToFile(std::string path);
 
   const vk::ImageCreateInfo &getInfo() const;
   const vk::Format &format() const;

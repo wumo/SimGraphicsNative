@@ -44,6 +44,14 @@ set(sources
   src/sim/graphics/base/resource/buffers.h
   src/sim/graphics/base/resource/images.cpp
   src/sim/graphics/base/resource/images.h
+  src/sim/graphics/base/resource/texture/texture_2d.cpp
+  src/sim/graphics/base/resource/texture/texture_cube.cpp
+  src/sim/graphics/base/resource/texture/texture_maker.cpp
+  src/sim/graphics/base/resource/texture/image_copy.cpp
+  src/sim/graphics/base/resource/texture/image_layout.cpp
+  src/sim/graphics/base/resource/texture/image_upload.cpp
+  src/sim/graphics/base/resource/texture/image_save.cpp
+  src/sim/graphics/base/resource/texture/sampler_maker.cpp
   
   src/sim/graphics/util/fps_meter.cpp
   src/sim/graphics/util/fps_meter.h

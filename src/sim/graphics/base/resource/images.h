@@ -119,43 +119,23 @@ public:
   Texture(Device &device, const vk::ImageCreateInfo &info, std::string name = "");
 };
 
-class DepthStencilImage: public Texture {
-public:
-  DepthStencilImage(
-    Device &device, uint32_t width, uint32_t height,
-    vk::Format format = vk::Format::eD24UnormS8Uint,
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
+namespace image {
 
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount);
-};
+uPtr<Texture> depthStencilUnique(
+  Device &device, uint32_t width, uint32_t height,
+  vk::Format format = vk::Format::eD24UnormS8Uint,
+  vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
 
-class ColorInputAttachmentImage: public Texture {
-public:
-  ColorInputAttachmentImage(
-    Device &device, uint32_t width, uint32_t height,
-    vk::Format format = vk::Format::eR8G8B8A8Unorm,
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
+uPtr<Texture> colorInputAttachmentUnique(
+  Device &device, uint32_t width, uint32_t height,
+  vk::Format format = vk::Format::eR8G8B8A8Unorm,
+  vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
 
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount);
-};
+uPtr<Texture> storageAttachmentUnique(
+  Device &device, uint32_t width, uint32_t height, vk::Format format,
+  vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
 
-class StorageAttachmentImage: public Texture {
-public:
-  StorageAttachmentImage(
-    Device &device, uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
-
-private:
-  static vk::ImageCreateInfo info(
-    uint32_t width, uint32_t height, vk::Format format,
-    vk::SampleCountFlagBits sampleCount);
-};
+}
 
 class Texture2D: public Texture {
 public:

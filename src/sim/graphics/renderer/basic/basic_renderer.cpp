@@ -140,19 +140,19 @@ void BasicRenderer::createPipelines() {
 }
 
 void BasicRenderer::recreateResources() {
-  attachments.offscreenImage = u<StorageAttachmentImage>(
+  attachments.offscreenImage = image::storageAttachmentUnique(
     *device, extent.width, extent.height, swapchain->getImageFormat(), sampleCount);
-  attachments.position = u<ColorInputAttachmentImage>(
+  attachments.position = image::colorInputAttachmentUnique(
     *device, extent.width, extent.height, vk::Format::eR32G32B32A32Sfloat, sampleCount);
-  attachments.normal = u<ColorInputAttachmentImage>(
+  attachments.normal = image::colorInputAttachmentUnique(
     *device, extent.width, extent.height, vk::Format::eR32G32B32A32Sfloat, sampleCount);
-  attachments.albedo = u<ColorInputAttachmentImage>(
+  attachments.albedo = image::colorInputAttachmentUnique(
     *device, extent.width, extent.height, vk::Format::eR8G8B8A8Unorm, sampleCount);
-  attachments.pbr = u<ColorInputAttachmentImage>(
+  attachments.pbr = image::colorInputAttachmentUnique(
     *device, extent.width, extent.height, vk::Format::eR8G8B8A8Unorm, sampleCount);
-  attachments.emissive = u<ColorInputAttachmentImage>(
+  attachments.emissive = image::colorInputAttachmentUnique(
     *device, extent.width, extent.height, vk::Format::eR8G8B8A8Unorm, sampleCount);
-  attachments.depth = u<DepthStencilImage>(
+  attachments.depth = image::depthStencilUnique(
     *device, extent.width, extent.height, vk::Format::eD24UnormS8Uint, sampleCount);
   debugMarker.name(attachments.offscreenImage->image(), "offscreenImage");
   debugMarker.name(attachments.position->image(), "position attchment");

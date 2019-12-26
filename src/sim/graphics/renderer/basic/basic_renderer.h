@@ -67,9 +67,9 @@ protected:
   } Pipelines;
 
   struct {
-    uPtr<StorageAttachmentImage> offscreenImage;
-    uPtr<ColorInputAttachmentImage> position, normal, albedo, pbr, emissive, translucent;
-    uPtr<DepthStencilImage> depth;
+    uPtr<Texture> offscreenImage;
+    uPtr<Texture> position, normal, albedo, pbr, emissive, translucent;
+    uPtr<Texture> depth;
   } attachments;
 };
 }

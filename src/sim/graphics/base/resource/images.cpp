@@ -17,7 +17,7 @@ using layout = vk::ImageLayout;
 using access = vk::AccessFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using stage = vk::PipelineStageFlagBits;
-using image = vk::ImageUsageFlagBits;
+using imageUsage = vk::ImageUsageFlagBits;
 using buffer = vk::BufferUsageFlagBits;
 
 void ImageBase::setLayout(
@@ -319,74 +319,59 @@ vk::ImageSubresourceRange ImageBase::subresourceRange(
 const vk::Sampler &ImageBase::sampler() const { return *_sampler; }
 const vk::ImageCreateInfo &ImageBase::getInfo() const { return _info; }
 
-DepthStencilImage::DepthStencilImage(
-  Device &device, uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount)
-  : Texture{device, info(width, height, format, sampleCount)} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
-}
-
-vk::ImageCreateInfo DepthStencilImage::info(
-  uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount) {
-  return {{},
-          vk::ImageType::e2D,
-          format,
-          {width, height, 1U},
-          1,
-          1,
-          sampleCount,
-          vk::ImageTiling::eOptimal,
-          image::eDepthStencilAttachment | image::eTransferSrc | image::eSampled};
-}
-
-ColorInputAttachmentImage::ColorInputAttachmentImage(
-  Device &device, uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount)
-  : Texture{device, info(width, height, format, sampleCount)} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
-}
-
-vk::ImageCreateInfo ColorInputAttachmentImage::info(
-  uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount) {
-  return {{},
-          vk::ImageType::e2D,
-          format,
-          {width, height, 1U},
-          1,
-          1,
-          sampleCount,
-          vk::ImageTiling::eOptimal,
-          image::eColorAttachment | image::eInputAttachment | image::eTransferSrc |
-            image::eSampled};
-}
-
-StorageAttachmentImage::StorageAttachmentImage(
-  Device &device, uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount)
-  : Texture{device, info(width, height, format, sampleCount)} {
-  createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
-}
-
-vk::ImageCreateInfo StorageAttachmentImage::info(
-  uint32_t width, uint32_t height, vk::Format format,
-  vk::SampleCountFlagBits sampleCount) {
-  vk::ImageCreateInfo info{
-    {},
-    vk::ImageType::e2D,
-    format,
-    {width, height, 1},
-    1,
-    1,
-    sampleCount,
-    vk::ImageTiling::eOptimal,
-    image::eColorAttachment | image::eSampled | image::eStorage | image::eTransferSrc};
-  return info;
-}
-
 Texture::Texture(Device &device, const vk::ImageCreateInfo &info, std::string name)
   : ImageBase{device.allocator(), info, VMA_MEMORY_USAGE_GPU_ONLY, {}, name} {}
+
+uPtr<Texture> image::depthStencilUnique(
+  Device &device, uint32_t width, uint32_t height, vk::Format format,
+  vk::SampleCountFlagBits sampleCount) {
+  auto texture = u<Texture>(
+    device, vk::ImageCreateInfo{{},
+                                vk::ImageType::e2D,
+                                format,
+                                {width, height, 1U},
+                                1,
+                                1,
+                                sampleCount,
+                                vk::ImageTiling::eOptimal,
+                                imageUsage::eDepthStencilAttachment});
+  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
+  return texture;
+}
+uPtr<Texture> image::colorInputAttachmentUnique(
+  Device &device, uint32_t width, uint32_t height, vk::Format format,
+  vk::SampleCountFlagBits sampleCount) {
+  auto texture = u<Texture>(
+    device,
+    vk::ImageCreateInfo{{},
+                        vk::ImageType::e2D,
+                        format,
+                        {width, height, 1U},
+                        1,
+                        1,
+                        sampleCount,
+                        vk::ImageTiling::eOptimal,
+                        imageUsage::eColorAttachment | imageUsage::eInputAttachment});
+  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
+  return texture;
+}
+uPtr<Texture> image::storageAttachmentUnique(
+  Device &device, uint32_t width, uint32_t height, vk::Format format,
+  vk::SampleCountFlagBits sampleCount) {
+  auto texture = u<Texture>(
+    device, vk::ImageCreateInfo{{},
+                                vk::ImageType::e2D,
+                                format,
+                                {width, height, 1},
+                                1,
+                                1,
+                                sampleCount,
+                                vk::ImageTiling::eOptimal,
+                                imageUsage::eColorAttachment | imageUsage::eSampled |
+                                  imageUsage::eStorage | imageUsage::eTransferSrc});
+  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
+  return texture;
+}
 
 Texture2D Texture2D::loadFromFile(
   Device &device, const std::string &file, vk::Format format, bool generateMipmap) {
@@ -458,8 +443,8 @@ Texture2D::Texture2D(
 
 vk::ImageCreateInfo Texture2D::info(
   uint32_t width, uint32_t height, bool useMipmap, vk::Format format, bool attachment) {
-  auto flag = image::eSampled | image::eTransferSrc | image::eTransferDst;
-  if(attachment) flag |= image::eColorAttachment;
+  auto flag = imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eTransferDst;
+  if(attachment) flag |= imageUsage::eColorAttachment;
   return {{},
           vk::ImageType::e2D,
           format,
@@ -557,7 +542,7 @@ vk::ImageCreateInfo TextureImageCube::info(
           6,
           vk::SampleCountFlagBits::e1,
           vk::ImageTiling::eOptimal,
-          image::eSampled | image::eTransferSrc | image::eTransferDst,
+          imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eTransferDst,
           vk::SharingMode::eExclusive,
           0,
           nullptr,

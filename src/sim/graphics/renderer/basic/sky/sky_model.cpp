@@ -171,7 +171,8 @@ SkyModel::SkyModel(
   double mie_phase_function_g, const std::vector<DensityProfileLayer> &absorption_density,
   const std::vector<double> &absorption_extinction,
   const std::vector<double> &ground_albedo, double max_sun_zenith_angle,
-  float length_unit_in_meters, unsigned int num_precomputed_wavelengths)
+  float length_unit_in_meters, unsigned int num_precomputed_wavelengths,
+  float exposure_scale)
   : device{device},
     debugMarker{debugMarker},
     num_precomputed_wavelengths_(num_precomputed_wavelengths) {
@@ -255,7 +256,28 @@ SkyModel::SkyModel(
   };
 
   _atmosphereUBO = u<HostUniformBuffer>(device.allocator(), atmosphere);
-  _sunUBO = u<HostUniformBuffer>(device.allocator(), sizeof(glm::vec3));
+
+  double white_point_r = 1.0;
+  double white_point_g = 1.0;
+  double white_point_b = 1.0;
+  if(do_white_balance_) {
+    ConvertSpectrumToLinearSrgb(
+      wavelengths, solar_irradiance, &white_point_r, &white_point_g, &white_point_b);
+    double white_point = (white_point_r + white_point_g + white_point_b) / 3.0;
+    white_point_r /= white_point;
+    white_point_g /= white_point;
+    white_point_b /= white_point;
+  }
+  sun.white_point = {white_point_r, white_point_g, white_point_b, 0};
+  sun.earth_center = {0, -bottom_radius / length_unit_in_meters, 0, 0};
+  sun.sun_size = {glm::tan(sun_angular_radius), glm::cos(sun_angular_radius)};
+  sun.exposure = exposure_ * exposure_scale;
+  sun.sun_direction = {
+    glm::cos(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_),
+    glm::sin(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_),
+    glm::cos(sun_zenith_angle_radians_), 0};
+
+  _sunUBO = u<HostUniformBuffer>(device.allocator(), sun);
 
   cumulateUBO = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
   LFRUBO = u<HostUniformBuffer>(device.allocator(), sizeof(glm::mat4));
@@ -264,19 +286,18 @@ SkyModel::SkyModel(
   transmittance_texture_ = newTexture2D(
     device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
     vk::Format::eR32G32B32A32Sfloat, "transmittance_texture_");
-
   scattering_texture_ = newTexture3D(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
     vk::Format::eR32G32B32A32Sfloat, "scattering_texture_");
-
   irradiance_texture_ = newTexture2D(
     device, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT,
     vk::Format::eR32G32B32A32Sfloat, "irradiance_texture_");
 
-  debugMarker.name(cumulateUBO->buffer(), "cumulateUBO");
-  debugMarker.name(ScatterOrderUBO->buffer(), "ScatterOrderBuffer");
-  debugMarker.name(LFRUBO->buffer(), "LFRUniformBuffer");
   debugMarker.name(_atmosphereUBO->buffer(), "AtmosphereUniform");
+  debugMarker.name(_sunUBO->buffer(), "sunUBO");
+  debugMarker.name(cumulateUBO->buffer(), "cumulateUBO");
+  debugMarker.name(LFRUBO->buffer(), "LFRUniformBuffer");
+  debugMarker.name(ScatterOrderUBO->buffer(), "ScatterOrderBuffer");
   debugMarker.name(transmittance_texture_->image(), "transmittance_texture_");
   debugMarker.name(scattering_texture_->image(), "scattering_texture_");
   debugMarker.name(irradiance_texture_->image(), "irradiance_texture_");

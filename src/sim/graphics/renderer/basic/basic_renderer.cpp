@@ -93,7 +93,7 @@ void BasicRenderer::createRenderPass() {
                          .input(albedo)
                          .input(pbr)
                          .input(emissive)
-                         .preserve(depth)
+                         .input(depth)
                          .index();
   auto &spMaker = maker.subpass(bindpoint::eGraphics).color(color).depthStencil(depth);
   if(config.sampleCount > 1)
@@ -153,7 +153,7 @@ void BasicRenderer::recreateResources() {
     *device, extent.width, extent.height, vk::Format::eR8G8B8A8Unorm, sampleCount);
   attachments.emissive = image::colorInputAttachmentUnique(
     *device, extent.width, extent.height, vk::Format::eR8G8B8A8Unorm, sampleCount);
-  attachments.depth = image::depthStencilUnique(
+  attachments.depth = image::depthStencilInputAttachmentUnique(
     *device, extent.width, extent.height, vk::Format::eD24UnormS8Uint, sampleCount);
   debugMarker.name(attachments.offscreenImage->image(), "offscreenImage");
   debugMarker.name(attachments.position->image(), "position attchment");

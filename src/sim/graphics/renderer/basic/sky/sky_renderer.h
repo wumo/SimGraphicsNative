@@ -36,15 +36,7 @@ private:
 
   bool use_constant_solar_spectrum_{false};
   bool use_ozone_{true};
-  bool use_combined_textures_{true};
   Luminance use_luminance_{PRECOMPUTED};
-  bool do_white_balance_{true};
-
-  double view_distance_meters_{9000.0};
-  double view_zenith_angle_radians_{1.47};
-  double view_azimuth_angle_radians_{-0.1};
-  double sun_zenith_angle_radians_{1.3};
-  double sun_azimuth_angle_radians_{2.9};
-  double exposure_{10.0};
+  
 };
 }

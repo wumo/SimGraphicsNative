@@ -70,7 +70,7 @@ public:
     const vk::AccessFlags &dstAccess, vk::PipelineStageFlagBits dstStage);
 
   vk::ImageMemoryBarrier barrier(
-    vk::ImageLayout newLayout, const vk::AccessFlags& dstAccessMask,
+    vk::ImageLayout newLayout, const vk::AccessFlags &dstAccessMask,
     vk::PipelineStageFlagBits dstStageMask,
     uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
     uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -162,6 +162,11 @@ uPtr<Texture> storageAttachmentUnique(
 
 uPtr<Texture> linearHostUnique(
   Device &device, uint32_t width, uint32_t height, vk::Format format);
+
+uPtr<Texture> depthStencilInputAttachmentUnique(
+  Device &device, uint32_t width, uint32_t height,
+  vk::Format format = vk::Format::eD24UnormS8Uint,
+  vk::SampleCountFlagBits sampleCount = vk::SampleCountFlagBits::e1);
 
 }
 

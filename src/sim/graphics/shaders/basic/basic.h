@@ -9,9 +9,9 @@ struct CameraUBO {
   // mat4 viewInv;
   // mat4 projInv;
   vec4 eye;
-  // vec4 r, v;
-  // float w, h, fov;
-  // float zNear, zFar;
+  vec4 r, v;
+  float w, h, fov;
+  float zNear, zFar;
 };
 
 // ref in shaders

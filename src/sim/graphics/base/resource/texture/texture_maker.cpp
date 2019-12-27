@@ -74,4 +74,22 @@ uPtr<Texture> linearHostUnique(
     VmaAllocationCreateInfo{VMA_ALLOCATION_CREATE_MAPPED_BIT, VMA_MEMORY_USAGE_GPU_TO_CPU,
                             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT});
 }
+
+uPtr<Texture> depthStencilInputAttachmentUnique(
+  Device &device, uint32_t width, uint32_t height, vk::Format format,
+  vk::SampleCountFlagBits sampleCount) {
+  auto texture = u<Texture>(
+    device.allocator(), vk::ImageCreateInfo{{},
+                                            vk::ImageType::e2D,
+                                            format,
+                                            {width, height, 1U},
+                                            1,
+                                            1,
+                                            sampleCount,
+                                            vk::ImageTiling::eOptimal,
+                                            imageUsage::eDepthStencilAttachment |
+                                              imageUsage::eInputAttachment});
+  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
+  return texture;
+}
 }

@@ -108,6 +108,14 @@ private:
     AtmosphereParameters atmosphere;
   };
 
+  struct SunUniform {
+    glm::vec4 white_point{};
+    glm::vec4 earth_center;
+    glm::vec4 sun_direction;
+    glm::vec2 sun_size;
+    float exposure;
+  };
+
 public:
   SkyModel(
     Device &device, DebugMarker &debugMarker,
@@ -201,7 +209,7 @@ public:
     // (rounded up to a multiple of 3), integrated with the CIE color matching
     // functions, and stored as illuminance values. Then only the
     // luminance-based API functions are provided (see the above note).
-    unsigned int num_precomputed_wavelengths);
+    unsigned int num_precomputed_wavelengths, float exposure_scale);
 
   void Init(unsigned int num_scattering_orders = 4);
 
@@ -262,9 +270,18 @@ private:
   uPtr<Texture> delta_rayleigh_scattering_texture, delta_mie_scattering_texture,
     delta_scattering_density_texture;
 
-  uPtr<HostUniformBuffer> _sunUBO;
   uPtr<HostUniformBuffer> _atmosphereUBO;
   AtmosphereUniform atmosphere;
+  uPtr<HostUniformBuffer> _sunUBO;
+  SunUniform sun;
+
+  bool do_white_balance_{true};
+  float view_distance_meters_{9000.0};
+  float view_zenith_angle_radians_{1.47};
+  float view_azimuth_angle_radians_{-0.1};
+  float sun_zenith_angle_radians_{1.3};
+  float sun_azimuth_angle_radians_{2.9};
+  float exposure_{10.0};
 
   std::function<AtmosphereParameters(const glm::vec3 &)> calcAtmosphereParams;
 

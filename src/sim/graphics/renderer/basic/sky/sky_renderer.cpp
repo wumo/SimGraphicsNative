@@ -107,21 +107,9 @@ void SkyRenderer::updateModel() {
     kTopRadius, rayleigh_density, rayleigh_scattering, mie_density, mie_scattering,
     mie_extinction, kMiePhaseFunctionG, ozone_density, absorption_extinction,
     ground_albedo, max_sun_zenith_angle, kLengthUnitInMeters,
-    use_luminance_ == PRECOMPUTED ? 15 : 3);
+    use_luminance_ == PRECOMPUTED ? 15 : 3, use_luminance_ != NONE ? 1e-5 : 1);
 
   _model->Init();
-
-  double white_point_r = 1.0;
-  double white_point_g = 1.0;
-  double white_point_b = 1.0;
-  if(do_white_balance_) {
-    SkyModel::ConvertSpectrumToLinearSrgb(
-      wavelengths, solar_irradiance, &white_point_r, &white_point_g, &white_point_b);
-    double white_point = (white_point_r + white_point_g + white_point_b) / 3.0;
-    white_point_r /= white_point;
-    white_point_g /= white_point;
-    white_point_b /= white_point;
-  }
 }
 
 }

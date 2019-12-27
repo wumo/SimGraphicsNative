@@ -7,16 +7,16 @@ class PerspectiveCamera {
 
 public:
   // ref in shaders
-  struct alignas(sizeof(glm::vec4)) UBO {
+  struct UBO {
     glm::mat4 view;
     glm::mat4 proj;
     glm::mat4 projView;
     //    glm::mat4 viewInv;
     //    glm::mat4 projInv;
     glm::vec4 eye;
-    //    glm::vec4 r, v;
-    //    float w, h, fov;
-    //    float zNear, zFar;
+    glm::vec4 r, v;
+    float w, h, fov;
+    float zNear, zFar;
   };
 
 public:
@@ -105,7 +105,11 @@ private:
   UBO flush() {
     auto proj = flushProjection();
     auto view = flushView();
-    return {view, proj, proj * view, glm::vec4(_location, 1.0)};
+    auto v = glm::vec4(normalize(_focus - _location), 1);
+    auto r = glm::vec4(normalize(cross(glm::vec3(v), _worldUp)), 1);
+    return {view, proj,   proj * view,   glm::vec4(_location, 1.0),
+            r,    v,      float(_width), float(_height),
+            _fov, _zNear, _zFar};
   }
 
   bool incoherent() const { return _view_incoherent || _proj_incoherent; }

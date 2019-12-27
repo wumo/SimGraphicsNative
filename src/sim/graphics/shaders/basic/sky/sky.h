@@ -1,6 +1,10 @@
 #ifndef SKY_H
   #define SKE_H
 
+  #ifndef SKY_SET
+    #define SKY_SET 0
+  #endif
+
   #define IN(x) const in x
   #define OUT(x) out x
   #define TEMPLATE(x)
@@ -10,7 +14,7 @@
 
   #include "definitions.h"
 
-layout(set = 0, binding = 0) uniform AtmosphereUniform {
+layout(set = SKY_SET, binding = 0) uniform AtmosphereUniform {
   int TRANSMITTANCE_TEXTURE_WIDTH;
   int TRANSMITTANCE_TEXTURE_HEIGHT;
   int SCATTERING_TEXTURE_R_SIZE;

@@ -209,6 +209,7 @@ private:
     __input__(albedo, shader::eFragment);
     __input__(pbr, shader::eFragment);
     __input__(emissive, shader::eFragment);
+    __input__(depth, shader::eFragment);
   } deferredSetDef;
 
   struct IBLSetDef: DescriptorSetDef {

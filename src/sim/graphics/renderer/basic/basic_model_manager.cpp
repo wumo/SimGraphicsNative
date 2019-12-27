@@ -162,6 +162,7 @@ void BasicModelManager::resize(vk::Extent2D extent) {
   deferredSetDef.albedo(renderer.attachments.albedo->imageView());
   deferredSetDef.pbr(renderer.attachments.pbr->imageView());
   deferredSetDef.emissive(renderer.attachments.emissive->imageView());
+  deferredSetDef.depth(renderer.attachments.depth->imageView());
   deferredSetDef.update(Sets.deferredSet);
 }
 
@@ -351,10 +352,10 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     cb.bindDescriptorSets(
       bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.ibl.set(),
       Sets.iblSet, nullptr);
-  //  if(skyRenderer->enabled())
-  //    cb.bindDescriptorSets(
-  //      bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.sky.set(),
-  //      Sets.skySet, nullptr);
+  if(skyRenderer->enabled())
+    cb.bindDescriptorSets(
+      bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.sky.set(),
+      Sets.skySet, nullptr);
 
   cb.bindVertexBuffers(0, Buffer.position->buffer(), zero);
   cb.bindVertexBuffers(1, Buffer.normal->buffer(), zero);
@@ -399,8 +400,8 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.nextSubpass(vk::SubpassContents::eInline);
   if(Image.useEnvironmentMap)
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredIBL);
-  //  else if(skyRenderer->enabled())
-  //    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredSky);
+  else if(skyRenderer->enabled())
+    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredSky);
   else
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferred);
   cb.draw(3, 1, 0, 0);

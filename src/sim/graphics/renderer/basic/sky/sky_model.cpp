@@ -358,10 +358,14 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
         i > 0 /* blend */, num_scattering_orders);
     }
 
-    //    ubo.atmosphere = calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
-    //    uboBuffer->updateSingle(ubo);
-    //
-    //    computeTransmittance(*transmittance_texture_);
+    ubo.atmosphere = calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
+    uboBuffer->updateSingle(ubo);
+
+    computeTransmittance(*transmittance_texture_);
+
+    transmittance_texture_->saveToFile(
+      device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance",
+      100.f);
   }
 }
 

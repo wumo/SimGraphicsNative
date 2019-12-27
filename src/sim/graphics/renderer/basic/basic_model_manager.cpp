@@ -75,24 +75,6 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     Sets.descriptorPool =
       DescriptorPoolMaker().pipelineLayout(basicLayout).createUnique(vkDevice);
 
-    //    uint32_t numUniformDescriptor = 1 /*camera*/ + 1 /*Lighting*/ + 1 /*ibl*/ + 2 /*sky*/;
-    //    uint32_t numStorageBufferDescriptor = 1 /*transforms*/ + 1 /*materials*/ +
-    //                                          1 /*lights*/ + 1 /*drawCMD*/ +
-    //                                          1 /*meshInstances*/;
-    //    auto numTextureDescriptor = modelConfig.maxNumTexture + 3 /*IBL*/ + 3 /*sky*/;
-    //    uint32_t numInputAttachment = 5 /*deferred*/;
-    //    uint32_t maxSet = basicLayout.numSets();
-    //    std::vector<vk::DescriptorPoolSize> poolSizes{
-    //      {vk::DescriptorType::eUniformBuffer, numUniformDescriptor},
-    //      {vk::DescriptorType ::eInputAttachment, numInputAttachment},
-    //      {vk::DescriptorType::eCombinedImageSampler, numTextureDescriptor},
-    //      {vk::DescriptorType::eStorageBuffer, numStorageBufferDescriptor},
-    //    };
-    //    vk::DescriptorPoolCreateInfo descriptorPoolInfo{
-    //      vk::DescriptorPoolCreateFlagBits::eUpdateAfterBindEXT, maxSet,
-    //      (uint32_t)poolSizes.size(), poolSizes.data()};
-    //    Sets.descriptorPool = vkDevice.createDescriptorPoolUnique(descriptorPoolInfo);
-
     Sets.basicSet = basicSetDef.createSet(*Sets.descriptorPool);
     Sets.deferredSet = deferredSetDef.createSet(*Sets.descriptorPool);
     Sets.iblSet = iblSetDef.createSet(*Sets.descriptorPool);
@@ -369,10 +351,10 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     cb.bindDescriptorSets(
       bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.ibl.set(),
       Sets.iblSet, nullptr);
-//  if(skyRenderer->enabled())
-//    cb.bindDescriptorSets(
-//      bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.sky.set(),
-//      Sets.skySet, nullptr);
+  //  if(skyRenderer->enabled())
+  //    cb.bindDescriptorSets(
+  //      bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.sky.set(),
+  //      Sets.skySet, nullptr);
 
   cb.bindVertexBuffers(0, Buffer.position->buffer(), zero);
   cb.bindVertexBuffers(1, Buffer.normal->buffer(), zero);
@@ -417,8 +399,8 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.nextSubpass(vk::SubpassContents::eInline);
   if(Image.useEnvironmentMap)
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredIBL);
-//  else if(skyRenderer->enabled())
-//    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredSky);
+  //  else if(skyRenderer->enabled())
+  //    cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredSky);
   else
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferred);
   cb.draw(3, 1, 0, 0);

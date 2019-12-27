@@ -4,9 +4,11 @@
 #include "sim/graphics/base/device.h"
 #include <stb_image.h>
 #include <fstream>
+#include <vulkan/vulkan.hpp>
 
 namespace sim::graphics {
 using layout = vk::ImageLayout;
+using access = vk::AccessFlagBits;
 using stage = vk::PipelineStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using buffer = vk::BufferUsageFlagBits;
@@ -50,6 +52,7 @@ void Texture::saveToFile(
     auto w = i % depthW, h = i / depthW;
 
     auto saveImg = image::linearHostUnique(device, width, height, _info.format);
+    saveImg->setCurrentState(layout::eUndefined, access::eTransferRead, stage::eTransfer);
 
     vk::ImageCopy region{{aspect::eColor, 0, 0, 1},
                          {0, 0, i},
@@ -60,15 +63,20 @@ void Texture::saveToFile(
     Device::executeImmediately(
       device.getDevice(), cmdPool, queue, [&](vk::CommandBuffer cb) {
         auto oldLayout = currentLayout;
-        setLayout(cb, layout::eTransferSrcOptimal);
-        saveImg->setLayout(cb, layout::eTransferDstOptimal);
+        auto oldAccess = srcAccess;
+        auto oldStage = srcStage;
+
+        transitToLayout(
+          cb, layout::eTransferSrcOptimal, access::eTransferRead, stage::eTransfer);
+        saveImg->transitToLayout(
+          cb, layout::eTransferDstOptimal, access::eTransferWrite, stage::eTransfer);
 
         cb.copyImage(
           image(), layout::eTransferSrcOptimal, saveImg->image(),
           layout::eTransferDstOptimal, region);
-        setLayout(cb, oldLayout);
 
-        saveImg->setLayout(cb, layout::eGeneral);
+        transitToLayout(cb, oldLayout, oldAccess, oldStage);
+        saveImg->transitToLayout(cb, layout::eGeneral, access::eHostRead, stage::eHost);
       });
 
     auto subResourceLayout = saveImg->subresourceLayout(

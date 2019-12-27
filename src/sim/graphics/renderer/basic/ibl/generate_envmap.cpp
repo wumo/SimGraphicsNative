@@ -203,8 +203,8 @@ void EnvMapGenerator::generateEnvMap(
   vk::Rect2D scissor{{0, 0}, {dim, dim}};
 
   device.graphicsImmediately([&](vk::CommandBuffer cb) {
-    offscreen.setLayout(cb, layout::eColorAttachmentOptimal);
-    cubeMap.setLayout(cb, layout::eTransferDstOptimal);
+    offscreen.setLayoutByGuess(cb, layout::eColorAttachmentOptimal);
+    cubeMap.setLayoutByGuess(cb, layout::eTransferDstOptimal);
   });
   for(auto m = 0u; m < mipLevels; m++)
     for(auto f = 0u; f < 6; f++) {

@@ -22,7 +22,7 @@ void Texture::upload(
   device.graphicsImmediately([&](vk::CommandBuffer cb) {
     auto buf = stagingBuffer.buffer();
     copy(cb, buf, 0, 0, _info.extent.width, _info.extent.height, _info.extent.depth, 0);
-    if(transitToShaderRead) setLayout(cb, layout::eShaderReadOnlyOptimal);
+    if(transitToShaderRead) setLayoutByGuess(cb, layout::eShaderReadOnlyOptimal);
   });
 }
 }

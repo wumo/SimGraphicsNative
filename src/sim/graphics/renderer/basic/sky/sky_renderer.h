@@ -32,7 +32,7 @@ private:
   bool use_constant_solar_spectrum_{false};
   bool use_ozone_{true};
   bool use_combined_textures_{true};
-  Luminance use_luminance_{NONE};
+  Luminance use_luminance_{PRECOMPUTED};
   bool do_white_balance_{true};
 
   double view_distance_meters_{9000.0};

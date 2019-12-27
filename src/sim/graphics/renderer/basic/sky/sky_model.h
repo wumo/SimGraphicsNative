@@ -223,16 +223,15 @@ private:
     Texture &delta_irradiance_texture, Texture &delta_rayleigh_scattering_texture,
     Texture &delta_mie_scattering_texture, Texture &delta_scattering_density_texture,
     Texture &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
-    const glm::mat4 &luminance_from_radiance, bool blend,
+    const glm::mat4 &luminance_from_radiance, bool cumulate,
     unsigned int num_scattering_orders);
   void computeTransmittance(Texture &transmittanceTexture);
   void computeDirectIrradiance(
-    bool blend, Texture &deltaIrradianceTexture, Texture &irradianceTexture,
+    Texture &deltaIrradianceTexture, Texture &irradianceTexture,
     Texture &transmittanceTexture);
   void computeSingleScattering(
-    bool blend, Texture &deltaRayleighScatteringTexture,
-    Texture &deltaMieScatteringTexture, Texture &scatteringTexture,
-    Texture &transmittanceTexture);
+    Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
+    Texture &scatteringTexture, Texture &transmittanceTexture);
   void computeScatteringDensity(
     Texture &deltaScatteringDensityTexture, Texture &transmittanceTexture,
     Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
@@ -265,6 +264,7 @@ private:
 
   std::function<AtmosphereParameters(const glm::vec3 &)> calcAtmosphereParams;
 
+  uPtr<HostUniformBuffer> cumulateUBO;
   uPtr<HostUniformBuffer> LFRUniformBuffer;
   uPtr<HostUniformBuffer> ScatterOrderBuffer;
 };

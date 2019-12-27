@@ -55,9 +55,8 @@ void SkyModel::computeTransmittance(Texture &transmittanceTexture) {
   auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
-    transmittanceTexture.setLayout(
-      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
+    transmittanceTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
@@ -75,6 +74,7 @@ void SkyModel::computeTransmittance(Texture &transmittanceTexture) {
     cb.pipelineBarrier(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr, barrier);
   });
-  transmittanceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+  transmittanceTexture.setCurrentState(
+    layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
 }
 }

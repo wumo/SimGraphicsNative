@@ -60,13 +60,21 @@ public:
     vk::ImageLayout newLayout,
     vk::PipelineStageFlagBits srcStageMask = vk::PipelineStageFlagBits::eAllCommands,
     vk::PipelineStageFlagBits dstStageMask = vk::PipelineStageFlagBits::eAllCommands);
-  void setLayout(
+  void setLayoutByGuess(
     const vk::CommandBuffer &cb, vk::ImageLayout newLayout,
     vk::PipelineStageFlagBits srcStageMask = vk::PipelineStageFlagBits::eAllCommands,
     vk::PipelineStageFlagBits dstStageMask = vk::PipelineStageFlagBits::eAllCommands);
 
-  void setCurrentLayout(vk::ImageLayout oldLayout);
+  void transitToLayout(
+    const vk::CommandBuffer &cb, vk::ImageLayout newLayout,
+    const vk::AccessFlags &dstAccess, vk::PipelineStageFlagBits dstStage);
 
+  void setCurrentLayout(vk::ImageLayout oldLayout);
+  void setSrcAccess(const vk::AccessFlags &srcAccess);
+  void setSrcStage(vk::PipelineStageFlagBits srcStage);
+  void setCurrentState(
+    vk::ImageLayout newLayout, vk::AccessFlags dstAccess,
+    vk::PipelineStageFlagBits dstStage);
   void setSampler(vk::UniqueSampler &&sampler);
   void createImageView(
     const vk::Device &device, vk::ImageViewType viewType,
@@ -123,6 +131,8 @@ protected:
   vk::UniqueImageView _imageView;
   vk::UniqueSampler _sampler;
   vk::ImageLayout currentLayout;
+  vk::AccessFlags srcAccess;
+  vk::PipelineStageFlagBits srcStage;
   vk::ImageCreateInfo _info;
   static vk::AccessFlags guessSrcAccess(const vk::ImageLayout &oldLayout);
   static vk::AccessFlags guessDstAccess(const vk::ImageLayout &newLayout);

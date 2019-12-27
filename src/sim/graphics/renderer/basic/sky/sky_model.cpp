@@ -234,8 +234,8 @@ SkyModel::SkyModel(
 
   uboBuffer = u<HostUniformBuffer>(device.allocator(), ubo);
 
+  cumulateUBO = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
   LFRUniformBuffer = u<HostUniformBuffer>(device.allocator(), sizeof(glm::mat4));
-
   ScatterOrderBuffer = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
 
   transmittance_texture_ = newTexture2D(
@@ -250,6 +250,7 @@ SkyModel::SkyModel(
     device, IRRADIANCE_TEXTURE_WIDTH, IRRADIANCE_TEXTURE_HEIGHT,
     vk::Format::eR32G32B32A32Sfloat, "irradiance_texture_");
 
+  debugMarker.name(cumulateUBO->buffer(), "cumulateUBO");
   debugMarker.name(ScatterOrderBuffer->buffer(), "ScatterOrderBuffer");
   debugMarker.name(LFRUniformBuffer->buffer(), "LFRUniformBuffer");
   debugMarker.name(uboBuffer->buffer(), "AtmosphereUniform");
@@ -285,6 +286,21 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
   debugMarker.name(
     delta_scattering_density_texture->image(), "delta_scattering_density_texture");
 
+  transmittance_texture_->setCurrentState(
+    layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+  scattering_texture_->setCurrentState(
+    layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+  irradiance_texture_->setCurrentState(
+    layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+  delta_irradiance_texture->setCurrentState(
+    layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+  delta_rayleigh_scattering_texture->setCurrentState(
+    layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+  delta_mie_scattering_texture->setCurrentState(
+    layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+  delta_scattering_density_texture->setCurrentState(
+    layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+
   if(num_precomputed_wavelengths_ <= 3) {
     glm::vec3 lambdas{kLambdaR, kLambdaG, kLambdaB};
     glm::mat4 luminance_from_radiance{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
@@ -299,6 +315,7 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
     constexpr double _kLambdaMax = 830.0;
     int num_iterations = (int(num_precomputed_wavelengths_) + 2) / 3;
     double dlambda = (_kLambdaMax - _kLambdaMin) / (3 * num_iterations);
+
     for(int i = 0; i < num_iterations; ++i) {
       glm::vec3 lambdas{_kLambdaMin + (3 * i + 0.5) * dlambda,
                         _kLambdaMin + (3 * i + 1.5) * dlambda,
@@ -333,12 +350,18 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
                                         0.0,
                                         0.0,
                                         0.0};
+      luminance_from_radiance = glm::transpose(luminance_from_radiance);
       Precompute(
         *delta_irradiance_texture, *delta_rayleigh_scattering_texture,
         *delta_mie_scattering_texture, *delta_scattering_density_texture,
         delta_multiple_scattering_texture, lambdas, luminance_from_radiance,
         i > 0 /* blend */, num_scattering_orders);
     }
+
+    //    ubo.atmosphere = calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
+    //    uboBuffer->updateSingle(ubo);
+    //
+    //    computeTransmittance(*transmittance_texture_);
   }
 }
 
@@ -350,8 +373,10 @@ void SkyModel::Precompute(
   Texture &deltaIrradianceTexture, Texture &deltaRayleighScatteringTexture,
   Texture &deltaMieScatteringTexture, Texture &deltaScatteringDensityTexture,
   Texture &deltaMultipleScatteringTexture, const glm::vec3 &lambdas,
-  const glm::mat4 &luminance_from_radiance, bool blend,
+  const glm::mat4 &luminance_from_radiance, bool cumulate,
   unsigned int num_scattering_orders) {
+
+  cumulateUBO->updateSingle(vk::Bool32(cumulate));
 
   ubo.atmosphere = calcAtmosphereParams(lambdas);
   uboBuffer->updateSingle(ubo);
@@ -362,7 +387,7 @@ void SkyModel::Precompute(
     device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance", 100.f);
 
   computeDirectIrradiance(
-    blend, deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
+    deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
 
   deltaIrradianceTexture.saveToFile(
     device, device.getComputeCmdPool(), device.computeQueue(), "./deltaIrradiance",
@@ -372,8 +397,8 @@ void SkyModel::Precompute(
 
   LFRUniformBuffer->updateSingle(luminance_from_radiance);
   computeSingleScattering(
-    blend, deltaRayleighScatteringTexture, deltaMieScatteringTexture,
-    *scattering_texture_, *transmittance_texture_);
+    deltaRayleighScatteringTexture, deltaMieScatteringTexture, *scattering_texture_,
+    *transmittance_texture_);
 
   deltaRayleighScatteringTexture.saveToFile(
     device, device.getComputeCmdPool(), device.computeQueue(),

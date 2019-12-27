@@ -32,7 +32,7 @@ TextureImageCube TextureImageCube::loadFromFile(
   device.graphicsImmediately([&](vk::CommandBuffer cb) {
     auto buf = stagingBuffer.buffer();
 
-    texture.setLayout(cb, layout::eTransferDstOptimal);
+    texture.setLayoutByGuess(cb, layout::eTransferDstOptimal);
 
     size_t offset = 0;
     for(uint32_t face = 0; face < 6; face++)
@@ -42,7 +42,7 @@ TextureImageCube TextureImageCube::loadFromFile(
           cb, buf, mipLevel, face, uint32_t(extent.x), uint32_t(extent.y), 1, offset);
         offset += tex[face][mipLevel].size();
       }
-    texture.setLayout(cb, layout::eShaderReadOnlyOptimal);
+    texture.setLayoutByGuess(cb, layout::eShaderReadOnlyOptimal);
   });
 
   return texture;

@@ -64,12 +64,10 @@ void SkyModel::computeMultipleScattering(
   auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
-    deltaMultipleScatteringTexture.setLayout(
-      cb, layout::eShaderReadOnlyOptimal, layout ::eGeneral, access::eShaderRead,
-      access::eShaderWrite, stage::eComputeShader, stage::eComputeShader);
-    scatteringTexture.setLayout(
-      cb, layout::eShaderReadOnlyOptimal, layout ::eGeneral, access::eShaderRead,
-      access::eShaderWrite, stage::eComputeShader, stage::eComputeShader);
+    deltaMultipleScatteringTexture.transitToLayout(
+      cb, layout ::eGeneral, access::eShaderWrite, stage::eComputeShader);
+    scatteringTexture.transitToLayout(
+      cb, layout ::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
@@ -97,8 +95,10 @@ void SkyModel::computeMultipleScattering(
       cb.pipelineBarrier(
         stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
         {deltaMultipleScatterBarrier, deltaScatterBarrier});
-      deltaScatteringDensityTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
-      scatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+      deltaMultipleScatteringTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
+      scatteringTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
     }
   });
 }

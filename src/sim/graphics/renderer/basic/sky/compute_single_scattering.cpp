@@ -19,6 +19,7 @@ using namespace glm;
 namespace {
 struct ComputeSingleScatteringDescriptorDef: DescriptorSetDef {
   __uniform__(atmosphere, shader::eCompute);
+  __uniform__(cumulate, shader::eCompute);
   __uniform__(luminance_from_radiance, shader::eCompute);
   __sampler__(transmittance, shader::eCompute);
   __storageImage__(delta_rayleigh, shader::eCompute);
@@ -28,13 +29,13 @@ struct ComputeSingleScatteringDescriptorDef: DescriptorSetDef {
 }
 
 void SkyModel::computeSingleScattering(
-  bool blend, Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
+  Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
   Texture &scatteringTexture, Texture &transmittanceTexture) {
   auto dim = scatteringTexture.extent();
 
   // Descriptor Pool
   std::vector<vk::DescriptorPoolSize> poolSizes{
-    {vk::DescriptorType::eUniformBuffer, 2},
+    {vk::DescriptorType::eUniformBuffer, 3},
     {vk::DescriptorType::eCombinedImageSampler, 1},
     {vk::DescriptorType::eStorageImage, 3},
   };
@@ -46,6 +47,7 @@ void SkyModel::computeSingleScattering(
   setDef.init(device.getDevice());
   auto set = setDef.createSet(*descriptorPool);
   setDef.atmosphere(uboBuffer->buffer());
+  setDef.cumulate(cumulateUBO->buffer());
   setDef.luminance_from_radiance(LFRUniformBuffer->buffer());
   setDef.transmittance(transmittanceTexture);
   setDef.delta_rayleigh(deltaRayleighScatteringTexture);
@@ -63,15 +65,12 @@ void SkyModel::computeSingleScattering(
   auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
-    deltaRayleighScatteringTexture.setLayout(
-      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
-    deltaMieScatteringTexture.setLayout(
-      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
-    scatteringTexture.setLayout(
-      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
+    deltaRayleighScatteringTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+    deltaMieScatteringTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+    scatteringTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
@@ -108,9 +107,12 @@ void SkyModel::computeSingleScattering(
       cb.pipelineBarrier(
         stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
         {deltaRayBarrier, deltaMieBarrier, scatteringBarrier});
-      deltaRayleighScatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
-      deltaMieScatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
-      scatteringTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+      deltaRayleighScatteringTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
+      deltaMieScatteringTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
+      scatteringTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
     }
   });
 }

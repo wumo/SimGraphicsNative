@@ -85,7 +85,7 @@ void Texture::createImageView(const vk::Device &device, vk::ImageViewCreateInfo 
 void Texture::setSampler(vk::UniqueSampler &&sampler) { _sampler = std::move(sampler); }
 
 void Texture::clear(const vk::CommandBuffer &cb, const std::array<float, 4> &color) {
-  setLayout(cb, layout::eTransferDstOptimal);
+  setLayoutByGuess(cb, layout::eTransferDstOptimal);
   vk::ClearColorValue clearColorValue{color};
   vk::ImageSubresourceRange range{aspect::eColor, 0, 1, 0, 1};
   cb.clearColorImage(

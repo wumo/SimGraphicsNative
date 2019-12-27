@@ -24,8 +24,8 @@ void Texture::copy(const vk::CommandBuffer &cb, Texture &srcImage, vk::Image &ds
 }
 
 void Texture::copy(const vk::CommandBuffer &cb, Texture &srcImage) {
-  srcImage.setLayout(cb, layout::eTransferSrcOptimal);
-  setLayout(cb, layout::eTransferDstOptimal);
+  srcImage.setLayoutByGuess(cb, layout::eTransferSrcOptimal);
+  setLayoutByGuess(cb, layout::eTransferDstOptimal);
   for(uint32_t mipLevel = 0; mipLevel < info().mipLevels; ++mipLevel) {
     vk::ImageCopy region;
     region.srcSubresource = {aspect::eColor, mipLevel, 0, 1};
@@ -40,7 +40,7 @@ void Texture::copy(const vk::CommandBuffer &cb, Texture &srcImage) {
 void Texture::copy(
   const vk::CommandBuffer &cb, vk::Buffer buffer, uint32_t mipLevel, uint32_t arrayLayer,
   uint32_t width, uint32_t height, uint32_t depth, uint32_t offset) {
-  setLayout(cb, layout::eTransferDstOptimal, stage::eTopOfPipe, stage::eTransfer);
+  setLayoutByGuess(cb, layout::eTransferDstOptimal, stage::eTopOfPipe, stage::eTransfer);
   vk::BufferImageCopy region;
   region.bufferOffset = offset;
   region.imageSubresource = {aspect::eColor, mipLevel, arrayLayer, 1};

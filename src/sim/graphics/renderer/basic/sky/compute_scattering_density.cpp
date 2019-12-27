@@ -68,9 +68,8 @@ void SkyModel::computeScatteringDensity(
   auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
-    deltaScatteringDensityTexture.setLayout(
-      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
+    deltaScatteringDensityTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
@@ -88,7 +87,8 @@ void SkyModel::computeScatteringDensity(
         deltaScatteringDensityTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
       cb.pipelineBarrier(
         stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr, barrier);
-      deltaScatteringDensityTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+      deltaScatteringDensityTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
     }
   });
 }

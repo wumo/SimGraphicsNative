@@ -20,6 +20,7 @@ using namespace glm;
 namespace {
 struct ComputeDirectIrradianceDescriptorDef: DescriptorSetDef {
   __uniform__(atmosphere, shader::eCompute);
+  __uniform__(cumulate, shader::eCompute);
   __sampler__(transmittance, shader::eCompute);
   __storageImage__(delta_irradiance, shader::eCompute);
   __storageImage__(irradiance, shader::eCompute);
@@ -27,7 +28,7 @@ struct ComputeDirectIrradianceDescriptorDef: DescriptorSetDef {
 }
 
 void SkyModel::computeDirectIrradiance(
-  bool blend, Texture &deltaIrradianceTexture, Texture &irradianceTexture,
+  Texture &deltaIrradianceTexture, Texture &irradianceTexture,
   Texture &transmittanceTexture) {
 
   ComputePipelineMaker pipelineMaker{device.getDevice()};
@@ -39,7 +40,7 @@ void SkyModel::computeDirectIrradiance(
 
   // Descriptor Pool
   std::vector<vk::DescriptorPoolSize> poolSizes{
-    {vk::DescriptorType::eUniformBuffer, 1},
+    {vk::DescriptorType::eUniformBuffer, 2},
     {vk::DescriptorType::eCombinedImageSampler, 1},
     {vk::DescriptorType::eStorageImage, 2},
   };
@@ -51,6 +52,7 @@ void SkyModel::computeDirectIrradiance(
   setDef.init(device.getDevice());
   auto set = setDef.createSet(*descriptorPool);
   setDef.atmosphere(uboBuffer->buffer());
+  setDef.cumulate(cumulateUBO->buffer());
   setDef.transmittance(transmittanceTexture);
   setDef.delta_irradiance(deltaIrradianceTexture);
   setDef.irradiance(irradianceTexture);
@@ -63,12 +65,10 @@ void SkyModel::computeDirectIrradiance(
   auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
-    deltaIrradianceTexture.setLayout(
-      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
-    irradianceTexture.setLayout(
-      cb, layout::eUndefined, layout::eGeneral, access::eShaderRead, access::eShaderWrite,
-      stage::eComputeShader, stage::eComputeShader);
+    deltaIrradianceTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+    irradianceTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
@@ -96,8 +96,10 @@ void SkyModel::computeDirectIrradiance(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
       {deltaIrradianceBarrier, irradianceBarrier});
 
-    deltaIrradianceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
-    irradianceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+    deltaIrradianceTexture.setCurrentState(
+      layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
+    irradianceTexture.setCurrentState(
+      layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
   });
 }
 }

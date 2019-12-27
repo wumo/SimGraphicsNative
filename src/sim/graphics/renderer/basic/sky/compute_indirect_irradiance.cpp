@@ -69,13 +69,11 @@ void SkyModel::computeIndirectIrradiance(
   auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
-    deltaIrradianceTexture.setLayout(
-      cb, layout::eShaderReadOnlyOptimal, layout::eGeneral, access::eShaderRead,
-      access::eShaderWrite, stage::eComputeShader, stage::eComputeShader);
+    deltaIrradianceTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    irradianceTexture.setLayout(
-      cb, layout::eShaderReadOnlyOptimal, layout::eGeneral, access::eShaderRead,
-      access::eShaderWrite, stage::eComputeShader, stage::eComputeShader);
+    irradianceTexture.transitToLayout(
+      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
     cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
@@ -104,8 +102,10 @@ void SkyModel::computeIndirectIrradiance(
         stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
         {deltaIrradianceBarrier, irradianceBarrier});
 
-      deltaIrradianceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
-      irradianceTexture.setCurrentLayout(layout::eShaderReadOnlyOptimal);
+      deltaIrradianceTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
+      irradianceTexture.setCurrentState(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
     }
   });
 }

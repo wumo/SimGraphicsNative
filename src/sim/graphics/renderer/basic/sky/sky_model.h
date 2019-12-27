@@ -228,6 +228,7 @@ public:
 
   HostUniformBuffer &atmosphereUBO();
   HostUniformBuffer &sunUBO();
+  void updateSunPosition(float sun_zenith_angle_radians, float sun_azimuth_angle_radians);
   Texture &transmittanceTexture();
   Texture &scatteringTexture();
   Texture &irradianceTexture();
@@ -273,12 +274,8 @@ private:
   uPtr<HostUniformBuffer> _atmosphereUBO;
   AtmosphereUniform atmosphere;
   uPtr<HostUniformBuffer> _sunUBO;
-  SunUniform sun;
 
   bool do_white_balance_{true};
-  float view_distance_meters_{9000.0};
-  float view_zenith_angle_radians_{1.47};
-  float view_azimuth_angle_radians_{-0.1};
   float sun_zenith_angle_radians_{1.3};
   float sun_azimuth_angle_radians_{2.9};
   float exposure_{10.0};

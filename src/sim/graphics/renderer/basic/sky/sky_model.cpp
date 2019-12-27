@@ -268,16 +268,16 @@ SkyModel::SkyModel(
     white_point_g /= white_point;
     white_point_b /= white_point;
   }
-  sun.white_point = {white_point_r, white_point_g, white_point_b, 0};
-  sun.earth_center = {0, -bottom_radius / length_unit_in_meters, 0, 0};
-  sun.sun_size = {glm::tan(sun_angular_radius), glm::cos(sun_angular_radius)};
-  sun.exposure = exposure_ * exposure_scale;
-  sun.sun_direction = {
-    glm::cos(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_),
-    glm::sin(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_),
-    glm::cos(sun_zenith_angle_radians_), 0};
 
-  _sunUBO = u<HostUniformBuffer>(device.allocator(), sun);
+  _sunUBO = u<HostUniformBuffer>(device.allocator(), sizeof(SunUniform));
+
+  auto ptr = _sunUBO->ptr<SunUniform>();
+
+  ptr->white_point = {white_point_r, white_point_g, white_point_b, 0};
+  ptr->earth_center = {0, -bottom_radius / length_unit_in_meters, 0, 0};
+  ptr->sun_size = {glm::tan(sun_angular_radius), glm::cos(sun_angular_radius)};
+  ptr->exposure = exposure_ * exposure_scale;
+  updateSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
   cumulateUBO = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
   LFRUBO = u<HostUniformBuffer>(device.allocator(), sizeof(glm::mat4));
@@ -401,12 +401,12 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
 
     computeTransmittance(*transmittance_texture_);
 
-    transmittance_texture_->saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance");
-    scattering_texture_->saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./scattering");
-    irradiance_texture_->saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./irradiance");
+    //    transmittance_texture_->saveToFile(
+    //      device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance");
+    //    scattering_texture_->saveToFile(
+    //      device, device.getComputeCmdPool(), device.computeQueue(), "./scattering");
+    //    irradiance_texture_->saveToFile(
+    //      device, device.getComputeCmdPool(), device.computeQueue(), "./irradiance");
   }
 
   delta_irradiance_texture.reset();
@@ -460,6 +460,17 @@ void SkyModel::Precompute(
 
 HostUniformBuffer &SkyModel::atmosphereUBO() { return *_atmosphereUBO; }
 HostUniformBuffer &SkyModel::sunUBO() { return *_sunUBO; }
+
+void SkyModel::updateSunPosition(
+  float sun_zenith_angle_radians, float sun_azimuth_angle_radians) {
+  sun_azimuth_angle_radians_ = sun_azimuth_angle_radians;
+  sun_zenith_angle_radians_ = sun_zenith_angle_radians;
+
+  _sunUBO->ptr<SunUniform>()->sun_direction = {
+    glm::cos(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_),
+    glm::cos(sun_zenith_angle_radians_),
+    glm::sin(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_), 0};
+}
 Texture &SkyModel::transmittanceTexture() { return *transmittance_texture_; }
 Texture &SkyModel::scatteringTexture() { return *scattering_texture_; }
 Texture &SkyModel::irradianceTexture() { return *irradiance_texture_; }

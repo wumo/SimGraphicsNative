@@ -27,47 +27,6 @@ struct AngularInfo {
   vec3 padding;
 };
 
-// Calculation of the lighting contribution from an optional Image Based Light source.
-// Precomputed Environment Maps are required uniform inputs and are computed as outlined in [1].
-// See our README.md on Environment Maps [3] for additional discussion.
-#ifdef USE_IBL
-vec3 getIBLContribution(MaterialInfo materialInfo, vec3 n, vec3 v) {
-  float NdotV = clamp(dot(n, v), 0.0, 1.0);
-  uint mipcount = textureQueryLevels(SPECULAR_ENV_SAMPLER);
-  float lod =
-    clamp(materialInfo.perceptualRoughness * float(mipcount), 0.0, float(mipcount));
-  vec3 reflection = normalize(reflect(-v, n));
-  //  reflection.y *= -1.0f;
-
-  vec2 brdfSamplePoint =
-    clamp(vec2(NdotV, materialInfo.perceptualRoughness), vec2(0.0, 0.0), vec2(1.0, 1.0));
-  // retrieve a scale and bias to F0. See [1], Figure 3
-  vec2 brdf = LINEARtoSRGB(texture(BRDFLUT, brdfSamplePoint).rgb).rg;
-
-  vec4 diffuseSample = texture(DIFFUSE_ENV_SAMPLER, n);
-
-  #ifdef USE_TEX_LOD
-  vec4 specularSample = textureLod(SPECULAR_ENV_SAMPLER, reflection, lod);
-  #else
-  vec4 specularSample = texture(SPECULAR_ENV_SAMPLER, reflection);
-  #endif
-
-  #ifdef USE_HDR
-  // Already linear.
-  vec3 diffuseLight = diffuseSample.rgb;
-  vec3 specularLight = specularSample.rgb;
-  #else
-  vec3 diffuseLight = SRGBtoLINEAR(diffuseSample).rgb;
-  vec3 specularLight = SRGBtoLINEAR(specularSample).rgb;
-  #endif
-
-  vec3 diffuse = diffuseLight * materialInfo.diffuseColor;
-  vec3 specular = specularLight * (materialInfo.specularColor * brdf.x + brdf.y);
-
-  return diffuse + specular;
-}
-#endif
-
 // Lambert lighting
 // see https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
 vec3 diffuse(MaterialInfo materialInfo) { return materialInfo.diffuseColor / M_PI; }
@@ -195,6 +154,58 @@ vec3 applySpotLight(
   return rangeAttenuation * spotAttenuation * light.intensity * light.color * shade;
 }
 
+// Calculation of the lighting contribution from an optional Image Based Light source.
+// Precomputed Environment Maps are required uniform inputs and are computed as outlined in [1].
+// See our README.md on Environment Maps [3] for additional discussion.
+#ifdef USE_IBL
+vec3 getIBLContribution(MaterialInfo materialInfo, vec3 n, vec3 v) {
+  float NdotV = clamp(dot(n, v), 0.0, 1.0);
+  uint mipcount = textureQueryLevels(SPECULAR_ENV_SAMPLER);
+  float lod =
+    clamp(materialInfo.perceptualRoughness * float(mipcount), 0.0, float(mipcount));
+  vec3 reflection = normalize(reflect(-v, n));
+  //  reflection.y *= -1.0f;
+
+  vec2 brdfSamplePoint =
+    clamp(vec2(NdotV, materialInfo.perceptualRoughness), vec2(0.0, 0.0), vec2(1.0, 1.0));
+  // retrieve a scale and bias to F0. See [1], Figure 3
+  vec2 brdf = LINEARtoSRGB(texture(BRDFLUT, brdfSamplePoint).rgb).rg;
+
+  vec4 diffuseSample = texture(DIFFUSE_ENV_SAMPLER, n);
+
+  #ifdef USE_TEX_LOD
+  vec4 specularSample = textureLod(SPECULAR_ENV_SAMPLER, reflection, lod);
+  #else
+  vec4 specularSample = texture(SPECULAR_ENV_SAMPLER, reflection);
+  #endif
+
+  #ifdef USE_HDR
+  // Already linear.
+  vec3 diffuseLight = diffuseSample.rgb;
+  vec3 specularLight = specularSample.rgb;
+  #else
+  vec3 diffuseLight = SRGBtoLINEAR(diffuseSample).rgb;
+  vec3 specularLight = SRGBtoLINEAR(specularSample).rgb;
+  #endif
+
+  vec3 diffuse = diffuseLight * materialInfo.diffuseColor;
+  vec3 specular = specularLight * (materialInfo.specularColor * brdf.x + brdf.y);
+
+  return diffuse + specular;
+}
+#endif
+
+#ifdef USE_SKY
+vec3 getSkyContribution(MaterialInfo materialInfo, vec3 postion, vec3 n, vec3 v) {
+  vec3 sky_irradiance;
+  vec3 sun_irradiance =
+    GetSunAndSkyIrradiance(postion - earth_center, n, sun_direction, sky_irradiance);
+  vec3 radiance =
+    materialInfo.diffuseColor * (1.0 / PI) * (sun_irradiance + sky_irradiance);
+  return vec3(1.0) - exp(-radiance / white_point * exposure);
+}
+#endif
+
 vec3 shadeBRDF(
   vec3 postion, vec3 normal, vec3 diffuseColor, float ao, vec3 specularColor,
   float perceptualRoughness, vec3 emissive, float useIBL, vec3 cam_location) {
@@ -232,6 +243,10 @@ vec3 shadeBRDF(
   if(useIBL > 0.5)
     // Calculate lighting contribution from image based lighting source (IBL)
     color += getIBLContribution(materialInfo, normal, view);
+#endif
+
+#ifdef USE_SKY
+  if(useIBL > 0.5) color += getSkyContribution(materialInfo, postion, normal, view);
 #endif
 
   color = color * ao;

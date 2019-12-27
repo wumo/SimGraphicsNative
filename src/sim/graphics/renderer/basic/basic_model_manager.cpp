@@ -309,6 +309,12 @@ void BasicModelManager::useSky() {
   skySetDef.update(Sets.skySet);
 }
 
+void BasicModelManager::setSunPosition(
+  float sun_zenith_angle_radians, float sun_azimuth_angle_radians) {
+  skyRenderer->model().updateSunPosition(
+    sun_zenith_angle_radians, sun_azimuth_angle_radians);
+}
+
 void BasicModelManager::computeMesh(
   const std::string &imagePath, Ptr<Primitive> primitive) {}
 

@@ -76,7 +76,7 @@ vec3 view_ray(CameraUBO cam) {
   vec3 u = -f * cam.zNear * normalize(cross(cam.r.xyz, cam.v.xyz));
   vec3 v = cam.zNear * cam.v.xyz;
 
-  vec2 c = gl_FragCoord.xy * 2.0 - 1.0;
+  vec2 c = gl_FragCoord.xy / vec2(cam.w, cam.h) * 2.0 - 1.0;
   return normalize(v + c.x * r + c.y * u);
 }
 
@@ -103,10 +103,12 @@ void main() {
     vec3 radiance = GetSkyRadiance(
       cam.eye.xyz - earth_center, view_direction, 0, sun_direction, transmittance);
 
+    // If the view ray intersects the Sun, add the Sun radiance.
     if(dot(view_direction, sun_direction) > sun_size.y) {
       radiance = radiance + transmittance * GetSolarRadiance();
     }
-    color = pow(vec3(1.0) - exp(-radiance / white_point * exposure), vec3(1.0 / 2.2));
+
+    color = LINEARtoSRGB(vec3(1.0) - exp(-radiance / white_point * exposure));
 #endif
     outColor.rgb = color;
   } else {

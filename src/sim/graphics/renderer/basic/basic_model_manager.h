@@ -73,6 +73,7 @@ public:
   void useEnvironmentMap(Ptr<TextureImageCube> envMap);
 
   void useSky();
+  void setSunPosition(float sun_zenith_angle_radians, float sun_azimuth_angle_radians);
 
   void computeMesh(const std::string &imagePath, Ptr<Primitive> primitive);
 

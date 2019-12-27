@@ -20,7 +20,7 @@ auto main(int argc, const char **argv) -> int {
 
   auto &camera = mm.camera();
   camera.setLocation({2.f, 2.f, 2.f});
-  mm.addLight(LightType ::Directional, {-1, -1, -1});
+  //  mm.addLight(LightType ::Directional, {-1, -1, -1});
 
   std::string name = "DamagedHelmet";
   auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
@@ -79,6 +79,10 @@ auto main(int argc, const char **argv) -> int {
   //  mm.useEnvironmentMap(envCube);
 
   mm.useSky();
+  auto kPi = glm::pi<float>();
+  float sun_zenith_angle_radians_{-kPi / 2};
+  float sun_azimuth_angle_radians_{kPi / 2};
+  mm.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
   mm.debugInfo();
 
@@ -86,6 +90,7 @@ auto main(int argc, const char **argv) -> int {
   bool pressed{false};
   bool rotate{false};
   sim::graphics::FPSMeter mFPSMeter;
+
   app.run([&](uint32_t imageIndex, float elapsedDuration) {
     mFPSMeter.update(elapsedDuration);
     panningCamera.updateCamera(app.input);
@@ -107,5 +112,11 @@ auto main(int argc, const char **argv) -> int {
       mm.setWireframe(!mm.wireframe());
       pressed = false;
     }
+
+    sun_zenith_angle_radians_ += 1.f / 100 * elapsedDuration;
+    if(sun_zenith_angle_radians_ > kPi / 2) sun_zenith_angle_radians_ = -kPi / 2;
+    sun_azimuth_angle_radians_ += 1.f / 100 * elapsedDuration;
+    sun_azimuth_angle_radians_ = std::fmod(sun_azimuth_angle_radians_, 2 * kPi);
+    mm.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
   });
 }

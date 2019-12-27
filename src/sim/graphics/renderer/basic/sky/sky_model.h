@@ -220,10 +220,7 @@ public:
 
 private:
   void Precompute(
-    Texture &delta_irradiance_texture, Texture &delta_rayleigh_scattering_texture,
-    Texture &delta_mie_scattering_texture, Texture &delta_scattering_density_texture,
-    Texture &delta_multiple_scattering_texture, const glm::vec3 &lambdas,
-    const glm::mat4 &luminance_from_radiance, bool cumulate,
+    const glm::vec3 &lambdas, const glm::mat4 &luminance_from_radiance, bool cumulate,
     unsigned int num_scattering_orders);
   void computeTransmittance(Texture &transmittanceTexture);
   void computeDirectIrradiance(

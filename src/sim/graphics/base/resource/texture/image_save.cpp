@@ -14,8 +14,8 @@ using aspect = vk::ImageAspectFlagBits;
 using buffer = vk::BufferUsageFlagBits;
 
 void Texture::saveToFile(
-  Device &device, const vk::CommandPool cmdPool, const vk::Queue queue, std::string path,
-  float scale) {
+  Device &device, const vk::CommandPool cmdPool, const vk::Queue queue,
+  std::string path) {
 
   auto width = _info.extent.width, height = _info.extent.height,
        depth = _info.extent.depth;
@@ -108,9 +108,7 @@ void Texture::saveToFile(
     }
   }
 
-  if(max - min < 1e-6) scale = 0;
-  else
-    scale = 255 / (max - min);
+  float scale = (max - min < 1e-6) ? 0 : 255 / (max - min);
 
   // ppm binary pixel data
   std::vector<char> colorRow;

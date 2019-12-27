@@ -306,10 +306,7 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
     glm::mat4 luminance_from_radiance{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
                                       0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     Precompute(
-      *delta_irradiance_texture, *delta_rayleigh_scattering_texture,
-      *delta_mie_scattering_texture, *delta_scattering_density_texture,
-      delta_multiple_scattering_texture, lambdas, luminance_from_radiance,
-      false /* blend */, num_scattering_orders);
+      lambdas, luminance_from_radiance, false /* blend */, num_scattering_orders);
   } else {
     constexpr double _kLambdaMin = 360.0;
     constexpr double _kLambdaMax = 830.0;
@@ -352,10 +349,7 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
                                         0.0};
       luminance_from_radiance = glm::transpose(luminance_from_radiance);
       Precompute(
-        *delta_irradiance_texture, *delta_rayleigh_scattering_texture,
-        *delta_mie_scattering_texture, *delta_scattering_density_texture,
-        delta_multiple_scattering_texture, lambdas, luminance_from_radiance,
-        i > 0 /* blend */, num_scattering_orders);
+        lambdas, luminance_from_radiance, i > 0 /* blend */, num_scattering_orders);
     }
 
     ubo.atmosphere = calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
@@ -364,9 +358,17 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
     computeTransmittance(*transmittance_texture_);
 
     transmittance_texture_->saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance",
-      100.f);
+      device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance");
+    scattering_texture_->saveToFile(
+      device, device.getComputeCmdPool(), device.computeQueue(), "./scattering");
+    irradiance_texture_->saveToFile(
+      device, device.getComputeCmdPool(), device.computeQueue(), "./irradiance");
   }
+
+  delta_irradiance_texture.reset();
+  delta_rayleigh_scattering_texture.reset();
+  delta_mie_scattering_texture.reset();
+  delta_scattering_density_texture.reset();
 }
 
 void SkyModel::ConvertSpectrumToLinearSrgb(
@@ -374,10 +376,7 @@ void SkyModel::ConvertSpectrumToLinearSrgb(
   double *g, double *b) {}
 
 void SkyModel::Precompute(
-  Texture &deltaIrradianceTexture, Texture &deltaRayleighScatteringTexture,
-  Texture &deltaMieScatteringTexture, Texture &deltaScatteringDensityTexture,
-  Texture &deltaMultipleScatteringTexture, const glm::vec3 &lambdas,
-  const glm::mat4 &luminance_from_radiance, bool cumulate,
+  const glm::vec3 &lambdas, const glm::mat4 &luminance_from_radiance, bool cumulate,
   unsigned int num_scattering_orders) {
 
   cumulateUBO->updateSingle(vk::Bool32(cumulate));
@@ -387,65 +386,31 @@ void SkyModel::Precompute(
 
   computeTransmittance(*transmittance_texture_);
 
-  transmittance_texture_->saveToFile(
-    device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance", 100.f);
-
   computeDirectIrradiance(
-    deltaIrradianceTexture, *irradiance_texture_, *transmittance_texture_);
-
-  deltaIrradianceTexture.saveToFile(
-    device, device.getComputeCmdPool(), device.computeQueue(), "./deltaIrradiance",
-    100.f);
-  irradiance_texture_->saveToFile(
-    device, device.getComputeCmdPool(), device.computeQueue(), "./irradiance", 100.f);
+    *delta_irradiance_texture, *irradiance_texture_, *transmittance_texture_);
 
   LFRUniformBuffer->updateSingle(luminance_from_radiance);
   computeSingleScattering(
-    deltaRayleighScatteringTexture, deltaMieScatteringTexture, *scattering_texture_,
-    *transmittance_texture_);
-
-  deltaRayleighScatteringTexture.saveToFile(
-    device, device.getComputeCmdPool(), device.computeQueue(),
-    "./deltaRayleighScattering", 100.f);
-  deltaMieScatteringTexture.saveToFile(
-    device, device.getComputeCmdPool(), device.computeQueue(), "./deltaMieScattering",
-    100.f);
-  scattering_texture_->saveToFile(
-    device, device.getComputeCmdPool(), device.computeQueue(), "./scattering", 100.f);
+    *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
+    *scattering_texture_, *transmittance_texture_);
 
   //  auto scatteringOrder = 2u;
   for(auto scatteringOrder = 2u; scatteringOrder <= num_scattering_orders;
       ++scatteringOrder) {
     ScatterOrderBuffer->updateSingle(scatteringOrder);
     computeScatteringDensity(
-      deltaScatteringDensityTexture, *transmittance_texture_,
-      deltaRayleighScatteringTexture, deltaMieScatteringTexture,
-      deltaMultipleScatteringTexture, deltaIrradianceTexture);
-
-    deltaScatteringDensityTexture.saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(),
-      "./deltaScatteringDensity", 1000.f);
+      *delta_scattering_density_texture, *transmittance_texture_,
+      *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
+      *delta_rayleigh_scattering_texture, *delta_irradiance_texture);
 
     ScatterOrderBuffer->updateSingle(scatteringOrder - 1);
     computeIndirectIrradiance(
-      deltaIrradianceTexture, *irradiance_texture_, deltaRayleighScatteringTexture,
-      deltaMieScatteringTexture, deltaMultipleScatteringTexture);
-
-    deltaIrradianceTexture.saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./deltaIrradiance",
-      100.f);
-    irradiance_texture_->saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./irradiance", 100.f);
+      *delta_irradiance_texture, *irradiance_texture_, *delta_rayleigh_scattering_texture,
+      *delta_mie_scattering_texture, *delta_rayleigh_scattering_texture);
 
     computeMultipleScattering(
-      deltaMultipleScatteringTexture, *scattering_texture_, *transmittance_texture_,
-      deltaScatteringDensityTexture);
-
-    deltaMultipleScatteringTexture.saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./deltaMieScattering",
-      100.f);
-    scattering_texture_->saveToFile(
-      device, device.getComputeCmdPool(), device.computeQueue(), "./scattering", 100.f);
+      *delta_rayleigh_scattering_texture, *scattering_texture_, *transmittance_texture_,
+      *delta_scattering_density_texture);
   }
 }
 }

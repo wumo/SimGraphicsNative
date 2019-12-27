@@ -234,7 +234,6 @@ void VulkanBase::createSyncObjects() {
     semaphores[i].transferFinished = _device.createSemaphoreUnique({});
     semaphores[i].computeFinished = _device.createSemaphoreUnique({});
     semaphores[i].renderFinished = _device.createSemaphoreUnique({});
-    semaphores[i].ownershiPresentFinished = _device.createSemaphoreUnique({});
 
     semaphores[i].renderWaits.push_back(*semaphores[i].imageAvailable);
     semaphores[i].renderWaits.push_back(*semaphores[i].computeFinished);
@@ -255,8 +254,6 @@ void VulkanBase::createCommandBuffers() {
   transferCmdBuffers = _device.allocateCommandBuffers(info);
   info.commandPool = device->getComputeCmdPool();
   computeCmdBuffers = _device.allocateCommandBuffers(info);
-  info.commandPool = device->getPresentCmdPool();
-  presentCmdBuffers = _device.allocateCommandBuffers(info);
 }
 
 void VulkanBase::resize() {
@@ -291,71 +288,21 @@ void VulkanBase::update(std::function<void(uint32_t, float)> &updater, float dt)
   auto &graphicsCB = graphicsCmdBuffers[imageIndex];
   auto &computeCB = computeCmdBuffers[imageIndex];
   auto &transferCB = transferCmdBuffers[imageIndex];
-  auto &presentCB = presentCmdBuffers[imageIndex];
 
   auto &swapchainImage = swapchain->getImage(imageIndex);
 
   transferCB.begin({cbFlag::eSimultaneousUse});
   computeCB.begin({cbFlag ::eSimultaneousUse});
   graphicsCB.begin({cbFlag::eSimultaneousUse});
-  presentCB.begin({cbFlag::eSimultaneousUse});
-
-  if(device->presentQueue() != device->graphicsQueue()) {
-
-    vk::ImageMemoryBarrier barrier{{},
-                                   access::eColorAttachmentWrite,
-                                   layout::eUndefined,
-                                   layout::eColorAttachmentOptimal,
-                                   VK_QUEUE_FAMILY_IGNORED,
-                                   VK_QUEUE_FAMILY_IGNORED,
-                                   swapchainImage,
-                                   swapchain->subresourceRange()};
-
-    graphicsCB.pipelineBarrier(
-      vk::PipelineStageFlagBits::eColorAttachmentOutput,
-      vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, nullptr, nullptr, barrier);
-  }
 
   // dynamicCmdBuffers[imageIndex].resetQueryPool(queryPool, 0, 2);
   // dynamicCmdBuffers[imageIndex].writeTimestamp(stage::eTopOfPipe, queryPool, 0);
   updateFrame(updater, imageIndex, dt);
   // dynamicCmdBuffers[imageIndex].writeTimestamp(stage::eBottomOfPipe, queryPool, 1);
 
-  if(device->presentQueue() != device->graphicsQueue()) {
-
-    {
-      vk::ImageMemoryBarrier barrier{access::eColorAttachmentWrite,
-                                     {},
-                                     layout::eColorAttachmentOptimal,
-                                     layout::ePresentSrcKHR,
-                                     device->getGraphics().index,
-                                     device->getPresent().index,
-                                     swapchainImage,
-                                     swapchain->subresourceRange()};
-
-      graphicsCB.pipelineBarrier(
-        vk::PipelineStageFlagBits::eColorAttachmentOutput,
-        vk::PipelineStageFlagBits::eBottomOfPipe, {}, nullptr, nullptr, barrier);
-    }
-    {
-      vk::ImageMemoryBarrier barrier{{},
-                                     {},
-                                     layout::eColorAttachmentOptimal,
-                                     layout::ePresentSrcKHR,
-                                     device->getGraphics().index,
-                                     device->getPresent().index,
-                                     swapchainImage,
-                                     swapchain->subresourceRange()};
-      presentCB.pipelineBarrier(
-        vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe,
-        {}, nullptr, nullptr, barrier);
-    }
-  }
-
   transferCB.end();
   computeCB.end();
   graphicsCB.end();
-  presentCB.end();
 
   auto &semaphore = semaphores[frameIndex];
 
@@ -381,19 +328,10 @@ void VulkanBase::update(std::function<void(uint32_t, float)> &updater, float dt)
   submit.pWaitDstStageMask = semaphore.renderWaitStages.data();
   submit.signalSemaphoreCount = 1;
   submit.pSignalSemaphores = &(*semaphore.renderFinished);
-  device->graphicsQueue().submit(submit, vk::Fence{});
-
-  waitStage = vk::PipelineStageFlagBits::eAllCommands;
-  submit.pCommandBuffers = &presentCB;
-  submit.waitSemaphoreCount = 1;
-  submit.pWaitSemaphores = &(*semaphore.renderFinished);
-  submit.pWaitDstStageMask = &waitStage;
-  submit.signalSemaphoreCount = 1;
-  submit.pSignalSemaphores = &(*semaphore.ownershiPresentFinished);
-  device->presentQueue().submit(submit, frameFinishedFence);
+  device->graphicsQueue().submit(submit, frameFinishedFence);
 
   try {
-    result = swapchain->present(imageIndex, *semaphore.ownershiPresentFinished);
+    result = swapchain->present(imageIndex, *semaphore.renderFinished);
     if(result == vk::Result::eSuboptimalKHR) {
       input.resizeWanted = true;
       resize();

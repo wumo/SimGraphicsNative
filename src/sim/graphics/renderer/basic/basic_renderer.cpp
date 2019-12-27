@@ -100,14 +100,12 @@ void BasicRenderer::createRenderPass() {
     spMaker.resolve(presentImage); //resolve using tiled on chip memory.
   Subpasses.translucent = spMaker.index();
 
-  if(device->presentQueue() == device->graphicsQueue())
-    maker.dependency(VK_SUBPASS_EXTERNAL, Subpasses.gBuffer)
-      .srcStageMask(stage::eBottomOfPipe)
-      .dstStageMask(stage::eColorAttachmentOutput)
-      .srcAccessMask(access::eMemoryRead)
-      .dstAccessMask(access::eColorAttachmentWrite)
-      .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-
+  maker.dependency(VK_SUBPASS_EXTERNAL, Subpasses.gBuffer)
+    .srcStageMask(stage::eBottomOfPipe)
+    .dstStageMask(stage::eColorAttachmentOutput)
+    .srcAccessMask(access::eMemoryRead)
+    .dstAccessMask(access::eColorAttachmentWrite)
+    .dependencyFlags(vk::DependencyFlagBits::eByRegion);
   maker.dependency(Subpasses.gBuffer, Subpasses.deferred)
     .srcStageMask(stage::eColorAttachmentOutput)
     .dstStageMask(stage::eFragmentShader)
@@ -120,14 +118,12 @@ void BasicRenderer::createRenderPass() {
     .srcAccessMask(access::eColorAttachmentWrite)
     .dstAccessMask(access::eDepthStencilAttachmentRead)
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-
-  if(device->presentQueue() == device->graphicsQueue())
-    maker.dependency(Subpasses.translucent, VK_SUBPASS_EXTERNAL)
-      .srcStageMask(stage::eColorAttachmentOutput)
-      .dstStageMask(stage::eBottomOfPipe)
-      .srcAccessMask(access::eColorAttachmentWrite)
-      .dstAccessMask(access::eMemoryRead)
-      .dependencyFlags(vk::DependencyFlagBits::eByRegion);
+  maker.dependency(Subpasses.translucent, VK_SUBPASS_EXTERNAL)
+    .srcStageMask(stage::eColorAttachmentOutput)
+    .dstStageMask(stage::eBottomOfPipe)
+    .srcAccessMask(access::eColorAttachmentWrite)
+    .dstAccessMask(access::eMemoryRead)
+    .dependencyFlags(vk::DependencyFlagBits::eByRegion);
 
   renderPass = maker.createUnique(vkDevice);
 
@@ -250,9 +246,12 @@ void BasicRenderer::updateFrame(
       layout::eTransferSrcOptimal, {}, access::eTransferRead);
     Texture::copy(cb, *attachments.offscreenImage, swapchainImage);
     Texture::setLayout(
-      cb, swapchainImage, layout::eUndefined, layout::eColorAttachmentOptimal,
+      cb, swapchainImage, layout::eUndefined, layout::ePresentSrcKHR,
       access::eTransferWrite, access::eMemoryRead);
-  }
+  } else
+    Texture::setLayout(
+      cb, swapchainImage, layout::eUndefined, layout::ePresentSrcKHR,
+      access::eTransferWrite, access::eMemoryRead);
 
   vkDevice.getQueryPoolResults(
     *queryPool, 0, 1, pipelineStats.size() * sizeof(uint64_t), pipelineStats.data(),

@@ -88,6 +88,14 @@ using aspect = vk::ImageAspectFlagBits;
 uPtr<Texture> newTexture2D(
   Device &device, uint32_t width, uint32_t height, vk::Format format,
   const std::string &name) {
+  vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
+  uint32_t queueFamilyIndexCount = 0;
+  uint32_t queueFamilyIndices[]{device.getGraphics().index, device.getCompute().index};
+  if(device.getGraphics().index != device.getCompute().index) {
+    sharingMode = vk::SharingMode::eConcurrent;
+    queueFamilyIndexCount = 2;
+  }
+
   auto texture = u<Texture>(
     device.allocator(),
     vk::ImageCreateInfo{
@@ -99,7 +107,10 @@ uPtr<Texture> newTexture2D(
       1,
       vk::SampleCountFlagBits::e1,
       vk::ImageTiling::eOptimal,
-      imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eStorage},
+      imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eStorage,
+      sharingMode,
+      queueFamilyIndexCount,
+      queueFamilyIndices},
     VMA_MEMORY_USAGE_GPU_ONLY, vk::MemoryPropertyFlags{}, name);
   texture->createImageView(
     device.getDevice(), vk::ImageViewType::e2D, vk::ImageAspectFlagBits::eColor);
@@ -114,6 +125,14 @@ uPtr<Texture> newTexture2D(
 uPtr<Texture> newTexture3D(
   Device &device, uint32_t width, uint32_t height, uint32_t depth, vk::Format format,
   const std::string &name) {
+  vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
+  uint32_t queueFamilyIndexCount = 0;
+  uint32_t queueFamilyIndices[]{device.getGraphics().index, device.getCompute().index};
+  if(device.getGraphics().index != device.getCompute().index) {
+    sharingMode = vk::SharingMode::eConcurrent;
+    queueFamilyIndexCount = 2;
+  }
+
   auto texture = u<Texture>(
     device.allocator(),
     vk::ImageCreateInfo{
@@ -125,7 +144,10 @@ uPtr<Texture> newTexture3D(
       1,
       vk::SampleCountFlagBits::e1,
       vk::ImageTiling::eOptimal,
-      imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eStorage},
+      imageUsage::eSampled | imageUsage::eTransferSrc | imageUsage::eStorage,
+      sharingMode,
+      queueFamilyIndexCount,
+      queueFamilyIndices},
     VMA_MEMORY_USAGE_GPU_ONLY, vk::MemoryPropertyFlags{}, name);
   texture->createImageView(
     device.getDevice(), vk::ImageViewType::e3D, vk::ImageAspectFlagBits::eColor);

@@ -3,6 +3,7 @@
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeSingleScattering_comp.h"
+#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -26,6 +27,9 @@ struct ComputeSingleScatteringDescriptorDef: DescriptorSetDef {
   __storageImage__(delta_mie, shader::eCompute);
   __storageImage__(scattering, shader::eCompute);
 };
+struct ComputeSingleScatteringLayoutDef: PipelineLayoutDef {
+  __set__(set, ComputeSingleScatteringDescriptorDef);
+};
 }
 
 void SkyModel::computeSingleScattering(
@@ -33,36 +37,29 @@ void SkyModel::computeSingleScattering(
   Texture &scatteringTexture, Texture &transmittanceTexture) {
   auto dim = scatteringTexture.extent();
 
-  // Descriptor Pool
-  std::vector<vk::DescriptorPoolSize> poolSizes{
-    {vk::DescriptorType::eUniformBuffer, 3},
-    {vk::DescriptorType::eCombinedImageSampler, 1},
-    {vk::DescriptorType::eStorageImage, 3},
-  };
-  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
-    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
-  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
-  // Descriptor sets
-  ComputeSingleScatteringDescriptorDef setDef;
+  ComputeSingleScatteringDescriptorDef setDef{};
   setDef.init(device.getDevice());
+  ComputeSingleScatteringLayoutDef layoutDef{};
+  layoutDef.set(setDef);
+  layoutDef.init(device.getDevice());
+
+  auto descriptorPool =
+    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
+
   auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(uboBuffer->buffer());
+  setDef.atmosphere(_atmosphereUBO->buffer());
   setDef.cumulate(cumulateUBO->buffer());
-  setDef.luminance_from_radiance(LFRUniformBuffer->buffer());
+  setDef.luminance_from_radiance(LFRUBO->buffer());
   setDef.transmittance(transmittanceTexture);
   setDef.delta_rayleigh(deltaRayleighScatteringTexture);
   setDef.delta_mie(deltaMieScatteringTexture);
   setDef.scattering(scatteringTexture);
   setDef.update(set);
 
-  auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(device.getDevice());
-
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
     computeSingleScattering_comp, __ArraySize__(computeSingleScattering_comp));
-  auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
+  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
     deltaRayleighScatteringTexture.transitToLayout(
@@ -73,47 +70,18 @@ void SkyModel::computeSingleScattering(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
-    cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
+    cb.bindDescriptorSets(
+      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
     cb.dispatch(dim.width, dim.height, dim.depth);
 
-    {
-      vk::ImageMemoryBarrier deltaRayBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        deltaRayleighScatteringTexture.image(),
-        deltaRayleighScatteringTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      vk::ImageMemoryBarrier deltaMieBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        deltaMieScatteringTexture.image(),
-        deltaMieScatteringTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      vk::ImageMemoryBarrier scatteringBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        scatteringTexture.image(),
-        scatteringTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      cb.pipelineBarrier(
-        stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-        {deltaRayBarrier, deltaMieBarrier, scatteringBarrier});
-      deltaRayleighScatteringTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-      deltaMieScatteringTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-      scatteringTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-    }
+    cb.pipelineBarrier(
+      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+      {deltaRayleighScatteringTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+       deltaMieScatteringTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+       scatteringTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
   });
 }
 }

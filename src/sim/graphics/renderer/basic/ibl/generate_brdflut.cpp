@@ -73,7 +73,7 @@ uPtr<Texture2D> EnvMapGenerator::generateBRDFLUT() {
   brdfLUTDef.init(device.getDevice());
 
   auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*brdfLUTDef.descriptorSetLayout)
+                          .addSetLayout(*brdfLUTDef.descriptorSetLayout)
                           .createUnique(device.getDevice());
   vk::UniquePipeline pipeline;
   { // Pipeline

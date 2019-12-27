@@ -13,21 +13,17 @@ auto PipelineLayoutMaker::createUnique(const vk::Device &device) const
   return std::move(device.createPipelineLayoutUnique(pipelineLayoutInfo));
 }
 
-auto PipelineLayoutMaker::descriptorSetLayout(const vk::DescriptorSetLayout &layout)
+auto PipelineLayoutMaker::addSetLayout(const vk::DescriptorSetLayout &layout)
   -> PipelineLayoutMaker & {
   setLayouts.push_back(layout);
+  _setDefs.push_back(nullptr);
   return *this;
 }
-auto PipelineLayoutMaker::descriptorSetLayout(
-  uint32_t set, const vk::DescriptorSetLayout &layout) -> PipelineLayoutMaker & {
+auto PipelineLayoutMaker::updateSetLayout(
+  uint32_t set, const vk::DescriptorSetLayout &layout,
+  const DescriptorSetLayoutMaker *setDef) -> PipelineLayoutMaker & {
   setLayouts.at(set) = layout;
-  return *this;
-}
-
-auto PipelineLayoutMaker::descriptorSetLayouts(
-  const std::vector<vk::DescriptorSetLayout> &layouts) -> PipelineLayoutMaker & {
-  for(auto &layout: layouts)
-    descriptorSetLayout(layout);
+  _setDefs.at(set) = setDef;
   return *this;
 }
 
@@ -42,6 +38,11 @@ auto PipelineLayoutMaker::pushConstantRange(
   const vk::PushConstantRange &pushConstantRange) -> PipelineLayoutMaker & {
   pushConstantRanges.push_back(pushConstantRange);
   return *this;
+}
+
+auto PipelineLayoutMaker::setDefs() const
+  -> const std::vector<const DescriptorSetLayoutMaker *> & {
+  return _setDefs;
 }
 
 GraphicsPipelineMaker::GraphicsPipelineMaker(

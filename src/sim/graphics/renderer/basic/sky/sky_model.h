@@ -218,6 +218,12 @@ public:
   static constexpr double kLambdaG = 550.0;
   static constexpr double kLambdaB = 440.0;
 
+  HostUniformBuffer &atmosphereUBO();
+  HostUniformBuffer &sunUBO();
+  Texture &transmittanceTexture();
+  Texture &scatteringTexture();
+  Texture &irradianceTexture();
+
 private:
   void Precompute(
     const glm::vec3 &lambdas, const glm::mat4 &luminance_from_radiance, bool cumulate,
@@ -256,13 +262,14 @@ private:
   uPtr<Texture> delta_rayleigh_scattering_texture, delta_mie_scattering_texture,
     delta_scattering_density_texture;
 
-  uPtr<HostUniformBuffer> uboBuffer;
-  AtmosphereUniform ubo;
+  uPtr<HostUniformBuffer> _sunUBO;
+  uPtr<HostUniformBuffer> _atmosphereUBO;
+  AtmosphereUniform atmosphere;
 
   std::function<AtmosphereParameters(const glm::vec3 &)> calcAtmosphereParams;
 
   uPtr<HostUniformBuffer> cumulateUBO;
-  uPtr<HostUniformBuffer> LFRUniformBuffer;
-  uPtr<HostUniformBuffer> ScatterOrderBuffer;
+  uPtr<HostUniformBuffer> LFRUBO;
+  uPtr<HostUniformBuffer> ScatterOrderUBO;
 };
 }

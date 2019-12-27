@@ -32,6 +32,8 @@ set(sources
   
   src/sim/graphics/base/pipeline/descriptors.cpp
   src/sim/graphics/base/pipeline/descriptors.h
+  src/sim/graphics/base/pipeline/descriptor_pool_maker.cpp
+  src/sim/graphics/base/pipeline/descriptor_pool_maker.h
   src/sim/graphics/base/pipeline/pipeline.cpp
   src/sim/graphics/base/pipeline/pipeline.h
   src/sim/graphics/base/pipeline/render_pass.cpp

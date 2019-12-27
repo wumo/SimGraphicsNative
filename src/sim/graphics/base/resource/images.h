@@ -69,6 +69,13 @@ public:
     const vk::CommandBuffer &cb, vk::ImageLayout newLayout,
     const vk::AccessFlags &dstAccess, vk::PipelineStageFlagBits dstStage);
 
+  vk::ImageMemoryBarrier barrier(
+    vk::ImageLayout newLayout, const vk::AccessFlags& dstAccessMask,
+    vk::PipelineStageFlagBits dstStageMask,
+    uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+    vk::ImageAspectFlagBits aspect = vk::ImageAspectFlagBits::eColor);
+
   void setCurrentLayout(vk::ImageLayout oldLayout);
   void setSrcAccess(const vk::AccessFlags &srcAccess);
   void setSrcStage(vk::PipelineStageFlagBits srcStage);

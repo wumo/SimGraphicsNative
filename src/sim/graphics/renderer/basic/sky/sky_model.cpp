@@ -195,17 +195,17 @@ SkyModel::SkyModel(
   ComputeSpectralRadianceToLuminanceFactors(
     wavelengths, solar_irradiance, 0 /* lambda_power */, &sun_k_r, &sun_k_g, &sun_k_b);
 
-  ubo.transmittance_texture_width = TRANSMITTANCE_TEXTURE_WIDTH;
-  ubo.transmittance_texture_height = TRANSMITTANCE_TEXTURE_HEIGHT;
-  ubo.scattering_texture_r_size = SCATTERING_TEXTURE_R_SIZE;
-  ubo.scattering_texture_mu_size = SCATTERING_TEXTURE_MU_SIZE;
-  ubo.scattering_texture_mu_s_size = SCATTERING_TEXTURE_MU_S_SIZE;
-  ubo.scattering_texture_nu_size = SCATTERING_TEXTURE_NU_SIZE;
-  ubo.irradiance_texture_width = IRRADIANCE_TEXTURE_WIDTH;
-  ubo.irradiance_texture_height = IRRADIANCE_TEXTURE_HEIGHT;
+  atmosphere.transmittance_texture_width = TRANSMITTANCE_TEXTURE_WIDTH;
+  atmosphere.transmittance_texture_height = TRANSMITTANCE_TEXTURE_HEIGHT;
+  atmosphere.scattering_texture_r_size = SCATTERING_TEXTURE_R_SIZE;
+  atmosphere.scattering_texture_mu_size = SCATTERING_TEXTURE_MU_SIZE;
+  atmosphere.scattering_texture_mu_s_size = SCATTERING_TEXTURE_MU_S_SIZE;
+  atmosphere.scattering_texture_nu_size = SCATTERING_TEXTURE_NU_SIZE;
+  atmosphere.irradiance_texture_width = IRRADIANCE_TEXTURE_WIDTH;
+  atmosphere.irradiance_texture_height = IRRADIANCE_TEXTURE_HEIGHT;
 
-  ubo.sky_spectral_radiance_to_luminance = {sky_k_r, sky_k_g, sky_k_b, 0.0};
-  ubo.sun_spectral_radiance_to_luminance = {sun_k_r, sun_k_g, sun_k_b, 0.0};
+  atmosphere.sky_spectral_radiance_to_luminance = {sky_k_r, sky_k_g, sky_k_b, 0.0};
+  atmosphere.sun_spectral_radiance_to_luminance = {sun_k_r, sun_k_g, sun_k_b, 0.0};
 
   auto spectrum =
     [&wavelengths](const std::vector<double> &v, const glm::vec3 &lambdas, double scale) {
@@ -254,11 +254,12 @@ SkyModel::SkyModel(
     };
   };
 
-  uboBuffer = u<HostUniformBuffer>(device.allocator(), ubo);
+  _atmosphereUBO = u<HostUniformBuffer>(device.allocator(), atmosphere);
+  _sunUBO = u<HostUniformBuffer>(device.allocator(), sizeof(glm::vec3));
 
   cumulateUBO = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
-  LFRUniformBuffer = u<HostUniformBuffer>(device.allocator(), sizeof(glm::mat4));
-  ScatterOrderBuffer = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
+  LFRUBO = u<HostUniformBuffer>(device.allocator(), sizeof(glm::mat4));
+  ScatterOrderUBO = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
 
   transmittance_texture_ = newTexture2D(
     device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
@@ -273,9 +274,9 @@ SkyModel::SkyModel(
     vk::Format::eR32G32B32A32Sfloat, "irradiance_texture_");
 
   debugMarker.name(cumulateUBO->buffer(), "cumulateUBO");
-  debugMarker.name(ScatterOrderBuffer->buffer(), "ScatterOrderBuffer");
-  debugMarker.name(LFRUniformBuffer->buffer(), "LFRUniformBuffer");
-  debugMarker.name(uboBuffer->buffer(), "AtmosphereUniform");
+  debugMarker.name(ScatterOrderUBO->buffer(), "ScatterOrderBuffer");
+  debugMarker.name(LFRUBO->buffer(), "LFRUniformBuffer");
+  debugMarker.name(_atmosphereUBO->buffer(), "AtmosphereUniform");
   debugMarker.name(transmittance_texture_->image(), "transmittance_texture_");
   debugMarker.name(scattering_texture_->image(), "scattering_texture_");
   debugMarker.name(irradiance_texture_->image(), "irradiance_texture_");
@@ -374,8 +375,8 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
         lambdas, luminance_from_radiance, i > 0 /* blend */, num_scattering_orders);
     }
 
-    ubo.atmosphere = calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
-    uboBuffer->updateSingle(ubo);
+    atmosphere.atmosphere = calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
+    _atmosphereUBO->updateSingle(atmosphere);
 
     computeTransmittance(*transmittance_texture_);
 
@@ -403,15 +404,15 @@ void SkyModel::Precompute(
 
   cumulateUBO->updateSingle(vk::Bool32(cumulate));
 
-  ubo.atmosphere = calcAtmosphereParams(lambdas);
-  uboBuffer->updateSingle(ubo);
+  atmosphere.atmosphere = calcAtmosphereParams(lambdas);
+  _atmosphereUBO->updateSingle(atmosphere);
 
   computeTransmittance(*transmittance_texture_);
 
   computeDirectIrradiance(
     *delta_irradiance_texture, *irradiance_texture_, *transmittance_texture_);
 
-  LFRUniformBuffer->updateSingle(luminance_from_radiance);
+  LFRUBO->updateSingle(luminance_from_radiance);
   computeSingleScattering(
     *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
     *scattering_texture_, *transmittance_texture_);
@@ -419,13 +420,13 @@ void SkyModel::Precompute(
   //  auto scatteringOrder = 2u;
   for(auto scatteringOrder = 2u; scatteringOrder <= num_scattering_orders;
       ++scatteringOrder) {
-    ScatterOrderBuffer->updateSingle(scatteringOrder);
+    ScatterOrderUBO->updateSingle(scatteringOrder);
     computeScatteringDensity(
       *delta_scattering_density_texture, *transmittance_texture_,
       *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
       *delta_rayleigh_scattering_texture, *delta_irradiance_texture);
 
-    ScatterOrderBuffer->updateSingle(scatteringOrder - 1);
+    ScatterOrderUBO->updateSingle(scatteringOrder - 1);
     computeIndirectIrradiance(
       *delta_irradiance_texture, *irradiance_texture_, *delta_rayleigh_scattering_texture,
       *delta_mie_scattering_texture, *delta_rayleigh_scattering_texture);
@@ -435,4 +436,11 @@ void SkyModel::Precompute(
       *delta_scattering_density_texture);
   }
 }
+
+HostUniformBuffer &SkyModel::atmosphereUBO() { return *_atmosphereUBO; }
+HostUniformBuffer &SkyModel::sunUBO() { return *_sunUBO; }
+Texture &SkyModel::transmittanceTexture() { return *transmittance_texture_; }
+Texture &SkyModel::scatteringTexture() { return *scattering_texture_; }
+Texture &SkyModel::irradianceTexture() { return *irradiance_texture_; }
+
 }

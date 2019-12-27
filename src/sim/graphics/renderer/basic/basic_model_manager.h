@@ -73,7 +73,7 @@ public:
   void useEnvironmentMap(Ptr<TextureImageCube> envMap);
 
   void useSky();
-  
+
   void computeMesh(const std::string &imagePath, Ptr<Primitive> primitive);
 
   Ptr<Light> addLight(
@@ -173,7 +173,7 @@ private:
   } Image;
 
   struct {
-    vk::DescriptorSet basicSet, deferredSet, iblSet;
+    vk::DescriptorSet basicSet, deferredSet, iblSet, skySet;
     vk::UniqueDescriptorPool descriptorPool;
   } Sets;
 
@@ -217,10 +217,19 @@ private:
     __sampler__(brdfLUT, shader::eFragment);
   } iblSetDef;
 
+  struct SkySetDef: DescriptorSetDef {
+    __uniform__(atmosphere, vk::ShaderStageFlagBits::eFragment);
+    __uniform__(sun, vk::ShaderStageFlagBits::eFragment);
+    __sampler__(transmittance, vk::ShaderStageFlagBits::eFragment);
+    __sampler__(scattering, vk::ShaderStageFlagBits::eFragment);
+    __sampler__(irradiance, vk::ShaderStageFlagBits::eFragment);
+  } skySetDef;
+
   struct BasicLayoutDef: PipelineLayoutDef {
     __set__(basic, BasicSetDef);
     __set__(deferred, DeferredSetDef);
     __set__(ibl, IBLSetDef);
+    __set__(sky, SkySetDef);
   } basicLayout;
 
   struct CullSetDef: DescriptorSetDef {

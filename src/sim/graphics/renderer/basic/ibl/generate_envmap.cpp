@@ -143,7 +143,7 @@ void EnvMapGenerator::generateEnvMap(
       break;
   };
   auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*envMapDef.descriptorSetLayout)
+                          .addSetLayout(*envMapDef.descriptorSetLayout)
                           .pushConstantRange(pushConstantRange)
                           .createUnique(device.getDevice());
   vk::UniquePipeline pipeline;

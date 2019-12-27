@@ -13,7 +13,11 @@ constexpr double kLengthUnitInMeters = 1000.0;
 SkyRenderer::SkyRenderer(Device &device, DebugMarker &debugMarker)
   : device(device), debugMarker{debugMarker} {}
 
-void SkyRenderer::initModel() {
+bool SkyRenderer::enabled() const { return _model.get() != nullptr; }
+
+SkyModel &SkyRenderer::model() { return *_model; }
+
+void SkyRenderer::updateModel() {
   // Values from "Reference Solar Spectral Irradiance: ASTM G-173", ETR column
   // (see http://rredc.nrel.gov/solar/spectra/am1.5/ASTMG173/ASTMG173.html),
   // summed and averaged in each bin (e.g. the value for 360nm is the average

@@ -3,6 +3,7 @@
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeScatteringDensity_comp.h"
+#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -27,6 +28,9 @@ struct ComputeScatteringDensityDescriptorDef: DescriptorSetDef {
   __sampler__(irradiance, shader::eCompute);
   __storageImage__(scattering_density, shader::eCompute);
 };
+struct ComputeScatteringDensityLayoutDef: PipelineLayoutDef {
+  __set__(set, ComputeScatteringDensityDescriptorDef);
+};
 }
 
 void SkyModel::computeScatteringDensity(
@@ -35,21 +39,18 @@ void SkyModel::computeScatteringDensity(
   Texture &deltaMultipleScatteringTexture, Texture &deltaIrradianceTexture) {
   auto dim = deltaScatteringDensityTexture.extent();
 
-  // Descriptor Pool
-  std::vector<vk::DescriptorPoolSize> poolSizes{
-    {vk::DescriptorType::eUniformBuffer, 2},
-    {vk::DescriptorType::eCombinedImageSampler, 5},
-    {vk::DescriptorType::eStorageImage, 1},
-  };
-  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
-    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
-  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
-  // Descriptor sets
-  ComputeScatteringDensityDescriptorDef setDef;
+  ComputeScatteringDensityDescriptorDef setDef{};
   setDef.init(device.getDevice());
+  ComputeScatteringDensityLayoutDef layoutDef{};
+  layoutDef.set(setDef);
+  layoutDef.init(device.getDevice());
+
+  auto descriptorPool =
+    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
+
   auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(uboBuffer->buffer());
-  setDef.scattering_order(ScatterOrderBuffer->buffer());
+  setDef.atmosphere(_atmosphereUBO->buffer());
+  setDef.scattering_order(ScatterOrderUBO->buffer());
   setDef.transmittance(transmittanceTexture);
   setDef.delta_rayleigh(deltaRayleighScatteringTexture);
   setDef.delta_mie(deltaMieScatteringTexture);
@@ -58,38 +59,24 @@ void SkyModel::computeScatteringDensity(
   setDef.scattering_density(deltaScatteringDensityTexture);
   setDef.update(set);
 
-  auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(device.getDevice());
-
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
     computeScatteringDensity_comp, __ArraySize__(computeScatteringDensity_comp));
-  auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
+  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
     deltaScatteringDensityTexture.transitToLayout(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
-    cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
+    cb.bindDescriptorSets(
+      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
     cb.dispatch(dim.width, dim.height, dim.depth);
 
-    {
-      vk::ImageMemoryBarrier barrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        deltaScatteringDensityTexture.image(),
-        deltaScatteringDensityTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      cb.pipelineBarrier(
-        stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr, barrier);
-      deltaScatteringDensityTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-    }
+    cb.pipelineBarrier(
+      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+      deltaScatteringDensityTexture.barrier(
+        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader));
   });
 }
 }

@@ -4,6 +4,8 @@
 #include "sim/graphics/compiledShaders/basic/deferred_ms_frag.h"
 #include "sim/graphics/compiledShaders/basic/deferred_ibl_frag.h"
 #include "sim/graphics/compiledShaders/basic/deferred_ibl_ms_frag.h"
+#include "sim/graphics/compiledShaders/basic/deferred_sky_frag.h"
+#include "sim/graphics/compiledShaders/basic/deferred_sky_ms_frag.h"
 
 namespace sim::graphics::renderer::basic {
 using shader = vk::ShaderStageFlagBits;
@@ -45,5 +47,18 @@ void BasicRenderer::createDeferredPipeline(
   Pipelines.deferredIBL =
     pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
   debugMarker.name(*Pipelines.deferredIBL, "deferred IBL pipeline");
+
+  pipelineMaker.clearShaders();
+
+  pipelineMaker.shader(shader::eVertex, quad_vert, __ArraySize__(quad_vert));
+  if(config.sampleCount > 1)
+    pipelineMaker.shader(
+      shader::eFragment, deferred_sky_ms_frag, __ArraySize__(deferred_sky_ms_frag));
+  else
+    pipelineMaker.shader(
+      shader::eFragment, deferred_sky_frag, __ArraySize__(deferred_sky_frag));
+  Pipelines.deferredSky =
+    pipelineMaker.createUnique(*pipelineCache, pipelineLayout, *renderPass);
+  debugMarker.name(*Pipelines.deferredSky, "deferred Sky pipeline");
 }
 }

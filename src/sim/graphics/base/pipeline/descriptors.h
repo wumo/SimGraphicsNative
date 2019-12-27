@@ -39,6 +39,8 @@ public:
   int getVariableDescriptorBinding() const;
   uint32_t getVariableDescriptorCount() const;
 
+  auto bindings() const -> const std::vector<vk::DescriptorSetLayoutBinding> &;
+
 private:
   friend struct DescriptorUpdater;
 
@@ -47,7 +49,7 @@ private:
   bool useDescriptorIndexing{false};
   bool updateAfterBindPool{false};
   int variableDescriptorBinding{-1};
-  std::vector<vk::DescriptorSetLayoutBinding> bindings;
+  std::vector<vk::DescriptorSetLayoutBinding> _bindings;
 };
 
 /**
@@ -169,34 +171,30 @@ protected:
   DescriptorSetUpdater updater{};
   uint32_t binding{0};
 
-  vk::Device device;
+  vk::Device _device;
 
 public:
   vk::UniqueDescriptorSetLayout descriptorSetLayout{};
 
   void init(const vk::Device &device) {
     descriptorSetLayout = layout.createUnique(device);
-    this->device = device;
+    this->_device = device;
   }
 
   vk::DescriptorSet createSet(vk::DescriptorPool &pool) {
     errorIf(!descriptorSetLayout, "descriptorSetLayout hasn't been created!");
     return DescriptorSetMaker()
       .layout(*descriptorSetLayout, layout.getVariableDescriptorCount())
-      .create(device, pool)[0];
+      .create(_device, pool)[0];
   }
 
   void update(const vk::DescriptorSet &descriptorSet) {
-    errorIf(!device, "call init() first");
-    updater.update(device, descriptorSet);
+    errorIf(!_device, "call init() first");
+    updater.update(_device, descriptorSet);
     updater.reset();
   }
-};
 
-struct ShaderStage {
-  explicit ShaderStage(const vk::ShaderStageFlags stage): stage{stage} {}
-
-  const vk::ShaderStageFlags stage;
+  const DescriptorSetLayoutMaker &layoutDef() const { return layout; }
 };
 
 struct DescriptorUpdater {
@@ -207,7 +205,7 @@ struct DescriptorUpdater {
 
   const uint32_t binding;
 
-  uint32_t &descriptorCount() const { return layout.bindings[binding].descriptorCount; }
+  uint32_t &descriptorCount() const { return layout._bindings[binding].descriptorCount; }
 
 protected:
   DescriptorSetLayoutMaker &layout;

@@ -1,9 +1,9 @@
 #include "sky_model.h"
-#include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeIndirectIrradiance_comp.h"
+#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -28,6 +28,9 @@ struct ComputeIndirectIrradianceDescriptorDef: DescriptorSetDef {
   __storageImage__(delta_irradiance, shader::eCompute);
   __storageImage__(irradiance, shader::eCompute);
 };
+struct ComputeIndirectIrradianceLayoutDef: PipelineLayoutDef {
+  __set__(set, ComputeIndirectIrradianceDescriptorDef);
+};
 }
 
 void SkyModel::computeIndirectIrradiance(
@@ -36,22 +39,19 @@ void SkyModel::computeIndirectIrradiance(
   Texture &deltaMultipleScatteringTexture) {
   auto dim = irradianceTexture.extent();
 
-  // Descriptor Pool
-  std::vector<vk::DescriptorPoolSize> poolSizes{
-    {vk::DescriptorType::eUniformBuffer, 3},
-    {vk::DescriptorType::eCombinedImageSampler, 3},
-    {vk::DescriptorType::eStorageImage, 2},
-  };
-  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
-    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
-  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
-  // Descriptor sets
-  ComputeIndirectIrradianceDescriptorDef setDef;
+  ComputeIndirectIrradianceDescriptorDef setDef{};
   setDef.init(device.getDevice());
+  ComputeIndirectIrradianceLayoutDef layoutDef{};
+  layoutDef.set(setDef);
+  layoutDef.init(device.getDevice());
+
+  auto descriptorPool =
+    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
+
   auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(uboBuffer->buffer());
-  setDef.luminance_from_radiance(LFRUniformBuffer->buffer());
-  setDef.scattering_order(ScatterOrderBuffer->buffer());
+  setDef.atmosphere(_atmosphereUBO->buffer());
+  setDef.luminance_from_radiance(LFRUBO->buffer());
+  setDef.scattering_order(ScatterOrderUBO->buffer());
   setDef.delta_rayleigh(deltaRayleighScatteringTexture);
   setDef.delta_mie(deltaMieScatteringTexture);
   setDef.multpli_scattering(deltaMultipleScatteringTexture);
@@ -59,14 +59,10 @@ void SkyModel::computeIndirectIrradiance(
   setDef.irradiance(irradianceTexture);
   setDef.update(set);
 
-  auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(device.getDevice());
-
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
     computeIndirectIrradiance_comp, __ArraySize__(computeIndirectIrradiance_comp));
-  auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
+  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
     deltaIrradianceTexture.transitToLayout(
@@ -76,37 +72,16 @@ void SkyModel::computeIndirectIrradiance(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
-    cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
+    cb.bindDescriptorSets(
+      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
     cb.dispatch(dim.width, dim.height, dim.depth);
 
-    {
-      vk::ImageMemoryBarrier deltaIrradianceBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        deltaIrradianceTexture.image(),
-        deltaIrradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      vk::ImageMemoryBarrier irradianceBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        irradianceTexture.image(),
-        irradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      cb.pipelineBarrier(
-        stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-        {deltaIrradianceBarrier, irradianceBarrier});
-
-      deltaIrradianceTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-      irradianceTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-    }
+    cb.pipelineBarrier(
+      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+      {deltaIrradianceTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+       irradianceTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
   });
 }
 }

@@ -20,9 +20,14 @@ class SkyRenderer {
   };
 
 public:
+public:
   explicit SkyRenderer(Device &device, DebugMarker &debugMarker);
 
-  void initModel();
+  bool enabled() const;
+
+  SkyModel &model();
+
+  void updateModel();
 
 private:
   Device &device;

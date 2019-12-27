@@ -1,33 +1,40 @@
 #pragma once
 #include "sim/graphics/base/vkcommon.h"
 #include "shader.h"
+#include "descriptors.h"
 
 namespace sim::graphics {
 class PipelineLayoutMaker {
 public:
   vk::UniquePipelineLayout createUnique(const vk::Device &device) const;
-  PipelineLayoutMaker &descriptorSetLayout(const vk::DescriptorSetLayout &layout);
-  PipelineLayoutMaker &descriptorSetLayout(
-    uint32_t set, const vk::DescriptorSetLayout &layout);
-  PipelineLayoutMaker &descriptorSetLayouts(
-    const std::vector<vk::DescriptorSetLayout> &layouts);
+  PipelineLayoutMaker &addSetLayout(const vk::DescriptorSetLayout &layout);
+  PipelineLayoutMaker &updateSetLayout(
+    uint32_t set, const vk::DescriptorSetLayout &layout,
+    const DescriptorSetLayoutMaker *setDef);
   PipelineLayoutMaker &pushConstantRange(
     const vk::ShaderStageFlags &stageFlags, const uint32_t &offset, const uint32_t &size);
   PipelineLayoutMaker &pushConstantRange(const vk::PushConstantRange &stageFlags);
 
+  auto setDefs() const -> const std::vector<const DescriptorSetLayoutMaker *> &;
+
 private:
   std::vector<vk::DescriptorSetLayout> setLayouts;
   std::vector<vk::PushConstantRange> pushConstantRanges;
+  std::vector<const DescriptorSetLayoutMaker *> _setDefs;
 };
 
 class PipelineLayoutDef {
 protected:
   PipelineLayoutMaker maker;
-  uint32_t set{0};
+  uint32_t _set{0};
 
 public:
   vk::UniquePipelineLayout pipelineLayout{};
   void init(const vk::Device &device) { pipelineLayout = maker.createUnique(device); }
+
+  uint32_t numSets() const { return _set; }
+
+  const PipelineLayoutMaker &layoutDef() const { return maker; }
 };
 
 template<typename T>
@@ -37,7 +44,7 @@ public:
     : maker(maker), _set{set} {}
 
   void operator()(const T &def) {
-    maker.descriptorSetLayout(_set, *def.descriptorSetLayout);
+    maker.updateSetLayout(_set, *def.descriptorSetLayout, &(def.layoutDef()));
   }
 
   uint32_t set() const { return _set; }
@@ -49,7 +56,7 @@ private:
 
 #define __set__(field, def) \
 public:                     \
-  DescriptorSetLayoutUpdater<def> field{maker, (maker.descriptorSetLayout({}), set++)};
+  DescriptorSetLayoutUpdater<def> field{maker, (maker.addSetLayout({}), _set++)};
 
 class GraphicsPipelineMaker {
 public:

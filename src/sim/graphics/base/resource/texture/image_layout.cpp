@@ -175,6 +175,20 @@ void Texture::transitToLayout(
   srcStage = dstStage;
 }
 
+vk::ImageMemoryBarrier Texture::barrier(
+  vk::ImageLayout newLayout, const vk::AccessFlags &dstAccessMask,
+  vk::PipelineStageFlagBits dstStageMask, uint32_t srcQueueFamilyIndex,
+  uint32_t dstQueueFamilyIndex, vk::ImageAspectFlagBits aspect) {
+
+  vk::ImageMemoryBarrier _barrier{srcAccess, dstAccessMask,           currentLayout,
+                                  newLayout, srcQueueFamilyIndex,     dstQueueFamilyIndex,
+                                  image(),   subresourceRange(aspect)};
+  currentLayout = newLayout;
+  srcAccess = dstAccessMask;
+  srcStage = dstStageMask;
+  return _barrier;
+}
+
 void Texture::setCurrentLayout(vk::ImageLayout oldLayout) { currentLayout = oldLayout; }
 void Texture::setSrcAccess(const vk::AccessFlags &srcAccess) {
   Texture::srcAccess = srcAccess;

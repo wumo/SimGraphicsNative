@@ -1,9 +1,9 @@
 #include "sky_model.h"
-#include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeDirectIrradiance_comp.h"
+#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -25,6 +25,9 @@ struct ComputeDirectIrradianceDescriptorDef: DescriptorSetDef {
   __storageImage__(delta_irradiance, shader::eCompute);
   __storageImage__(irradiance, shader::eCompute);
 };
+struct ComputeDirectIrradianceLayoutDef: PipelineLayoutDef {
+  __set__(set, ComputeDirectIrradianceDescriptorDef);
+};
 }
 
 void SkyModel::computeDirectIrradiance(
@@ -38,31 +41,24 @@ void SkyModel::computeDirectIrradiance(
 
   auto dim = irradianceTexture.extent();
 
-  // Descriptor Pool
-  std::vector<vk::DescriptorPoolSize> poolSizes{
-    {vk::DescriptorType::eUniformBuffer, 2},
-    {vk::DescriptorType::eCombinedImageSampler, 1},
-    {vk::DescriptorType::eStorageImage, 2},
-  };
-  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
-    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
-  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
-  // Descriptor sets
-  ComputeDirectIrradianceDescriptorDef setDef;
+  ComputeDirectIrradianceDescriptorDef setDef{};
   setDef.init(device.getDevice());
+  ComputeDirectIrradianceLayoutDef layoutDef{};
+  layoutDef.set(setDef);
+  layoutDef.init(device.getDevice());
+
+  auto descriptorPool =
+    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
+
   auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(uboBuffer->buffer());
+  setDef.atmosphere(_atmosphereUBO->buffer());
   setDef.cumulate(cumulateUBO->buffer());
   setDef.transmittance(transmittanceTexture);
   setDef.delta_irradiance(deltaIrradianceTexture);
   setDef.irradiance(irradianceTexture);
   setDef.update(set);
 
-  auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(device.getDevice());
-
-  auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
+  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
     deltaIrradianceTexture.transitToLayout(
@@ -71,35 +67,16 @@ void SkyModel::computeDirectIrradiance(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
-    cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
+    cb.bindDescriptorSets(
+      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
     cb.dispatch(dim.width, dim.height, 1);
 
-    vk::ImageMemoryBarrier deltaIrradianceBarrier{
-      access::eShaderWrite,
-      access::eShaderRead,
-      layout::eGeneral,
-      layout::eShaderReadOnlyOptimal,
-      VK_QUEUE_FAMILY_IGNORED,
-      VK_QUEUE_FAMILY_IGNORED,
-      deltaIrradianceTexture.image(),
-      deltaIrradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-    vk::ImageMemoryBarrier irradianceBarrier{
-      access::eShaderWrite,
-      access::eShaderRead,
-      layout::eGeneral,
-      layout::eShaderReadOnlyOptimal,
-      VK_QUEUE_FAMILY_IGNORED,
-      VK_QUEUE_FAMILY_IGNORED,
-      irradianceTexture.image(),
-      irradianceTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
     cb.pipelineBarrier(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-      {deltaIrradianceBarrier, irradianceBarrier});
-
-    deltaIrradianceTexture.setCurrentState(
-      layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-    irradianceTexture.setCurrentState(
-      layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
+      {deltaIrradianceTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+       irradianceTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
   });
 }
 }

@@ -30,7 +30,7 @@ auto DescriptorSetLayoutMaker::descriptor(
   uint32_t binding, vk::DescriptorType descriptorType, vk::ShaderStageFlags stageFlags,
   uint32_t descriptorCount, vk::DescriptorBindingFlagsEXT bindingFlags)
   -> DescriptorSetLayoutMaker & {
-  bindings.emplace_back(binding, descriptorType, descriptorCount, stageFlags, nullptr);
+  _bindings.emplace_back(binding, descriptorType, descriptorCount, stageFlags, nullptr);
   flags.push_back(bindingFlags);
   useDescriptorIndexing = bool(bindingFlags);
   if(bindingFlags & vk::DescriptorBindingFlagBitsEXT::eUpdateAfterBind)
@@ -95,8 +95,8 @@ auto DescriptorSetLayoutMaker::accelerationStructure(
 auto DescriptorSetLayoutMaker::createUnique(const vk::Device &device) const
   -> vk::UniqueDescriptorSetLayout {
   vk::DescriptorSetLayoutCreateInfo layoutInfo;
-  layoutInfo.bindingCount = uint32_t(bindings.size());
-  layoutInfo.pBindings = bindings.data();
+  layoutInfo.bindingCount = uint32_t(_bindings.size());
+  layoutInfo.pBindings = _bindings.data();
   vk::DescriptorSetLayoutBindingFlagsCreateInfoEXT bindingFlags;
   if(useDescriptorIndexing) {
     bindingFlags.bindingCount = uint32_t(flags.size());
@@ -109,7 +109,7 @@ auto DescriptorSetLayoutMaker::createUnique(const vk::Device &device) const
     variableDescriptorBinding != -1 &&
       variableDescriptorBinding !=
         std::max_element(
-          bindings.begin(), bindings.end(),
+          _bindings.begin(), _bindings.end(),
           [](const auto &a, const auto &b) { return a.binding < b.binding; })
           ->binding,
     "varialbe descriptor should only be the last binding!");
@@ -123,7 +123,11 @@ auto DescriptorSetLayoutMaker::getVariableDescriptorBinding() const -> int {
 auto DescriptorSetLayoutMaker::getVariableDescriptorCount() const -> uint32_t {
   return variableDescriptorBinding == -1 ?
            0 :
-           bindings[variableDescriptorBinding].descriptorCount;
+           _bindings[variableDescriptorBinding].descriptorCount;
+}
+auto DescriptorSetLayoutMaker::bindings() const
+  -> const std::vector<vk::DescriptorSetLayoutBinding> & {
+  return _bindings;
 }
 
 auto DescriptorSetMaker::layout(vk::DescriptorSetLayout layout) -> DescriptorSetMaker & {

@@ -1,9 +1,9 @@
 #include "sky_model.h"
-#include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeMultipleScattering_comp.h"
+#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -26,6 +26,9 @@ struct ComputeMultipleScatteringDescriptorDef: DescriptorSetDef {
   __storageImage__(delta_multiple_scattering, shader::eCompute);
   __storageImage__(scattering, shader::eCompute);
 };
+struct ComputeMultipleScatteringLayoutDef: PipelineLayoutDef {
+  __set__(set, ComputeMultipleScatteringDescriptorDef);
+};
 }
 
 void SkyModel::computeMultipleScattering(
@@ -33,35 +36,28 @@ void SkyModel::computeMultipleScattering(
   Texture &transmittanceTexture, Texture &deltaScatteringDensityTexture) {
   auto dim = scatteringTexture.extent();
 
-  // Descriptor Pool
-  std::vector<vk::DescriptorPoolSize> poolSizes{
-    {vk::DescriptorType::eUniformBuffer, 2},
-    {vk::DescriptorType::eCombinedImageSampler, 2},
-    {vk::DescriptorType::eStorageImage, 2},
-  };
-  vk::DescriptorPoolCreateInfo descriptorPoolInfo{
-    {}, 1, (uint32_t)poolSizes.size(), poolSizes.data()};
-  auto descriptorPool = device.getDevice().createDescriptorPoolUnique(descriptorPoolInfo);
-  // Descriptor sets
-  ComputeMultipleScatteringDescriptorDef setDef;
+  ComputeMultipleScatteringDescriptorDef setDef{};
   setDef.init(device.getDevice());
+  ComputeMultipleScatteringLayoutDef layoutDef{};
+  layoutDef.set(setDef);
+  layoutDef.init(device.getDevice());
+
+  auto descriptorPool =
+    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
+
   auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(uboBuffer->buffer());
-  setDef.luminance_from_radiance(LFRUniformBuffer->buffer());
+  setDef.atmosphere(_atmosphereUBO->buffer());
+  setDef.luminance_from_radiance(LFRUBO->buffer());
   setDef.transmittance(transmittanceTexture);
   setDef.scattering_density(deltaScatteringDensityTexture);
   setDef.delta_multiple_scattering(deltaMultipleScatteringTexture);
   setDef.scattering(scatteringTexture);
   setDef.update(set);
 
-  auto pipelineLayout = PipelineLayoutMaker()
-                          .descriptorSetLayout(*setDef.descriptorSetLayout)
-                          .createUnique(device.getDevice());
-
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
     computeMultipleScattering_comp, __ArraySize__(computeMultipleScattering_comp));
-  auto pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout);
+  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
 
   device.computeImmediately([&](vk::CommandBuffer cb) {
     deltaMultipleScatteringTexture.transitToLayout(
@@ -70,36 +66,16 @@ void SkyModel::computeMultipleScattering(
       cb, layout ::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     cb.bindPipeline(bindpoint::eCompute, *pipeline);
-    cb.bindDescriptorSets(bindpoint::eCompute, *pipelineLayout, 0, set, nullptr);
+    cb.bindDescriptorSets(
+      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
     cb.dispatch(dim.width, dim.height, dim.depth);
 
-    {
-      vk::ImageMemoryBarrier deltaMultipleScatterBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        deltaMultipleScatteringTexture.image(),
-        deltaMultipleScatteringTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      vk::ImageMemoryBarrier deltaScatterBarrier{
-        access::eShaderWrite,
-        access::eShaderRead,
-        layout::eGeneral,
-        layout::eShaderReadOnlyOptimal,
-        VK_QUEUE_FAMILY_IGNORED,
-        VK_QUEUE_FAMILY_IGNORED,
-        scatteringTexture.image(),
-        scatteringTexture.subresourceRange(vk::ImageAspectFlagBits::eColor)};
-      cb.pipelineBarrier(
-        stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-        {deltaMultipleScatterBarrier, deltaScatterBarrier});
-      deltaMultipleScatteringTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-      scatteringTexture.setCurrentState(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader);
-    }
+    cb.pipelineBarrier(
+      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+      {deltaMultipleScatteringTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+       scatteringTexture.barrier(
+         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
   });
 }
 }

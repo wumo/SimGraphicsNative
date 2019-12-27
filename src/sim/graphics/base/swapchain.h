@@ -16,6 +16,8 @@ public:
   vk::Result present(
     const uint32_t &imageIndex, const vk::Semaphore &renderFinishedSemaphore);
 
+  vk::ImageSubresourceRange subresourceRange() const;
+
   vk::Format &getImageFormat() { return surfaceFormat.format; }
   const vk::Extent2D &getImageExtent() const { return imageExtent; }
   const std::vector<vk::UniqueImageView> &getImageViews() const { return imageViews; }

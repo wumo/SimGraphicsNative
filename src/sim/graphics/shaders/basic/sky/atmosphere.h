@@ -5,8 +5,7 @@
 
 layout(set = 0, binding = 1) uniform sampler2D transmittance_texture;
 layout(set = 0, binding = 2) uniform sampler3D scattering_texture;
-layout(set = 0, binding = 3) uniform sampler3D single_mie_scattering_texture;
-layout(set = 0, binding = 4) uniform sampler2D irradiance_texture;
+layout(set = 0, binding = 3) uniform sampler2D irradiance_texture;
 
 #ifdef RADIANCE_API_ENABLED
 RadianceSpectrum GetSolarRadiance() {

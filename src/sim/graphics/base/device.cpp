@@ -141,6 +141,9 @@ Device::Device(VulkanBase &framework) {
     {vk::CommandPoolCreateFlagBits::eResetCommandBuffer}, compute.index});
   transferCmdPool = device->createCommandPoolUnique(vk::CommandPoolCreateInfo{
     {vk::CommandPoolCreateFlagBits::eResetCommandBuffer}, transfer.index});
+  presentCmdPool = device->createCommandPoolUnique(vk::CommandPoolCreateInfo{
+    {vk::CommandPoolCreateFlagBits::eResetCommandBuffer}, present.index});
+
   VULKAN_HPP_DEFAULT_DISPATCHER.init(*device);
 
   createAllocator();
@@ -227,6 +230,8 @@ const vk::CommandPool &Device::getGraphicsCMDPool() const { return *graphicsCmdP
 const vk::CommandPool &Device::getComputeCmdPool() const { return *computeCmdPool; }
 
 const vk::CommandPool &Device::getTransferCmdPool() const { return *transferCmdPool; }
+
+const vk::CommandPool &Device::getPresentCmdPool() const { return *presentCmdPool; }
 
 const QueueInfo &Device::getGraphics() const { return graphics; }
 

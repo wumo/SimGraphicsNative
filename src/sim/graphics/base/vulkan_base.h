@@ -77,7 +77,7 @@ protected:
   uPtr<Swapchain> swapchain;
   vk::Extent2D extent;
   std::vector<vk::CommandBuffer> graphicsCmdBuffers, transferCmdBuffers,
-    computeCmdBuffers;
+    computeCmdBuffers, presentCmdBuffers;
   vk::QueryPool queryPool;
 
   struct Semaphores {
@@ -85,9 +85,10 @@ protected:
     vk::UniqueSemaphore transferFinished;
     vk::UniqueSemaphore computeFinished;
     vk::UniqueSemaphore renderFinished;
+    vk::UniqueSemaphore ownershiPresentFinished;
 
     std::vector<vk::PipelineStageFlags> renderWaitStages;
-    std::vector<vk::Semaphore> renderWaits, renderSignals;
+    std::vector<vk::Semaphore> renderWaits;
   };
 
   std::vector<Semaphores> semaphores;

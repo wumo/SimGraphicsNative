@@ -7,7 +7,12 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE;
 namespace sim::graphics {
 using namespace sim;
 using cbFlag = vk::CommandBufferUsageFlagBits;
+using address = vk::SamplerAddressMode;
+using layout = vk::ImageLayout;
 using stage = vk::PipelineStageFlagBits;
+using access = vk::AccessFlagBits;
+using shader = vk::ShaderStageFlagBits;
+using aspect = vk::ImageAspectFlagBits;
 
 static auto mouse_move_callback(GLFWwindow *window, double xpos, double ypos) -> void {
   auto input = static_cast<Input *>(glfwGetWindowUserPointer(window));
@@ -229,13 +234,12 @@ void VulkanBase::createSyncObjects() {
     semaphores[i].transferFinished = _device.createSemaphoreUnique({});
     semaphores[i].computeFinished = _device.createSemaphoreUnique({});
     semaphores[i].renderFinished = _device.createSemaphoreUnique({});
+    semaphores[i].ownershiPresentFinished = _device.createSemaphoreUnique({});
 
     semaphores[i].renderWaits.push_back(*semaphores[i].imageAvailable);
     semaphores[i].renderWaits.push_back(*semaphores[i].computeFinished);
     semaphores[i].renderWaitStages.emplace_back(stage::eBottomOfPipe);
     semaphores[i].renderWaitStages.emplace_back(stage::eBottomOfPipe);
-
-    semaphores[i].renderSignals.push_back(*semaphores[i].renderFinished);
 
     inFlightFrameFences[i] = _device.createFenceUnique(fenceInfo);
   }
@@ -251,6 +255,8 @@ void VulkanBase::createCommandBuffers() {
   transferCmdBuffers = _device.allocateCommandBuffers(info);
   info.commandPool = device->getComputeCmdPool();
   computeCmdBuffers = _device.allocateCommandBuffers(info);
+  info.commandPool = device->getPresentCmdPool();
+  presentCmdBuffers = _device.allocateCommandBuffers(info);
 }
 
 void VulkanBase::resize() {
@@ -281,41 +287,113 @@ void VulkanBase::update(std::function<void(uint32_t, float)> &updater, float dt)
     resize();
     input.resizeWanted = false;
   }
-  transferCmdBuffers[imageIndex].begin({cbFlag::eSimultaneousUse});
-  computeCmdBuffers[imageIndex].begin({cbFlag ::eSimultaneousUse});
-  graphicsCmdBuffers[imageIndex].begin({cbFlag::eSimultaneousUse});
+
+  auto &graphicsCB = graphicsCmdBuffers[imageIndex];
+  auto &computeCB = computeCmdBuffers[imageIndex];
+  auto &transferCB = transferCmdBuffers[imageIndex];
+  auto &presentCB = presentCmdBuffers[imageIndex];
+
+  auto &swapchainImage = swapchain->getImage(imageIndex);
+
+  transferCB.begin({cbFlag::eSimultaneousUse});
+  computeCB.begin({cbFlag ::eSimultaneousUse});
+  graphicsCB.begin({cbFlag::eSimultaneousUse});
+  presentCB.begin({cbFlag::eSimultaneousUse});
+
+  if(device->presentQueue() != device->graphicsQueue()) {
+
+    vk::ImageMemoryBarrier barrier{{},
+                                   access::eColorAttachmentWrite,
+                                   layout::eUndefined,
+                                   layout::eColorAttachmentOptimal,
+                                   VK_QUEUE_FAMILY_IGNORED,
+                                   VK_QUEUE_FAMILY_IGNORED,
+                                   swapchainImage,
+                                   swapchain->subresourceRange()};
+
+    graphicsCB.pipelineBarrier(
+      vk::PipelineStageFlagBits::eColorAttachmentOutput,
+      vk::PipelineStageFlagBits::eColorAttachmentOutput, {}, nullptr, nullptr, barrier);
+  }
+
   // dynamicCmdBuffers[imageIndex].resetQueryPool(queryPool, 0, 2);
   // dynamicCmdBuffers[imageIndex].writeTimestamp(stage::eTopOfPipe, queryPool, 0);
   updateFrame(updater, imageIndex, dt);
   // dynamicCmdBuffers[imageIndex].writeTimestamp(stage::eBottomOfPipe, queryPool, 1);
-  transferCmdBuffers[imageIndex].end();
-  computeCmdBuffers[imageIndex].end();
-  graphicsCmdBuffers[imageIndex].end();
+
+  if(device->presentQueue() != device->graphicsQueue()) {
+
+    {
+      vk::ImageMemoryBarrier barrier{access::eColorAttachmentWrite,
+                                     {},
+                                     layout::eColorAttachmentOptimal,
+                                     layout::ePresentSrcKHR,
+                                     device->getGraphics().index,
+                                     device->getPresent().index,
+                                     swapchainImage,
+                                     swapchain->subresourceRange()};
+
+      graphicsCB.pipelineBarrier(
+        vk::PipelineStageFlagBits::eColorAttachmentOutput,
+        vk::PipelineStageFlagBits::eBottomOfPipe, {}, nullptr, nullptr, barrier);
+    }
+    {
+      vk::ImageMemoryBarrier barrier{{},
+                                     {},
+                                     layout::eColorAttachmentOptimal,
+                                     layout::ePresentSrcKHR,
+                                     device->getGraphics().index,
+                                     device->getPresent().index,
+                                     swapchainImage,
+                                     swapchain->subresourceRange()};
+      presentCB.pipelineBarrier(
+        vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eBottomOfPipe,
+        {}, nullptr, nullptr, barrier);
+    }
+  }
+
+  transferCB.end();
+  computeCB.end();
+  graphicsCB.end();
+  presentCB.end();
+
+  auto &semaphore = semaphores[frameIndex];
 
   vk::SubmitInfo submit;
   submit.commandBufferCount = 1;
-  submit.pCommandBuffers = &transferCmdBuffers[imageIndex];
+  submit.pCommandBuffers = &transferCB;
   submit.signalSemaphoreCount = 1;
-  submit.pSignalSemaphores = &(*semaphores[frameIndex].transferFinished);
+  submit.pSignalSemaphores = &(*semaphore.transferFinished);
   device->transferQueue().submit(submit, vk::Fence{});
 
   vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eComputeShader;
-  submit.pCommandBuffers = &computeCmdBuffers[imageIndex];
+  submit.pCommandBuffers = &computeCB;
   submit.waitSemaphoreCount = 1;
-  submit.pWaitSemaphores = &(*semaphores[frameIndex].transferFinished);
+  submit.pWaitSemaphores = &(*semaphore.transferFinished);
   submit.pWaitDstStageMask = &waitStage;
-  submit.pSignalSemaphores = &(*semaphores[frameIndex].computeFinished);
+  submit.signalSemaphoreCount = 1;
+  submit.pSignalSemaphores = &(*semaphore.computeFinished);
   device->computeQueue().submit(submit, vk::Fence{});
 
-  submit.pCommandBuffers = &graphicsCmdBuffers[imageIndex];
-  submit.waitSemaphoreCount = uint32_t(semaphores[frameIndex].renderWaits.size());
-  submit.pWaitSemaphores = semaphores[frameIndex].renderWaits.data();
-  submit.pWaitDstStageMask = semaphores[frameIndex].renderWaitStages.data();
-  submit.signalSemaphoreCount = uint32_t(semaphores[frameIndex].renderSignals.size());
-  submit.pSignalSemaphores = semaphores[frameIndex].renderSignals.data();
-  device->graphicsQueue().submit(submit, frameFinishedFence);
+  submit.pCommandBuffers = &graphicsCB;
+  submit.waitSemaphoreCount = uint32_t(semaphore.renderWaits.size());
+  submit.pWaitSemaphores = semaphore.renderWaits.data();
+  submit.pWaitDstStageMask = semaphore.renderWaitStages.data();
+  submit.signalSemaphoreCount = 1;
+  submit.pSignalSemaphores = &(*semaphore.renderFinished);
+  device->graphicsQueue().submit(submit, vk::Fence{});
+
+  waitStage = vk::PipelineStageFlagBits::eAllCommands;
+  submit.pCommandBuffers = &presentCB;
+  submit.waitSemaphoreCount = 1;
+  submit.pWaitSemaphores = &(*semaphore.renderFinished);
+  submit.pWaitDstStageMask = &waitStage;
+  submit.signalSemaphoreCount = 1;
+  submit.pSignalSemaphores = &(*semaphore.ownershiPresentFinished);
+  device->presentQueue().submit(submit, frameFinishedFence);
+
   try {
-    result = swapchain->present(imageIndex, *semaphores[frameIndex].renderFinished);
+    result = swapchain->present(imageIndex, *semaphore.ownershiPresentFinished);
     if(result == vk::Result::eSuboptimalKHR) {
       input.resizeWanted = true;
       resize();

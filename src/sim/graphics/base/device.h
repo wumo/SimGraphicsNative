@@ -31,6 +31,7 @@ public:
   const vk::CommandPool &getGraphicsCMDPool() const;
   const vk::CommandPool &getComputeCmdPool() const;
   const vk::CommandPool &getTransferCmdPool() const;
+  const vk::CommandPool &getPresentCmdPool() const;
   const vk::Device &getDevice() const;
   const QueueInfo &getGraphics() const;
   const vk::Queue &graphicsQueue() const;
@@ -70,6 +71,7 @@ private:
 
   vk::UniqueCommandPool graphicsCmdPool;
   QueueInfo graphics;
+  vk::UniqueCommandPool presentCmdPool;
   QueueInfo present;
   vk::UniqueCommandPool computeCmdPool;
   QueueInfo compute;

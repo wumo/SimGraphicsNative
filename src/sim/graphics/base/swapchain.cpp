@@ -74,12 +74,12 @@ void Swapchain::resize() {
   auto presentIndex = base.device->getPresent().index;
 
   uint32_t queueFamilyIndices[]{graphicsIndex, presentIndex};
-  if(graphicsIndex != presentIndex) {
-    info.imageSharingMode = vk::SharingMode::eConcurrent;
-    info.queueFamilyIndexCount = 2;
-    info.pQueueFamilyIndices = queueFamilyIndices;
-  } else
-    info.imageSharingMode = vk::SharingMode::eExclusive;
+  //  if(graphicsIndex != presentIndex) {
+  //    info.imageSharingMode = vk::SharingMode::eConcurrent;
+  //    info.queueFamilyIndexCount = 2;
+  //    info.pQueueFamilyIndices = queueFamilyIndices;
+  //  } else
+  info.imageSharingMode = vk::SharingMode::eExclusive;
 
   info.preTransform = cap.currentTransform;
   info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
@@ -121,5 +121,9 @@ vk::Result Swapchain::present(
   presentInfo.pImageIndices = &imageIndex;
 
   return presentQueue.presentKHR(presentInfo);
+}
+
+vk::ImageSubresourceRange Swapchain::subresourceRange() const {
+  return {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 }
 }

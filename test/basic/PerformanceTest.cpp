@@ -42,8 +42,13 @@ auto main(int argc, const char **argv) -> int {
       auto instance = mm.newModelInstance(model, t);
     }
 
-  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
-  mm.useEnvironmentMap(envCube);
+  //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
+  //  mm.useEnvironmentMap(envCube);
+  mm.useSky();
+  auto kPi = glm::pi<float>();
+  float sun_zenith_angle_radians_{0};
+  float sun_azimuth_angle_radians_{kPi / 2};
+  mm.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
   mm.debugInfo();
 

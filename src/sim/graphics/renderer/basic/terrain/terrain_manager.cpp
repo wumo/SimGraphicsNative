@@ -62,7 +62,7 @@ void TerrainManager::loadSingle(
   gridPrimitive->setAabb(aabb);
   gridPrimitive->setTesselationLevel(tesselationLevel);
 
-  auto gridMaterial = mm.newMaterial(MaterialType::eNone);
+  auto gridMaterial = mm.newMaterial(MaterialType::eTerrain);
   auto gridMesh = mm.newMesh(gridPrimitive, gridMaterial);
   auto gridNode = mm.newNode();
   Node::addMesh(gridNode, gridMesh);

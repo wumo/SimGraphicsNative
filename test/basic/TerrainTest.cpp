@@ -22,7 +22,7 @@ auto main(int argc, const char **argv) -> int {
 
   auto &camera = mm.camera();
   camera.setLocation({2.f, 2.f, 2.f});
-  mm.addLight(LightType ::Directional, {-1, -1, -1});
+//  mm.addLight(LightType ::Directional, {-1, -1, -1});
 
   std::string name = "DamagedHelmet";
   auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";

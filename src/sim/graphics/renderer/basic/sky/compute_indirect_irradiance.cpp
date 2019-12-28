@@ -17,64 +17,47 @@ using flag = vk::DescriptorBindingFlagBitsEXT;
 using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
-namespace {
-struct ComputeIndirectIrradianceDescriptorDef: DescriptorSetDef {
-  __uniform__(atmosphere, shader::eCompute);
-  __uniform__(luminance_from_radiance, shader::eCompute);
-  __uniform__(scattering_order, shader::eCompute);
-  __sampler__(delta_rayleigh, shader::eCompute);
-  __sampler__(delta_mie, shader::eCompute);
-  __sampler__(multpli_scattering, shader::eCompute);
-  __storageImage__(delta_irradiance, shader::eCompute);
-  __storageImage__(irradiance, shader::eCompute);
-};
-struct ComputeIndirectIrradianceLayoutDef: PipelineLayoutDef {
-  __set__(set, ComputeIndirectIrradianceDescriptorDef);
-};
-}
 
-void SkyModel::computeIndirectIrradiance(
+auto SkyModel::createIndirectIrradiance(
   Texture &deltaIrradianceTexture, Texture &irradianceTexture,
   Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-  Texture &deltaMultipleScatteringTexture) {
-  auto dim = irradianceTexture.extent();
+  Texture &deltaMultipleScatteringTexture) -> SkyModel::ComputeCMD {
 
-  ComputeIndirectIrradianceDescriptorDef setDef{};
-  setDef.init(device.getDevice());
-  ComputeIndirectIrradianceLayoutDef layoutDef{};
-  layoutDef.set(setDef);
-  layoutDef.init(device.getDevice());
+  indirectIrradianceSet = indirectIrradianceSetDef.createSet(*descriptorPool);
+  indirectIrradianceSetDef.atmosphere(_atmosphereUBO->buffer());
+  indirectIrradianceSetDef.luminance_from_radiance(LFRUBO->buffer());
+  indirectIrradianceSetDef.scattering_order(ScatterOrderUBO->buffer());
+  indirectIrradianceSetDef.delta_rayleigh(deltaRayleighScatteringTexture);
+  indirectIrradianceSetDef.delta_mie(deltaMieScatteringTexture);
+  indirectIrradianceSetDef.multpli_scattering(deltaMultipleScatteringTexture);
+  indirectIrradianceSetDef.delta_irradiance(deltaIrradianceTexture);
+  indirectIrradianceSetDef.irradiance(irradianceTexture);
+  indirectIrradianceSetDef.update(indirectIrradianceSet);
 
-  auto descriptorPool =
-    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
-
-  auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(_atmosphereUBO->buffer());
-  setDef.luminance_from_radiance(LFRUBO->buffer());
-  setDef.scattering_order(ScatterOrderUBO->buffer());
-  setDef.delta_rayleigh(deltaRayleighScatteringTexture);
-  setDef.delta_mie(deltaMieScatteringTexture);
-  setDef.multpli_scattering(deltaMultipleScatteringTexture);
-  setDef.delta_irradiance(deltaIrradianceTexture);
-  setDef.irradiance(irradianceTexture);
-  setDef.update(set);
+  SpecializationMaker sp{};
+  auto spInfo = sp.entry<uint32_t>(8).entry<uint32_t>(8).entry<uint32_t>(1).create();
 
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
-    computeIndirectIrradiance_comp, __ArraySize__(computeIndirectIrradiance_comp));
-  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
+    computeIndirectIrradiance_comp, __ArraySize__(computeIndirectIrradiance_comp),
+    &spInfo);
+  indirectIrradiancePipeline =
+    pipelineMaker.createUnique(nullptr, *indirectIrradianceLayoutDef.pipelineLayout);
 
-  device.computeImmediately([&](vk::CommandBuffer cb) {
+  return [&](vk::CommandBuffer cb) {
+    auto dim = irradianceTexture.extent();
+
     deltaIrradianceTexture.transitToLayout(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
     irradianceTexture.transitToLayout(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.bindPipeline(bindpoint::eCompute, *pipeline);
+    cb.bindPipeline(bindpoint::eCompute, *indirectIrradiancePipeline);
     cb.bindDescriptorSets(
-      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
-    cb.dispatch(dim.width, dim.height, dim.depth);
+      bindpoint::eCompute, *indirectIrradianceLayoutDef.pipelineLayout,
+      indirectIrradianceLayoutDef.set.set(), indirectIrradianceSet, nullptr);
+    cb.dispatch(dim.width / 8, dim.height / 8, 1);
 
     cb.pipelineBarrier(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
@@ -82,6 +65,6 @@ void SkyModel::computeIndirectIrradiance(
          layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
        irradianceTexture.barrier(
          layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
-  });
+  };
 }
 }

@@ -10,6 +10,11 @@ layout(set = 0, binding = 4, rgba32f) uniform image3D delta_rayleigh;
 layout(set = 0, binding = 5, rgba32f) uniform image3D delta_mie;
 layout(set = 0, binding = 6, rgba32f) uniform image3D scattering;
 
+layout(constant_id = 0) const uint lx = 1;
+layout(constant_id = 1) const uint ly = 1;
+layout(constant_id = 2) const uint lz = 1;
+layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
+
 void main() {
   ivec3 coord = ivec3(gl_GlobalInvocationID.xyz);
 

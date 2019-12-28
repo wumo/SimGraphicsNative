@@ -2,6 +2,7 @@
 #include "constants.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
+#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -176,13 +177,6 @@ SkyModel::SkyModel(
   : device{device},
     debugMarker{debugMarker},
     num_precomputed_wavelengths_(num_precomputed_wavelengths) {
-  // Compute the values for the SKY_RADIANCE_TO_LUMINANCE constant. In theory
-  // this should be 1 in precomputed illuminance mode (because the precomputed
-  // textures already contain illuminance values). In practice, however, storing
-  // true illuminance values in half precision textures yields artefacts
-  // (because the values are too large), so we store illuminance values divided
-  // by MAX_LUMINOUS_EFFICACY instead. This is why, in precomputed illuminance
-  // mode, we set SKY_RADIANCE_TO_LUMINANCE to MAX_LUMINOUS_EFFICACY.
   bool precompute_illuminance = num_precomputed_wavelengths > 3;
   double sky_k_r, sky_k_g, sky_k_b;
   if(precompute_illuminance) {
@@ -196,17 +190,20 @@ SkyModel::SkyModel(
   ComputeSpectralRadianceToLuminanceFactors(
     wavelengths, solar_irradiance, 0 /* lambda_power */, &sun_k_r, &sun_k_g, &sun_k_b);
 
-  atmosphere.transmittance_texture_width = TRANSMITTANCE_TEXTURE_WIDTH;
-  atmosphere.transmittance_texture_height = TRANSMITTANCE_TEXTURE_HEIGHT;
-  atmosphere.scattering_texture_r_size = SCATTERING_TEXTURE_R_SIZE;
-  atmosphere.scattering_texture_mu_size = SCATTERING_TEXTURE_MU_SIZE;
-  atmosphere.scattering_texture_mu_s_size = SCATTERING_TEXTURE_MU_S_SIZE;
-  atmosphere.scattering_texture_nu_size = SCATTERING_TEXTURE_NU_SIZE;
-  atmosphere.irradiance_texture_width = IRRADIANCE_TEXTURE_WIDTH;
-  atmosphere.irradiance_texture_height = IRRADIANCE_TEXTURE_HEIGHT;
+  _atmosphereUBO = u<HostUniformBuffer>(device.allocator(), sizeof(AtmosphereUniform));
+  auto atmospherePtr = _atmosphereUBO->ptr<AtmosphereUniform>();
 
-  atmosphere.sky_spectral_radiance_to_luminance = {sky_k_r, sky_k_g, sky_k_b, 0.0};
-  atmosphere.sun_spectral_radiance_to_luminance = {sun_k_r, sun_k_g, sun_k_b, 0.0};
+  atmospherePtr->transmittance_texture_width = TRANSMITTANCE_TEXTURE_WIDTH;
+  atmospherePtr->transmittance_texture_height = TRANSMITTANCE_TEXTURE_HEIGHT;
+  atmospherePtr->scattering_texture_r_size = SCATTERING_TEXTURE_R_SIZE;
+  atmospherePtr->scattering_texture_mu_size = SCATTERING_TEXTURE_MU_SIZE;
+  atmospherePtr->scattering_texture_mu_s_size = SCATTERING_TEXTURE_MU_S_SIZE;
+  atmospherePtr->scattering_texture_nu_size = SCATTERING_TEXTURE_NU_SIZE;
+  atmospherePtr->irradiance_texture_width = IRRADIANCE_TEXTURE_WIDTH;
+  atmospherePtr->irradiance_texture_height = IRRADIANCE_TEXTURE_HEIGHT;
+
+  atmospherePtr->sky_spectral_radiance_to_luminance = {sky_k_r, sky_k_g, sky_k_b, 0.0};
+  atmospherePtr->sun_spectral_radiance_to_luminance = {sun_k_r, sun_k_g, sun_k_b, 0.0};
 
   auto spectrum =
     [&wavelengths](const std::vector<double> &v, const glm::vec3 &lambdas, double scale) {
@@ -255,8 +252,6 @@ SkyModel::SkyModel(
     };
   };
 
-  _atmosphereUBO = u<HostUniformBuffer>(device.allocator(), atmosphere);
-
   double white_point_r = 1.0;
   double white_point_g = 1.0;
   double white_point_b = 1.0;
@@ -303,6 +298,63 @@ SkyModel::SkyModel(
   debugMarker.name(irradiance_texture_->image(), "irradiance_texture_");
 }
 
+void SkyModel::createComputePipelines() {
+  transmittanceSetDef.init(device.getDevice());
+  transmittanceLayoutDef.set(transmittanceSetDef);
+  transmittanceLayoutDef.init(device.getDevice());
+
+  singleScatteringSetDef.init(device.getDevice());
+  singleScatteringLayoutDef.set(singleScatteringSetDef);
+  singleScatteringLayoutDef.init(device.getDevice());
+
+  scatteringDensitySetDef.init(device.getDevice());
+  scatteringDensityLayoutDef.set(scatteringDensitySetDef);
+  scatteringDensityLayoutDef.init(device.getDevice());
+
+  multipleScatteringSetDef.init(device.getDevice());
+  multipleScatteringLayoutDef.set(multipleScatteringSetDef);
+  multipleScatteringLayoutDef.init(device.getDevice());
+
+  indirectIrradianceSetDef.init(device.getDevice());
+  indirectIrradianceLayoutDef.set(indirectIrradianceSetDef);
+  indirectIrradianceLayoutDef.init(device.getDevice());
+
+  directIrradianceSetDef.init(device.getDevice());
+  directIrradianceLayoutDef.set(directIrradianceSetDef);
+  directIrradianceLayoutDef.init(device.getDevice());
+
+  descriptorPool = DescriptorPoolMaker()
+                     .pipelineLayout(transmittanceLayoutDef)
+                     .pipelineLayout(singleScatteringLayoutDef)
+                     .pipelineLayout(scatteringDensityLayoutDef)
+                     .pipelineLayout(multipleScatteringLayoutDef)
+                     .pipelineLayout(indirectIrradianceLayoutDef)
+                     .pipelineLayout(directIrradianceLayoutDef)
+                     .createUnique(device.getDevice());
+
+  computeTransmittanceCMD = createTransmittance(*transmittance_texture_);
+
+  computeDirectIrradianceCMD = createDirectIrradiance(
+    *delta_irradiance_texture, *irradiance_texture_, *transmittance_texture_);
+
+  computeSingleScatteringCMD = createSingleScattering(
+    *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
+    *scattering_texture_, *transmittance_texture_);
+
+  computeScatteringDensityCMD = createScatteringDensity(
+    *delta_scattering_density_texture, *transmittance_texture_,
+    *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
+    *delta_rayleigh_scattering_texture, *delta_irradiance_texture);
+
+  computeIndirectIrradianceCMD = createIndirectIrradiance(
+    *delta_irradiance_texture, *irradiance_texture_, *delta_rayleigh_scattering_texture,
+    *delta_mie_scattering_texture, *delta_rayleigh_scattering_texture);
+
+  computeMultipleScatteringCMD = createMultipleScattering(
+    *delta_rayleigh_scattering_texture, *scattering_texture_, *transmittance_texture_,
+    *delta_scattering_density_texture);
+}
+
 void SkyModel::Init(unsigned int num_scattering_orders) {
 
   delta_irradiance_texture = newTexture2D(
@@ -344,6 +396,8 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
     layout::eUndefined, access::eShaderRead, stage::eComputeShader);
   delta_scattering_density_texture->setCurrentState(
     layout::eUndefined, access::eShaderRead, stage::eComputeShader);
+
+  createComputePipelines();
 
   if(num_precomputed_wavelengths_ <= 3) {
     glm::vec3 lambdas{kLambdaR, kLambdaG, kLambdaB};
@@ -396,10 +450,11 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
         lambdas, luminance_from_radiance, i > 0 /* blend */, num_scattering_orders);
     }
 
-    atmosphere.atmosphere = calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
-    _atmosphereUBO->updateSingle(atmosphere);
+    _atmosphereUBO->ptr<AtmosphereUniform>()->atmosphere =
+      calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
 
-    computeTransmittance(*transmittance_texture_);
+    device.computeImmediately(computeTransmittanceCMD);
+    //    createTransmittance(*transmittance_texture_);
 
     //    transmittance_texture_->saveToFile(
     //      device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance");
@@ -425,36 +480,24 @@ void SkyModel::Precompute(
 
   cumulateUBO->updateSingle(vk::Bool32(cumulate));
 
-  atmosphere.atmosphere = calcAtmosphereParams(lambdas);
-  _atmosphereUBO->updateSingle(atmosphere);
+  _atmosphereUBO->ptr<AtmosphereUniform>()->atmosphere = calcAtmosphereParams(lambdas);
 
-  computeTransmittance(*transmittance_texture_);
-
-  computeDirectIrradiance(
-    *delta_irradiance_texture, *irradiance_texture_, *transmittance_texture_);
+  device.computeImmediately(computeTransmittanceCMD);
+  device.computeImmediately(computeDirectIrradianceCMD);
 
   LFRUBO->updateSingle(luminance_from_radiance);
-  computeSingleScattering(
-    *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
-    *scattering_texture_, *transmittance_texture_);
+  device.computeImmediately(computeSingleScatteringCMD);
 
   //  auto scatteringOrder = 2u;
   for(auto scatteringOrder = 2u; scatteringOrder <= num_scattering_orders;
       ++scatteringOrder) {
     ScatterOrderUBO->updateSingle(scatteringOrder);
-    computeScatteringDensity(
-      *delta_scattering_density_texture, *transmittance_texture_,
-      *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
-      *delta_rayleigh_scattering_texture, *delta_irradiance_texture);
+    device.computeImmediately(computeScatteringDensityCMD);
 
     ScatterOrderUBO->updateSingle(scatteringOrder - 1);
-    computeIndirectIrradiance(
-      *delta_irradiance_texture, *irradiance_texture_, *delta_rayleigh_scattering_texture,
-      *delta_mie_scattering_texture, *delta_rayleigh_scattering_texture);
+    device.computeImmediately(computeIndirectIrradianceCMD);
 
-    computeMultipleScattering(
-      *delta_rayleigh_scattering_texture, *scattering_texture_, *transmittance_texture_,
-      *delta_scattering_density_texture);
+    device.computeImmediately(computeMultipleScatteringCMD);
   }
 }
 

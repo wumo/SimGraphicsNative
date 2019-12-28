@@ -17,66 +17,48 @@ using flag = vk::DescriptorBindingFlagBitsEXT;
 using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
-namespace {
-struct ComputeScatteringDensityDescriptorDef: DescriptorSetDef {
-  __uniform__(atmosphere, shader::eCompute);
-  __uniform__(scattering_order, shader::eCompute);
-  __sampler__(transmittance, shader::eCompute);
-  __sampler__(delta_rayleigh, shader::eCompute);
-  __sampler__(delta_mie, shader::eCompute);
-  __sampler__(multpli_scattering, shader::eCompute);
-  __sampler__(irradiance, shader::eCompute);
-  __storageImage__(scattering_density, shader::eCompute);
-};
-struct ComputeScatteringDensityLayoutDef: PipelineLayoutDef {
-  __set__(set, ComputeScatteringDensityDescriptorDef);
-};
-}
 
-void SkyModel::computeScatteringDensity(
+auto SkyModel::createScatteringDensity(
   Texture &deltaScatteringDensityTexture, Texture &transmittanceTexture,
   Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-  Texture &deltaMultipleScatteringTexture, Texture &deltaIrradianceTexture) {
-  auto dim = deltaScatteringDensityTexture.extent();
+  Texture &deltaMultipleScatteringTexture, Texture &deltaIrradianceTexture)
+  -> SkyModel::ComputeCMD {
 
-  ComputeScatteringDensityDescriptorDef setDef{};
-  setDef.init(device.getDevice());
-  ComputeScatteringDensityLayoutDef layoutDef{};
-  layoutDef.set(setDef);
-  layoutDef.init(device.getDevice());
+  scatteringDensitySet = scatteringDensitySetDef.createSet(*descriptorPool);
+  scatteringDensitySetDef.atmosphere(_atmosphereUBO->buffer());
+  scatteringDensitySetDef.scattering_order(ScatterOrderUBO->buffer());
+  scatteringDensitySetDef.transmittance(transmittanceTexture);
+  scatteringDensitySetDef.delta_rayleigh(deltaRayleighScatteringTexture);
+  scatteringDensitySetDef.delta_mie(deltaMieScatteringTexture);
+  scatteringDensitySetDef.multpli_scattering(deltaMultipleScatteringTexture);
+  scatteringDensitySetDef.irradiance(deltaIrradianceTexture);
+  scatteringDensitySetDef.scattering_density(deltaScatteringDensityTexture);
+  scatteringDensitySetDef.update(scatteringDensitySet);
 
-  auto descriptorPool =
-    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
-
-  auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(_atmosphereUBO->buffer());
-  setDef.scattering_order(ScatterOrderUBO->buffer());
-  setDef.transmittance(transmittanceTexture);
-  setDef.delta_rayleigh(deltaRayleighScatteringTexture);
-  setDef.delta_mie(deltaMieScatteringTexture);
-  setDef.multpli_scattering(deltaMultipleScatteringTexture);
-  setDef.irradiance(deltaIrradianceTexture);
-  setDef.scattering_density(deltaScatteringDensityTexture);
-  setDef.update(set);
+  SpecializationMaker sp{};
+  auto spInfo = sp.entry<uint32_t>(8).entry<uint32_t>(8).entry<uint32_t>(1).create();
 
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
-    computeScatteringDensity_comp, __ArraySize__(computeScatteringDensity_comp));
-  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
+    computeScatteringDensity_comp, __ArraySize__(computeScatteringDensity_comp), &spInfo);
+  scatteringDensityPipeline =
+    pipelineMaker.createUnique(nullptr, *scatteringDensityLayoutDef.pipelineLayout);
 
-  device.computeImmediately([&](vk::CommandBuffer cb) {
+  return [&](vk::CommandBuffer cb) {
+    auto dim = deltaScatteringDensityTexture.extent();
     deltaScatteringDensityTexture.transitToLayout(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.bindPipeline(bindpoint::eCompute, *pipeline);
+    cb.bindPipeline(bindpoint::eCompute, *scatteringDensityPipeline);
     cb.bindDescriptorSets(
-      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
-    cb.dispatch(dim.width, dim.height, dim.depth);
+      bindpoint::eCompute, *scatteringDensityLayoutDef.pipelineLayout,
+      scatteringDensityLayoutDef.set.set(), scatteringDensitySet, nullptr);
+    cb.dispatch(dim.width / 8, dim.height / 8, dim.depth / 1);
 
     cb.pipelineBarrier(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
       deltaScatteringDensityTexture.barrier(
         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader));
-  });
+  };
 }
 }

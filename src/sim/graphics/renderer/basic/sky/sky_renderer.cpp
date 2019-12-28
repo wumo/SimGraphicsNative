@@ -109,7 +109,13 @@ void SkyRenderer::updateModel() {
     ground_albedo, max_sun_zenith_angle, kLengthUnitInMeters,
     use_luminance_ == PRECOMPUTED ? 15 : 3, use_luminance_ != NONE ? 1e-5 : 1);
 
+  auto tStart = std::chrono::high_resolution_clock::now();
+
   _model->Init();
+
+  auto tEnd = std::chrono::high_resolution_clock::now();
+  auto tDiff = std::chrono::duration<double, std::milli>(tEnd - tStart).count();
+  debugLog("Generating sky map took ", tDiff, " ms");
 }
 
 }

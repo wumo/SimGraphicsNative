@@ -1,7 +1,5 @@
 #include "sky_model.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
-#include "sim/graphics/base/pipeline/pipeline.h"
-#include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeTransmittance_comp.h"
 #include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
@@ -17,53 +15,40 @@ using flag = vk::DescriptorBindingFlagBitsEXT;
 using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
-namespace {
-struct ComputeTransmittanceDescriptorDef: DescriptorSetDef {
-  __uniform__(atmosphere, shader::eCompute);
-  __storageImage__(transmittance, shader::eCompute);
-};
-struct ComputeTransmittanceLayoutDef: PipelineLayoutDef {
-  __set__(set, ComputeTransmittanceDescriptorDef);
-};
-}
 
-void SkyModel::computeTransmittance(Texture &transmittanceTexture) {
+auto SkyModel::createTransmittance(Texture &transmittanceTexture)
+  -> SkyModel::ComputeCMD {
   ComputePipelineMaker pipelineMaker{device.getDevice()};
 
+  SpecializationMaker sp{};
+  auto spInfo = sp.entry<uint32_t>(8).entry<uint32_t>(8).entry<uint32_t>(1).create();
   pipelineMaker.shader(
-    computeTransmittance_comp, __ArraySize__(computeTransmittance_comp));
+    computeTransmittance_comp, __ArraySize__(computeTransmittance_comp), &spInfo);
 
-  auto dim = transmittanceTexture.extent();
+  transmittancePipeline =
+    pipelineMaker.createUnique(nullptr, *transmittanceLayoutDef.pipelineLayout);
 
-  ComputeTransmittanceDescriptorDef setDef{};
-  setDef.init(device.getDevice());
-  ComputeTransmittanceLayoutDef layoutDef{};
-  layoutDef.set(setDef);
-  layoutDef.init(device.getDevice());
+  transmittanceSet = transmittanceSetDef.createSet(*descriptorPool);
+  transmittanceSetDef.atmosphere(_atmosphereUBO->buffer());
+  transmittanceSetDef.transmittance(transmittanceTexture);
+  transmittanceSetDef.update(transmittanceSet);
 
-  auto descriptorPool =
-    DescriptorPoolMaker().pipelineLayout(layoutDef).createUnique(device.getDevice());
+  return [&](vk::CommandBuffer cb) {
+    auto dim = transmittanceTexture.extent();
 
-  auto set = setDef.createSet(*descriptorPool);
-  setDef.atmosphere(_atmosphereUBO->buffer());
-  setDef.transmittance(transmittanceTexture);
-  setDef.update(set);
-
-  auto pipeline = pipelineMaker.createUnique(nullptr, *layoutDef.pipelineLayout);
-
-  device.computeImmediately([&](vk::CommandBuffer cb) {
     transmittanceTexture.transitToLayout(
       cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.bindPipeline(bindpoint::eCompute, *pipeline);
+    cb.bindPipeline(bindpoint::eCompute, *transmittancePipeline);
     cb.bindDescriptorSets(
-      bindpoint::eCompute, *layoutDef.pipelineLayout, layoutDef.set.set(), set, nullptr);
-    cb.dispatch(dim.width, dim.height, 1);
+      bindpoint::eCompute, *transmittanceLayoutDef.pipelineLayout,
+      transmittanceLayoutDef.set.set(), transmittanceSet, nullptr);
+    cb.dispatch(dim.width / 8, dim.height / 8, 1);
 
     cb.pipelineBarrier(
       stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
       transmittanceTexture.barrier(
         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader));
-  });
+  };
 }
 }

@@ -6,7 +6,6 @@
 #include "sim/graphics/compiledShaders/envmap/filtercube_vert.h"
 #include "sim/graphics/compiledShaders/envmap/irradiancecube_frag.h"
 #include "sim/graphics/compiledShaders/envmap/prefilterenvmap_frag.h"
-#include "../builder/primitive_builder.h"
 
 namespace sim::graphics::renderer::basic {
 using loadOp = vk::AttachmentLoadOp;

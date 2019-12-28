@@ -17,18 +17,13 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 
-auto SkyModel::createMultipleScattering(
-  Texture &deltaMultipleScatteringTexture, Texture &scatteringTexture,
-  Texture &transmittanceTexture, Texture &deltaScatteringDensityTexture)
-  -> SkyModel::ComputeCMD {
-
+void SkyModel::createMultipleScatteringSets() {
   multipleScatteringSet = multipleScatteringSetDef.createSet(*descriptorPool);
   multipleScatteringSetDef.atmosphere(_atmosphereUBO->buffer());
-  multipleScatteringSetDef.luminance_from_radiance(LFRUBO->buffer());
-  multipleScatteringSetDef.transmittance(transmittanceTexture);
-  multipleScatteringSetDef.scattering_density(deltaScatteringDensityTexture);
-  multipleScatteringSetDef.delta_multiple_scattering(deltaMultipleScatteringTexture);
-  multipleScatteringSetDef.scattering(scatteringTexture);
+  multipleScatteringSetDef.transmittance(*transmittance_texture_);
+  multipleScatteringSetDef.scattering_density(*delta_scattering_density_texture);
+  multipleScatteringSetDef.delta_multiple_scattering(*delta_rayleigh_scattering_texture);
+  multipleScatteringSetDef.scattering(*scattering_texture_);
   multipleScatteringSetDef.update(multipleScatteringSet);
 
   SpecializationMaker sp{};
@@ -39,27 +34,32 @@ auto SkyModel::createMultipleScattering(
     &spInfo);
   multipleScatteringPipeline =
     pipelineMaker.createUnique(nullptr, *multipleScatteringLayoutDef.pipelineLayout);
+}
 
-  return [&](vk::CommandBuffer cb) {
-    auto dim = scatteringTexture.extent();
+void SkyModel::recordMultipleScatteringCMD(
+  vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance) {
 
-    deltaMultipleScatteringTexture.transitToLayout(
-      cb, layout ::eGeneral, access::eShaderWrite, stage::eComputeShader);
-    scatteringTexture.transitToLayout(
-      cb, layout ::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  auto dim = scattering_texture_->extent();
 
-    cb.bindPipeline(bindpoint::eCompute, *multipleScatteringPipeline);
-    cb.bindDescriptorSets(
-      bindpoint::eCompute, *multipleScatteringLayoutDef.pipelineLayout,
-      multipleScatteringLayoutDef.set.set(), multipleScatteringSet, nullptr);
-    cb.dispatch(dim.width / 8, dim.height / 8, dim.depth / 1);
+  delta_rayleigh_scattering_texture->transitToLayout(
+    cb, layout ::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  scattering_texture_->transitToLayout(
+    cb, layout ::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.pipelineBarrier(
-      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-      {deltaMultipleScatteringTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
-       scatteringTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
-  };
+  cb.bindPipeline(bindpoint::eCompute, *multipleScatteringPipeline);
+  cb.bindDescriptorSets(
+    bindpoint::eCompute, *multipleScatteringLayoutDef.pipelineLayout,
+    multipleScatteringLayoutDef.set.set(), multipleScatteringSet, nullptr);
+  cb.pushConstants<glm::mat4>(
+    *multipleScatteringLayoutDef.pipelineLayout, shader::eCompute, 0,
+    luminance_from_radiance);
+  cb.dispatch(dim.width / 8, dim.height / 8, dim.depth / 1);
+
+  cb.pipelineBarrier(
+    stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+    {delta_rayleigh_scattering_texture->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+     scattering_texture_->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
 }
 }

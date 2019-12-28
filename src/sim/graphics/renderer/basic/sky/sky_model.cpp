@@ -7,6 +7,10 @@
 namespace sim::graphics::renderer::basic {
 
 namespace {
+constexpr double kLambdaR = 680.0;
+constexpr double kLambdaG = 550.0;
+constexpr double kLambdaB = 440.0;
+
 constexpr int kLambdaMin = 360;
 constexpr int kLambdaMax = 830;
 
@@ -51,9 +55,9 @@ void ComputeSpectralRadianceToLuminanceFactors(
   *k_r = 0.0;
   *k_g = 0.0;
   *k_b = 0.0;
-  double solar_r = Interpolate(wavelengths, solar_irradiance, SkyModel::kLambdaR);
-  double solar_g = Interpolate(wavelengths, solar_irradiance, SkyModel::kLambdaG);
-  double solar_b = Interpolate(wavelengths, solar_irradiance, SkyModel::kLambdaB);
+  double solar_r = Interpolate(wavelengths, solar_irradiance, kLambdaR);
+  double solar_g = Interpolate(wavelengths, solar_irradiance, kLambdaG);
+  double solar_b = Interpolate(wavelengths, solar_irradiance, kLambdaB);
   int dlambda = 1;
   for(int lambda = kLambdaMin; lambda < kLambdaMax; lambda += dlambda) {
     double x_bar = CieColorMatchingFunctionTableValue(lambda, 1);
@@ -64,13 +68,34 @@ void ComputeSpectralRadianceToLuminanceFactors(
     double g_bar = xyz2srgb[3] * x_bar + xyz2srgb[4] * y_bar + xyz2srgb[5] * z_bar;
     double b_bar = xyz2srgb[6] * x_bar + xyz2srgb[7] * y_bar + xyz2srgb[8] * z_bar;
     double irradiance = Interpolate(wavelengths, solar_irradiance, lambda);
-    *k_r += r_bar * irradiance / solar_r * pow(lambda / SkyModel::kLambdaR, lambda_power);
-    *k_g += g_bar * irradiance / solar_g * pow(lambda / SkyModel::kLambdaG, lambda_power);
-    *k_b += b_bar * irradiance / solar_b * pow(lambda / SkyModel::kLambdaB, lambda_power);
+    *k_r += r_bar * irradiance / solar_r * pow(lambda / kLambdaR, lambda_power);
+    *k_g += g_bar * irradiance / solar_g * pow(lambda / kLambdaG, lambda_power);
+    *k_b += b_bar * irradiance / solar_b * pow(lambda / kLambdaB, lambda_power);
   }
   *k_r *= MAX_LUMINOUS_EFFICACY * dlambda;
   *k_g *= MAX_LUMINOUS_EFFICACY * dlambda;
   *k_b *= MAX_LUMINOUS_EFFICACY * dlambda;
+}
+
+void ConvertSpectrumToLinearSrgb(
+  const std::vector<double> &wavelengths, const std::vector<double> &spectrum, double *r,
+  double *g, double *b) {
+  double x = 0.0;
+  double y = 0.0;
+  double z = 0.0;
+  const int dlambda = 1;
+  for(int lambda = kLambdaMin; lambda < kLambdaMax; lambda += dlambda) {
+    double value = Interpolate(wavelengths, spectrum, lambda);
+    x += CieColorMatchingFunctionTableValue(lambda, 1) * value;
+    y += CieColorMatchingFunctionTableValue(lambda, 2) * value;
+    z += CieColorMatchingFunctionTableValue(lambda, 3) * value;
+  }
+  *r = MAX_LUMINOUS_EFFICACY *
+       (XYZ_TO_SRGB[0] * x + XYZ_TO_SRGB[1] * y + XYZ_TO_SRGB[2] * z) * dlambda;
+  *g = MAX_LUMINOUS_EFFICACY *
+       (XYZ_TO_SRGB[3] * x + XYZ_TO_SRGB[4] * y + XYZ_TO_SRGB[5] * z) * dlambda;
+  *b = MAX_LUMINOUS_EFFICACY *
+       (XYZ_TO_SRGB[6] * x + XYZ_TO_SRGB[7] * y + XYZ_TO_SRGB[8] * z) * dlambda;
 }
 
 using imageUsage = vk::ImageUsageFlagBits;
@@ -177,15 +202,9 @@ SkyModel::SkyModel(
   : device{device},
     debugMarker{debugMarker},
     num_precomputed_wavelengths_(num_precomputed_wavelengths) {
-  bool precompute_illuminance = num_precomputed_wavelengths > 3;
   double sky_k_r, sky_k_g, sky_k_b;
-  if(precompute_illuminance) {
-    sky_k_r = sky_k_g = sky_k_b = MAX_LUMINOUS_EFFICACY;
-  } else {
-    ComputeSpectralRadianceToLuminanceFactors(
-      wavelengths, solar_irradiance, -3 /* lambda_power */, &sky_k_r, &sky_k_g, &sky_k_b);
-  }
-  // Compute the values for the SUN_RADIANCE_TO_LUMINANCE constant.
+  sky_k_r = sky_k_g = sky_k_b = MAX_LUMINOUS_EFFICACY;
+
   double sun_k_r, sun_k_g, sun_k_b;
   ComputeSpectralRadianceToLuminanceFactors(
     wavelengths, solar_irradiance, 0 /* lambda_power */, &sun_k_r, &sun_k_g, &sun_k_b);
@@ -274,10 +293,6 @@ SkyModel::SkyModel(
   ptr->exposure = exposure_ * exposure_scale;
   updateSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
-  cumulateUBO = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
-  LFRUBO = u<HostUniformBuffer>(device.allocator(), sizeof(glm::mat4));
-  ScatterOrderUBO = u<HostUniformBuffer>(device.allocator(), sizeof(int32_t));
-
   transmittance_texture_ = newTexture2D(
     device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
     vk::Format::eR32G32B32A32Sfloat, "transmittance_texture_");
@@ -290,15 +305,12 @@ SkyModel::SkyModel(
 
   debugMarker.name(_atmosphereUBO->buffer(), "AtmosphereUniform");
   debugMarker.name(_sunUBO->buffer(), "sunUBO");
-  debugMarker.name(cumulateUBO->buffer(), "cumulateUBO");
-  debugMarker.name(LFRUBO->buffer(), "LFRUniformBuffer");
-  debugMarker.name(ScatterOrderUBO->buffer(), "ScatterOrderBuffer");
   debugMarker.name(transmittance_texture_->image(), "transmittance_texture_");
   debugMarker.name(scattering_texture_->image(), "scattering_texture_");
   debugMarker.name(irradiance_texture_->image(), "irradiance_texture_");
 }
 
-void SkyModel::createComputePipelines() {
+void SkyModel::createDescriptors() {
   transmittanceSetDef.init(device.getDevice());
   transmittanceLayoutDef.set(transmittanceSetDef);
   transmittanceLayoutDef.init(device.getDevice());
@@ -332,27 +344,12 @@ void SkyModel::createComputePipelines() {
                      .pipelineLayout(directIrradianceLayoutDef)
                      .createUnique(device.getDevice());
 
-  computeTransmittanceCMD = createTransmittance(*transmittance_texture_);
-
-  computeDirectIrradianceCMD = createDirectIrradiance(
-    *delta_irradiance_texture, *irradiance_texture_, *transmittance_texture_);
-
-  computeSingleScatteringCMD = createSingleScattering(
-    *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
-    *scattering_texture_, *transmittance_texture_);
-
-  computeScatteringDensityCMD = createScatteringDensity(
-    *delta_scattering_density_texture, *transmittance_texture_,
-    *delta_rayleigh_scattering_texture, *delta_mie_scattering_texture,
-    *delta_rayleigh_scattering_texture, *delta_irradiance_texture);
-
-  computeIndirectIrradianceCMD = createIndirectIrradiance(
-    *delta_irradiance_texture, *irradiance_texture_, *delta_rayleigh_scattering_texture,
-    *delta_mie_scattering_texture, *delta_rayleigh_scattering_texture);
-
-  computeMultipleScatteringCMD = createMultipleScattering(
-    *delta_rayleigh_scattering_texture, *scattering_texture_, *transmittance_texture_,
-    *delta_scattering_density_texture);
+  createTransmittanceSets();
+  createDirectIrradianceSets();
+  createSingleScatteringSets();
+  createScatteringDensitySets();
+  createIndirectIrradianceSets();
+  createMultipleScatteringSets();
 }
 
 void SkyModel::Init(unsigned int num_scattering_orders) {
@@ -372,8 +369,6 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
   delta_scattering_density_texture = newTexture3D(
     device, SCATTERING_TEXTURE_WIDTH, SCATTERING_TEXTURE_HEIGHT, SCATTERING_TEXTURE_DEPTH,
     vk::Format::eR32G32B32A32Sfloat, "delta_scattering_density_texture");
-
-  Texture &delta_multiple_scattering_texture = *delta_rayleigh_scattering_texture;
 
   debugMarker.name(delta_irradiance_texture->image(), "delta_irradiance_texture");
   debugMarker.name(
@@ -397,72 +392,16 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
   delta_scattering_density_texture->setCurrentState(
     layout::eUndefined, access::eShaderRead, stage::eComputeShader);
 
-  createComputePipelines();
+  createDescriptors();
 
-  if(num_precomputed_wavelengths_ <= 3) {
-    glm::vec3 lambdas{kLambdaR, kLambdaG, kLambdaB};
-    glm::mat4 luminance_from_radiance{1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-                                      0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    Precompute(
-      lambdas, luminance_from_radiance, false /* blend */, num_scattering_orders);
-  } else {
-    constexpr double _kLambdaMin = 360.0;
-    constexpr double _kLambdaMax = 830.0;
-    int num_iterations = (int(num_precomputed_wavelengths_) + 2) / 3;
-    double dlambda = (_kLambdaMax - _kLambdaMin) / (3 * num_iterations);
+  compute(num_scattering_orders);
 
-    for(int i = 0; i < num_iterations; ++i) {
-      glm::vec3 lambdas{_kLambdaMin + (3 * i + 0.5) * dlambda,
-                        _kLambdaMin + (3 * i + 1.5) * dlambda,
-                        _kLambdaMin + (3 * i + 2.5) * dlambda};
-      auto coeff = [dlambda](double lambda, int component) {
-        // Note that we don't include MAX_LUMINOUS_EFFICACY here, to avoid
-        // artefacts due to too large values when using half precision on GPU.
-        // We add this term back in kAtmosphereShader, via
-        // SKY_SPECTRAL_RADIANCE_TO_LUMINANCE (see also the comments in the
-        // Model constructor).
-        double x = CieColorMatchingFunctionTableValue(lambda, 1);
-        double y = CieColorMatchingFunctionTableValue(lambda, 2);
-        double z = CieColorMatchingFunctionTableValue(lambda, 3);
-        return static_cast<float>(
-          (XYZ_TO_SRGB[component * 3] * x + XYZ_TO_SRGB[component * 3 + 1] * y +
-           XYZ_TO_SRGB[component * 3 + 2] * z) *
-          dlambda);
-      };
-      glm::mat4 luminance_from_radiance{coeff(lambdas[0], 0),
-                                        coeff(lambdas[1], 0),
-                                        coeff(lambdas[2], 0),
-                                        0.0,
-                                        coeff(lambdas[0], 1),
-                                        coeff(lambdas[1], 1),
-                                        coeff(lambdas[2], 1),
-                                        0.0,
-                                        coeff(lambdas[0], 2),
-                                        coeff(lambdas[1], 2),
-                                        coeff(lambdas[2], 2),
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        0.0,
-                                        0.0};
-      luminance_from_radiance = glm::transpose(luminance_from_radiance);
-      Precompute(
-        lambdas, luminance_from_radiance, i > 0 /* blend */, num_scattering_orders);
-    }
-
-    _atmosphereUBO->ptr<AtmosphereUniform>()->atmosphere =
-      calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
-
-    device.computeImmediately(computeTransmittanceCMD);
-    //    createTransmittance(*transmittance_texture_);
-
-    //    transmittance_texture_->saveToFile(
-    //      device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance");
-    //    scattering_texture_->saveToFile(
-    //      device, device.getComputeCmdPool(), device.computeQueue(), "./scattering");
-    //    irradiance_texture_->saveToFile(
-    //      device, device.getComputeCmdPool(), device.computeQueue(), "./irradiance");
-  }
+  //  transmittance_texture_->saveToFile(
+  //    device, device.getComputeCmdPool(), device.computeQueue(), "./transmittance");
+  //  scattering_texture_->saveToFile(
+  //    device, device.getComputeCmdPool(), device.computeQueue(), "./scattering");
+  //  irradiance_texture_->saveToFile(
+  //    device, device.getComputeCmdPool(), device.computeQueue(), "./irradiance");
 
   delta_irradiance_texture.reset();
   delta_rayleigh_scattering_texture.reset();
@@ -470,34 +409,70 @@ void SkyModel::Init(unsigned int num_scattering_orders) {
   delta_scattering_density_texture.reset();
 }
 
-void SkyModel::ConvertSpectrumToLinearSrgb(
-  const std::vector<double> &wavelengths, const std::vector<double> &spectrum, double *r,
-  double *g, double *b) {}
+void SkyModel::compute(uint32_t num_scattering_orders) {
+  constexpr double _kLambdaMin = 360.0;
+  constexpr double _kLambdaMax = 830.0;
+  int num_iterations = (int(num_precomputed_wavelengths_) + 2) / 3;
+  double dlambda = (_kLambdaMax - _kLambdaMin) / (3 * num_iterations);
 
-void SkyModel::Precompute(
-  const glm::vec3 &lambdas, const glm::mat4 &luminance_from_radiance, bool cumulate,
+  for(int i = 0; i < num_iterations; ++i) {
+    glm::vec3 lambdas{_kLambdaMin + (3 * i + 0.5) * dlambda,
+                      _kLambdaMin + (3 * i + 1.5) * dlambda,
+                      _kLambdaMin + (3 * i + 2.5) * dlambda};
+    auto coeff = [dlambda](double lambda, int component) {
+      double x = CieColorMatchingFunctionTableValue(lambda, 1);
+      double y = CieColorMatchingFunctionTableValue(lambda, 2);
+      double z = CieColorMatchingFunctionTableValue(lambda, 3);
+      return static_cast<float>(
+        (XYZ_TO_SRGB[component * 3] * x + XYZ_TO_SRGB[component * 3 + 1] * y +
+         XYZ_TO_SRGB[component * 3 + 2] * z) *
+        dlambda);
+    };
+    glm::mat4 luminance_from_radiance{coeff(lambdas[0], 0),
+                                      coeff(lambdas[1], 0),
+                                      coeff(lambdas[2], 0),
+                                      0.0,
+                                      coeff(lambdas[0], 1),
+                                      coeff(lambdas[1], 1),
+                                      coeff(lambdas[2], 1),
+                                      0.0,
+                                      coeff(lambdas[0], 2),
+                                      coeff(lambdas[1], 2),
+                                      coeff(lambdas[2], 2),
+                                      0.0,
+                                      0.0,
+                                      0.0,
+                                      0.0,
+                                      0.0};
+    luminance_from_radiance = glm::transpose(luminance_from_radiance);
+    device.computeImmediately([&](vk::CommandBuffer cb) {
+      precompute(
+        cb, lambdas, luminance_from_radiance, i > 0 /* blend */, num_scattering_orders);
+    });
+  }
+
+  _atmosphereUBO->ptr<AtmosphereUniform>()->atmosphere =
+    calcAtmosphereParams({kLambdaR, kLambdaG, kLambdaB});
+
+  device.computeImmediately([&](vk::CommandBuffer cb) { recordTransmittanceCMD(cb); });
+}
+
+void SkyModel::precompute(
+  vk::CommandBuffer cb, const glm::vec3 &lambdas,
+  const glm::mat4 &luminance_from_radiance, bool cumulate,
   unsigned int num_scattering_orders) {
-
-  cumulateUBO->updateSingle(vk::Bool32(cumulate));
-
+  auto _cumulate = vk::Bool32(cumulate);
   _atmosphereUBO->ptr<AtmosphereUniform>()->atmosphere = calcAtmosphereParams(lambdas);
 
-  device.computeImmediately(computeTransmittanceCMD);
-  device.computeImmediately(computeDirectIrradianceCMD);
+  recordTransmittanceCMD(cb);
+  recordDirectIrradianceCMD(cb, _cumulate);
+  recordSingleScatteringCMD(cb, luminance_from_radiance, _cumulate);
 
-  LFRUBO->updateSingle(luminance_from_radiance);
-  device.computeImmediately(computeSingleScatteringCMD);
-
-  //  auto scatteringOrder = 2u;
-  for(auto scatteringOrder = 2u; scatteringOrder <= num_scattering_orders;
+  for(auto scatteringOrder = 2; scatteringOrder <= num_scattering_orders;
       ++scatteringOrder) {
-    ScatterOrderUBO->updateSingle(scatteringOrder);
-    device.computeImmediately(computeScatteringDensityCMD);
-
-    ScatterOrderUBO->updateSingle(scatteringOrder - 1);
-    device.computeImmediately(computeIndirectIrradianceCMD);
-
-    device.computeImmediately(computeMultipleScatteringCMD);
+    recordScatteringDensityCMD(cb, scatteringOrder);
+    recordIndirectIrradianceCMD(cb, luminance_from_radiance, scatteringOrder - 1);
+    recordMultipleScatteringCMD(cb, luminance_from_radiance);
   }
 }
 

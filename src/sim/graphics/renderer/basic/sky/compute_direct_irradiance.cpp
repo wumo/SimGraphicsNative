@@ -18,16 +18,12 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 
-auto SkyModel::createDirectIrradiance(
-  Texture &deltaIrradianceTexture, Texture &irradianceTexture,
-  Texture &transmittanceTexture) -> SkyModel::ComputeCMD {
-
+void SkyModel::createDirectIrradianceSets() {
   directIrradianceSet = directIrradianceSetDef.createSet(*descriptorPool);
   directIrradianceSetDef.atmosphere(_atmosphereUBO->buffer());
-  directIrradianceSetDef.cumulate(cumulateUBO->buffer());
-  directIrradianceSetDef.transmittance(transmittanceTexture);
-  directIrradianceSetDef.delta_irradiance(deltaIrradianceTexture);
-  directIrradianceSetDef.irradiance(irradianceTexture);
+  directIrradianceSetDef.transmittance(*transmittance_texture_);
+  directIrradianceSetDef.delta_irradiance(*delta_irradiance_texture);
+  directIrradianceSetDef.irradiance(*irradiance_texture_);
   directIrradianceSetDef.update(directIrradianceSet);
 
   SpecializationMaker sp{};
@@ -38,27 +34,30 @@ auto SkyModel::createDirectIrradiance(
 
   directIrradiancePipeline =
     pipelineMaker.createUnique(nullptr, *directIrradianceLayoutDef.pipelineLayout);
+}
 
-  return [&](vk::CommandBuffer cb) {
-    auto dim = irradianceTexture.extent();
+void SkyModel::recordDirectIrradianceCMD(vk::CommandBuffer cb, vk::Bool32 cumulate) {
 
-    deltaIrradianceTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
-    irradianceTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  auto dim = irradiance_texture_->extent();
 
-    cb.bindPipeline(bindpoint::eCompute, *directIrradiancePipeline);
-    cb.bindDescriptorSets(
-      bindpoint::eCompute, *directIrradianceLayoutDef.pipelineLayout,
-      directIrradianceLayoutDef.set.set(), directIrradianceSet, nullptr);
-    cb.dispatch(dim.width / 8, dim.height / 8, 1);
+  delta_irradiance_texture->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  irradiance_texture_->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.pipelineBarrier(
-      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-      {deltaIrradianceTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
-       irradianceTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
-  };
+  cb.bindPipeline(bindpoint::eCompute, *directIrradiancePipeline);
+  cb.bindDescriptorSets(
+    bindpoint::eCompute, *directIrradianceLayoutDef.pipelineLayout,
+    directIrradianceLayoutDef.set.set(), directIrradianceSet, nullptr);
+  cb.pushConstants<vk::Bool32>(
+    *directIrradianceLayoutDef.pipelineLayout, shader::eCompute, 0, cumulate);
+  cb.dispatch(dim.width / 8, dim.height / 8, 1);
+
+  cb.pipelineBarrier(
+    stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+    {delta_irradiance_texture->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+     irradiance_texture_->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
 }
 }

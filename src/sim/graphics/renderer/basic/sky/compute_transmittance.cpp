@@ -16,8 +16,7 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 
-auto SkyModel::createTransmittance(Texture &transmittanceTexture)
-  -> SkyModel::ComputeCMD {
+void SkyModel::createTransmittanceSets() {
   ComputePipelineMaker pipelineMaker{device.getDevice()};
 
   SpecializationMaker sp{};
@@ -30,25 +29,26 @@ auto SkyModel::createTransmittance(Texture &transmittanceTexture)
 
   transmittanceSet = transmittanceSetDef.createSet(*descriptorPool);
   transmittanceSetDef.atmosphere(_atmosphereUBO->buffer());
-  transmittanceSetDef.transmittance(transmittanceTexture);
+  transmittanceSetDef.transmittance(*transmittance_texture_);
   transmittanceSetDef.update(transmittanceSet);
+}
 
-  return [&](vk::CommandBuffer cb) {
-    auto dim = transmittanceTexture.extent();
+void SkyModel::recordTransmittanceCMD(vk::CommandBuffer cb) {
 
-    transmittanceTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  auto dim = transmittance_texture_->extent();
 
-    cb.bindPipeline(bindpoint::eCompute, *transmittancePipeline);
-    cb.bindDescriptorSets(
-      bindpoint::eCompute, *transmittanceLayoutDef.pipelineLayout,
-      transmittanceLayoutDef.set.set(), transmittanceSet, nullptr);
-    cb.dispatch(dim.width / 8, dim.height / 8, 1);
+  transmittance_texture_->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.pipelineBarrier(
-      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-      transmittanceTexture.barrier(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader));
-  };
+  cb.bindPipeline(bindpoint::eCompute, *transmittancePipeline);
+  cb.bindDescriptorSets(
+    bindpoint::eCompute, *transmittanceLayoutDef.pipelineLayout,
+    transmittanceLayoutDef.set.set(), transmittanceSet, nullptr);
+  cb.dispatch(dim.width / 8, dim.height / 8, 1);
+
+  cb.pipelineBarrier(
+    stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+    transmittance_texture_->barrier(
+      layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader));
 }
 }

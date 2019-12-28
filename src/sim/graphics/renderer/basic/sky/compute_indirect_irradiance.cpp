@@ -18,20 +18,14 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 
-auto SkyModel::createIndirectIrradiance(
-  Texture &deltaIrradianceTexture, Texture &irradianceTexture,
-  Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-  Texture &deltaMultipleScatteringTexture) -> SkyModel::ComputeCMD {
-
+void SkyModel::createIndirectIrradianceSets() {
   indirectIrradianceSet = indirectIrradianceSetDef.createSet(*descriptorPool);
   indirectIrradianceSetDef.atmosphere(_atmosphereUBO->buffer());
-  indirectIrradianceSetDef.luminance_from_radiance(LFRUBO->buffer());
-  indirectIrradianceSetDef.scattering_order(ScatterOrderUBO->buffer());
-  indirectIrradianceSetDef.delta_rayleigh(deltaRayleighScatteringTexture);
-  indirectIrradianceSetDef.delta_mie(deltaMieScatteringTexture);
-  indirectIrradianceSetDef.multpli_scattering(deltaMultipleScatteringTexture);
-  indirectIrradianceSetDef.delta_irradiance(deltaIrradianceTexture);
-  indirectIrradianceSetDef.irradiance(irradianceTexture);
+  indirectIrradianceSetDef.delta_rayleigh(*delta_rayleigh_scattering_texture);
+  indirectIrradianceSetDef.delta_mie(*delta_mie_scattering_texture);
+  indirectIrradianceSetDef.multpli_scattering(*delta_rayleigh_scattering_texture);
+  indirectIrradianceSetDef.delta_irradiance(*delta_irradiance_texture);
+  indirectIrradianceSetDef.irradiance(*irradiance_texture_);
   indirectIrradianceSetDef.update(indirectIrradianceSet);
 
   SpecializationMaker sp{};
@@ -43,28 +37,37 @@ auto SkyModel::createIndirectIrradiance(
     &spInfo);
   indirectIrradiancePipeline =
     pipelineMaker.createUnique(nullptr, *indirectIrradianceLayoutDef.pipelineLayout);
+}
 
-  return [&](vk::CommandBuffer cb) {
-    auto dim = irradianceTexture.extent();
+void SkyModel::recordIndirectIrradianceCMD(
+  vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance,
+  int32_t scatteringOrder) {
 
-    deltaIrradianceTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  auto dim = irradiance_texture_->extent();
 
-    irradianceTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  delta_irradiance_texture->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.bindPipeline(bindpoint::eCompute, *indirectIrradiancePipeline);
-    cb.bindDescriptorSets(
-      bindpoint::eCompute, *indirectIrradianceLayoutDef.pipelineLayout,
-      indirectIrradianceLayoutDef.set.set(), indirectIrradianceSet, nullptr);
-    cb.dispatch(dim.width / 8, dim.height / 8, 1);
+  irradiance_texture_->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.pipelineBarrier(
-      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-      {deltaIrradianceTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
-       irradianceTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
-  };
+  cb.bindPipeline(bindpoint::eCompute, *indirectIrradiancePipeline);
+  cb.bindDescriptorSets(
+    bindpoint::eCompute, *indirectIrradianceLayoutDef.pipelineLayout,
+    indirectIrradianceLayoutDef.set.set(), indirectIrradianceSet, nullptr);
+  ScatteringOrderLFUConstant constant{luminance_from_radiance, scatteringOrder};
+  cb.pushConstants<ScatteringOrderLFUConstant>(
+    *indirectIrradianceLayoutDef.pipelineLayout, shader::eCompute, 0, constant);
+  cb.pushConstants<int32_t>(
+    *indirectIrradianceLayoutDef.pipelineLayout, shader::eCompute, sizeof(glm::mat4),
+    scatteringOrder);
+  cb.dispatch(dim.width / 8, dim.height / 8, 1);
+
+  cb.pipelineBarrier(
+    stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+    {delta_irradiance_texture->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+     irradiance_texture_->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
 }
 }

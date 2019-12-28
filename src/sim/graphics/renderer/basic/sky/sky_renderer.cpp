@@ -52,7 +52,6 @@ void SkyRenderer::updateModel() {
   constexpr double kMaxOzoneNumberDensity = 300.0 * kDobsonUnit / 15000.0;
   // Wavelength independent solar irradiance "spectrum" (not physically
   // realistic, but was used in the original implementation).
-  constexpr double kConstantSolarIrradiance = 1.5;
   constexpr double kBottomRadius = 6360000.0;
   constexpr double kTopRadius = 6420000.0;
   constexpr double kRayleigh = 1.24062e-6;
@@ -86,17 +85,12 @@ void SkyRenderer::updateModel() {
     double lambda = static_cast<double>(l) * 1e-3; // micro-meters
     double mie = kMieAngstromBeta / kMieScaleHeight * pow(lambda, -kMieAngstromAlpha);
     wavelengths.push_back(l);
-    if(use_constant_solar_spectrum_) {
-      solar_irradiance.push_back(kConstantSolarIrradiance);
-    } else {
-      solar_irradiance.push_back(kSolarIrradiance[(l - kLambdaMin) / 10]);
-    }
+    solar_irradiance.push_back(kSolarIrradiance[(l - kLambdaMin) / 10]);
     rayleigh_scattering.push_back(kRayleigh * pow(lambda, -4));
     mie_scattering.push_back(mie * kMieSingleScatteringAlbedo);
     mie_extinction.push_back(mie);
     absorption_extinction.push_back(
-      use_ozone_ ? kMaxOzoneNumberDensity * kOzoneCrossSection[(l - kLambdaMin) / 10] :
-                   0.0);
+      kMaxOzoneNumberDensity * kOzoneCrossSection[(l - kLambdaMin) / 10]);
     ground_albedo.push_back(kGroundAlbedo);
   }
 
@@ -106,8 +100,7 @@ void SkyRenderer::updateModel() {
     device, debugMarker, wavelengths, solar_irradiance, kSunAngularRadius, kBottomRadius,
     kTopRadius, rayleigh_density, rayleigh_scattering, mie_density, mie_scattering,
     mie_extinction, kMiePhaseFunctionG, ozone_density, absorption_extinction,
-    ground_albedo, max_sun_zenith_angle, kLengthUnitInMeters,
-    use_luminance_ == PRECOMPUTED ? 15 : 3, use_luminance_ != NONE ? 1e-5 : 1);
+    ground_albedo, max_sun_zenith_angle, kLengthUnitInMeters, 15, 1e-5);
 
   auto tStart = std::chrono::high_resolution_clock::now();
 

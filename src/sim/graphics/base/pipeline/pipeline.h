@@ -11,9 +11,15 @@ public:
   PipelineLayoutMaker &updateSetLayout(
     uint32_t set, const vk::DescriptorSetLayout &layout,
     const DescriptorSetLayoutMaker *setDef);
-  PipelineLayoutMaker &pushConstantRange(
-    const vk::ShaderStageFlags &stageFlags, const uint32_t &offset, const uint32_t &size);
   PipelineLayoutMaker &pushConstantRange(const vk::PushConstantRange &stageFlags);
+
+  template<typename T>
+  auto pushConstantRange(const vk::ShaderStageFlags &stageFlags)
+    -> PipelineLayoutMaker & {
+    pushConstantRanges.emplace_back(stageFlags, offset, sizeof(T));
+    offset += sizeof(T);
+    return *this;
+  }
 
   auto setDefs() const -> const std::vector<const DescriptorSetLayoutMaker *> &;
 
@@ -21,6 +27,7 @@ private:
   std::vector<vk::DescriptorSetLayout> setLayouts;
   std::vector<vk::PushConstantRange> pushConstantRanges;
   std::vector<const DescriptorSetLayoutMaker *> _setDefs;
+  uint32_t offset{0};
 };
 
 class PipelineLayoutDef {
@@ -57,6 +64,10 @@ private:
 #define __set__(field, def) \
 public:                     \
   DescriptorSetLayoutUpdater<def> field{maker, (maker.addSetLayout({}), _set++)};
+
+#define __push_constant__(field, stage, type) \
+public:                                       \
+  int field{(maker.pushConstantRange<type>(stage), 0)};
 
 class GraphicsPipelineMaker {
 public:
@@ -184,7 +195,7 @@ private:
 
 class ComputePipelineMaker {
 public:
-  ComputePipelineMaker(const vk::Device &device);
+  explicit ComputePipelineMaker(const vk::Device &device);
 
   void shader(ShaderModule &shader, const vk::SpecializationInfo *pSpecializationInfo);
   void shader(

@@ -28,13 +28,6 @@ auto PipelineLayoutMaker::updateSetLayout(
 }
 
 auto PipelineLayoutMaker::pushConstantRange(
-  const vk::ShaderStageFlags &stageFlags, const uint32_t &offset, const uint32_t &size)
-  -> PipelineLayoutMaker & {
-  pushConstantRanges.emplace_back(stageFlags, offset, size);
-  return *this;
-}
-
-auto PipelineLayoutMaker::pushConstantRange(
   const vk::PushConstantRange &pushConstantRange) -> PipelineLayoutMaker & {
   pushConstantRanges.push_back(pushConstantRange);
   return *this;

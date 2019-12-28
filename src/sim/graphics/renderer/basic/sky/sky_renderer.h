@@ -33,10 +33,5 @@ private:
   Device &device;
   DebugMarker &debugMarker;
   uPtr<SkyModel> _model;
-
-  bool use_constant_solar_spectrum_{false};
-  bool use_ozone_{true};
-  Luminance use_luminance_{PRECOMPUTED};
-  
 };
 }

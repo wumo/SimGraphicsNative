@@ -15,18 +15,13 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 
-auto SkyModel::createSingleScattering(
-  Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-  Texture &scatteringTexture, Texture &transmittanceTexture) -> SkyModel::ComputeCMD {
-
+void SkyModel::createSingleScatteringSets() {
   singleScatteringSet = singleScatteringSetDef.createSet(*descriptorPool);
   singleScatteringSetDef.atmosphere(_atmosphereUBO->buffer());
-  singleScatteringSetDef.cumulate(cumulateUBO->buffer());
-  singleScatteringSetDef.luminance_from_radiance(LFRUBO->buffer());
-  singleScatteringSetDef.transmittance(transmittanceTexture);
-  singleScatteringSetDef.delta_rayleigh(deltaRayleighScatteringTexture);
-  singleScatteringSetDef.delta_mie(deltaMieScatteringTexture);
-  singleScatteringSetDef.scattering(scatteringTexture);
+  singleScatteringSetDef.transmittance(*transmittance_texture_);
+  singleScatteringSetDef.delta_rayleigh(*delta_rayleigh_scattering_texture);
+  singleScatteringSetDef.delta_mie(*delta_mie_scattering_texture);
+  singleScatteringSetDef.scattering(*scattering_texture_);
   singleScatteringSetDef.update(singleScatteringSet);
 
   SpecializationMaker sp{};
@@ -37,31 +32,36 @@ auto SkyModel::createSingleScattering(
     computeSingleScattering_comp, __ArraySize__(computeSingleScattering_comp), &spInfo);
   singleScatteringPipeline =
     pipelineMaker.createUnique(nullptr, *singleScatteringLayoutDef.pipelineLayout);
+}
 
-  return [&](vk::CommandBuffer cb) {
-    auto dim = scatteringTexture.extent();
+void SkyModel::recordSingleScatteringCMD(
+  vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance, vk::Bool32 cumulate) {
 
-    deltaRayleighScatteringTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
-    deltaMieScatteringTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
-    scatteringTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  auto dim = scattering_texture_->extent();
 
-    cb.bindPipeline(bindpoint::eCompute, *singleScatteringPipeline);
-    cb.bindDescriptorSets(
-      bindpoint::eCompute, *singleScatteringLayoutDef.pipelineLayout,
-      singleScatteringLayoutDef.set.set(), singleScatteringSet, nullptr);
-    cb.dispatch(dim.width / 8, dim.height / 8, dim.depth / 1);
+  delta_rayleigh_scattering_texture->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  delta_mie_scattering_texture->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+  scattering_texture_->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.pipelineBarrier(
-      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-      {deltaRayleighScatteringTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
-       deltaMieScatteringTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
-       scatteringTexture.barrier(
-         layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
-  };
+  cb.bindPipeline(bindpoint::eCompute, *singleScatteringPipeline);
+  cb.bindDescriptorSets(
+    bindpoint::eCompute, *singleScatteringLayoutDef.pipelineLayout,
+    singleScatteringLayoutDef.set.set(), singleScatteringSet, nullptr);
+  CumulateLFUConstant constant{luminance_from_radiance, cumulate};
+  cb.pushConstants<CumulateLFUConstant>(
+    *singleScatteringLayoutDef.pipelineLayout, shader::eCompute, 0, constant);
+  cb.dispatch(dim.width / 8, dim.height / 8, dim.depth / 1);
+
+  cb.pipelineBarrier(
+    stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+    {delta_rayleigh_scattering_texture->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+     delta_mie_scattering_texture->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader),
+     scattering_texture_->barrier(
+       layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader)});
 }
 }

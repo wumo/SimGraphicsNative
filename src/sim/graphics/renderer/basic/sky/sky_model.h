@@ -94,19 +94,6 @@ public:
 
   void Init(unsigned int num_scattering_orders = 4);
 
-  // Utility method to convert a function of the wavelength to linear sRGB.
-  // 'wavelengths' and 'spectrum' must have the same size. The integral of
-  // 'spectrum' times each CIE_2_DEG_COLOR_MATCHING_FUNCTIONS (and times
-  // MAX_LUMINOUS_EFFICACY) is computed to get XYZ values, which are then
-  // converted to linear sRGB with the XYZ_TO_SRGB matrix.
-  static void ConvertSpectrumToLinearSrgb(
-    const std::vector<double> &wavelengths, const std::vector<double> &spectrum,
-    double *r, double *g, double *b);
-
-  static constexpr double kLambdaR = 680.0;
-  static constexpr double kLambdaG = 550.0;
-  static constexpr double kLambdaB = 440.0;
-
   HostUniformBuffer &atmosphereUBO();
   HostUniformBuffer &sunUBO();
   void updateSunPosition(float sun_zenith_angle_radians, float sun_azimuth_angle_radians);
@@ -115,31 +102,35 @@ public:
   Texture &irradianceTexture();
 
 private:
-  void Precompute(
-    const glm::vec3 &lambdas, const glm::mat4 &luminance_from_radiance, bool cumulate,
+  void createDescriptors();
+
+  void createTransmittanceSets();
+  void recordTransmittanceCMD(vk::CommandBuffer cb);
+
+  void createDirectIrradianceSets();
+  void recordDirectIrradianceCMD(vk::CommandBuffer cb, vk::Bool32 cumulate);
+
+  void createSingleScatteringSets();
+  void recordSingleScatteringCMD(
+    vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance, vk::Bool32 cumulate);
+
+  void createScatteringDensitySets();
+  void recordScatteringDensityCMD(vk::CommandBuffer cb, int32_t scatteringOrder);
+
+  void createIndirectIrradianceSets();
+  void recordIndirectIrradianceCMD(
+    vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance,
+    int32_t scatteringOrder);
+
+  void createMultipleScatteringSets();
+  void recordMultipleScatteringCMD(
+    vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance);
+
+  void compute(uint32_t num_scattering_orders);
+  void precompute(
+    vk::CommandBuffer cb, const glm::vec3 &lambdas,
+    const glm::mat4 &luminance_from_radiance, bool cumulate,
     unsigned int num_scattering_orders);
-
-  void createComputePipelines();
-
-  using ComputeCMD = std::function<void(vk::CommandBuffer cb)>;
-  ComputeCMD createTransmittance(Texture &transmittanceTexture);
-  ComputeCMD createDirectIrradiance(
-    Texture &deltaIrradianceTexture, Texture &irradianceTexture,
-    Texture &transmittanceTexture);
-  ComputeCMD createSingleScattering(
-    Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-    Texture &scatteringTexture, Texture &transmittanceTexture);
-  ComputeCMD createScatteringDensity(
-    Texture &deltaScatteringDensityTexture, Texture &transmittanceTexture,
-    Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-    Texture &deltaMultipleScatteringTexture, Texture &deltaIrradianceTexture);
-  ComputeCMD createIndirectIrradiance(
-    Texture &deltaIrradianceTexture, Texture &irradianceTexture,
-    Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-    Texture &deltaMultipleScatteringTexture);
-  ComputeCMD createMultipleScattering(
-    Texture &deltaMultipleScatteringTexture, Texture &scatteringTexture,
-    Texture &transmittanceTexture, Texture &deltaScatteringDensityTexture);
 
 private:
   Device &device;
@@ -165,10 +156,6 @@ private:
 
   std::function<AtmosphereParameters(const glm::vec3 &)> calcAtmosphereParams;
 
-  uPtr<HostUniformBuffer> cumulateUBO;
-  uPtr<HostUniformBuffer> LFRUBO;
-  uPtr<HostUniformBuffer> ScatterOrderUBO;
-
   using shader = vk::ShaderStageFlagBits;
 
   vk::UniqueDescriptorPool descriptorPool;
@@ -182,41 +169,40 @@ private:
   } transmittanceLayoutDef;
   vk::DescriptorSet transmittanceSet;
   vk::UniquePipeline transmittancePipeline;
-  ComputeCMD computeTransmittanceCMD;
 
   struct DirectIrradianceSetDef: DescriptorSetDef {
     __uniform__(atmosphere, shader::eCompute);
-    __uniform__(cumulate, shader::eCompute);
     __sampler__(transmittance, shader::eCompute);
     __storageImage__(delta_irradiance, shader::eCompute);
     __storageImage__(irradiance, shader::eCompute);
   } directIrradianceSetDef;
   struct DirectIrradianceLayoutDef: PipelineLayoutDef {
+    __push_constant__(constant, shader::eCompute, vk::Bool32);
     __set__(set, DirectIrradianceSetDef);
   } directIrradianceLayoutDef;
   vk::DescriptorSet directIrradianceSet;
   vk::UniquePipeline directIrradiancePipeline;
-  ComputeCMD computeDirectIrradianceCMD;
 
   struct SingleScatteringSetDef: DescriptorSetDef {
     __uniform__(atmosphere, shader::eCompute);
-    __uniform__(cumulate, shader::eCompute);
-    __uniform__(luminance_from_radiance, shader::eCompute);
     __sampler__(transmittance, shader::eCompute);
     __storageImage__(delta_rayleigh, shader::eCompute);
     __storageImage__(delta_mie, shader::eCompute);
     __storageImage__(scattering, shader::eCompute);
   } singleScatteringSetDef;
+  struct CumulateLFUConstant {
+    glm::mat4 luminance_from_radiance;
+    vk::Bool32 cumulate;
+  };
   struct SingleScatteringLayoutDef: PipelineLayoutDef {
+    __push_constant__(constant, shader::eCompute, CumulateLFUConstant);
     __set__(set, SingleScatteringSetDef);
   } singleScatteringLayoutDef;
   vk::DescriptorSet singleScatteringSet;
   vk::UniquePipeline singleScatteringPipeline;
-  ComputeCMD computeSingleScatteringCMD;
 
   struct ScatteringDensitySetDef: DescriptorSetDef {
     __uniform__(atmosphere, shader::eCompute);
-    __uniform__(scattering_order, shader::eCompute);
     __sampler__(transmittance, shader::eCompute);
     __sampler__(delta_rayleigh, shader::eCompute);
     __sampler__(delta_mie, shader::eCompute);
@@ -225,42 +211,43 @@ private:
     __storageImage__(scattering_density, shader::eCompute);
   } scatteringDensitySetDef;
   struct ScatteringDensityLayoutDef: PipelineLayoutDef {
+    __push_constant__(constant, shader::eCompute, int32_t);
     __set__(set, ScatteringDensitySetDef);
   } scatteringDensityLayoutDef;
   vk::DescriptorSet scatteringDensitySet;
   vk::UniquePipeline scatteringDensityPipeline;
-  ComputeCMD computeScatteringDensityCMD;
 
   struct IndirectIrradianceSetDef: DescriptorSetDef {
     __uniform__(atmosphere, shader::eCompute);
-    __uniform__(luminance_from_radiance, shader::eCompute);
-    __uniform__(scattering_order, shader::eCompute);
     __sampler__(delta_rayleigh, shader::eCompute);
     __sampler__(delta_mie, shader::eCompute);
     __sampler__(multpli_scattering, shader::eCompute);
     __storageImage__(delta_irradiance, shader::eCompute);
     __storageImage__(irradiance, shader::eCompute);
   } indirectIrradianceSetDef;
+  struct ScatteringOrderLFUConstant {
+    glm::mat4 luminance_from_radiance;
+    int32_t scattering_order;
+  };
   struct IndirectIrradianceLayoutDef: PipelineLayoutDef {
+    __push_constant__(constant, shader::eCompute, ScatteringOrderLFUConstant);
     __set__(set, IndirectIrradianceSetDef);
   } indirectIrradianceLayoutDef;
   vk::DescriptorSet indirectIrradianceSet;
   vk::UniquePipeline indirectIrradiancePipeline;
-  ComputeCMD computeIndirectIrradianceCMD;
 
   struct MultipleScatteringSetDef: DescriptorSetDef {
     __uniform__(atmosphere, shader::eCompute);
-    __uniform__(luminance_from_radiance, shader::eCompute);
     __sampler__(transmittance, shader::eCompute);
     __sampler__(scattering_density, shader::eCompute);
     __storageImage__(delta_multiple_scattering, shader::eCompute);
     __storageImage__(scattering, shader::eCompute);
   } multipleScatteringSetDef;
   struct MultipleScatteringLayoutDef: PipelineLayoutDef {
+    __push_constant__(constant, shader::eCompute, glm::mat4);
     __set__(set, MultipleScatteringSetDef);
   } multipleScatteringLayoutDef;
   vk::DescriptorSet multipleScatteringSet;
   vk::UniquePipeline multipleScatteringPipeline;
-  ComputeCMD computeMultipleScatteringCMD;
 };
 }

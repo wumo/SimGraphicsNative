@@ -1,9 +1,7 @@
 #include "sky_model.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
-#include "sim/graphics/base/pipeline/descriptors.h"
 #include "sim/graphics/compiledShaders/basic/sky/computeScatteringDensity_comp.h"
-#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -18,21 +16,15 @@ using shader = vk::ShaderStageFlagBits;
 using aspect = vk::ImageAspectFlagBits;
 using namespace glm;
 
-auto SkyModel::createScatteringDensity(
-  Texture &deltaScatteringDensityTexture, Texture &transmittanceTexture,
-  Texture &deltaRayleighScatteringTexture, Texture &deltaMieScatteringTexture,
-  Texture &deltaMultipleScatteringTexture, Texture &deltaIrradianceTexture)
-  -> SkyModel::ComputeCMD {
-
+void SkyModel::createScatteringDensitySets() {
   scatteringDensitySet = scatteringDensitySetDef.createSet(*descriptorPool);
   scatteringDensitySetDef.atmosphere(_atmosphereUBO->buffer());
-  scatteringDensitySetDef.scattering_order(ScatterOrderUBO->buffer());
-  scatteringDensitySetDef.transmittance(transmittanceTexture);
-  scatteringDensitySetDef.delta_rayleigh(deltaRayleighScatteringTexture);
-  scatteringDensitySetDef.delta_mie(deltaMieScatteringTexture);
-  scatteringDensitySetDef.multpli_scattering(deltaMultipleScatteringTexture);
-  scatteringDensitySetDef.irradiance(deltaIrradianceTexture);
-  scatteringDensitySetDef.scattering_density(deltaScatteringDensityTexture);
+  scatteringDensitySetDef.transmittance(*transmittance_texture_);
+  scatteringDensitySetDef.delta_rayleigh(*delta_rayleigh_scattering_texture);
+  scatteringDensitySetDef.delta_mie(*delta_mie_scattering_texture);
+  scatteringDensitySetDef.multpli_scattering(*delta_rayleigh_scattering_texture);
+  scatteringDensitySetDef.irradiance(*delta_irradiance_texture);
+  scatteringDensitySetDef.scattering_density(*delta_scattering_density_texture);
   scatteringDensitySetDef.update(scatteringDensitySet);
 
   SpecializationMaker sp{};
@@ -43,22 +35,25 @@ auto SkyModel::createScatteringDensity(
     computeScatteringDensity_comp, __ArraySize__(computeScatteringDensity_comp), &spInfo);
   scatteringDensityPipeline =
     pipelineMaker.createUnique(nullptr, *scatteringDensityLayoutDef.pipelineLayout);
+}
 
-  return [&](vk::CommandBuffer cb) {
-    auto dim = deltaScatteringDensityTexture.extent();
-    deltaScatteringDensityTexture.transitToLayout(
-      cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
+void SkyModel::recordScatteringDensityCMD(vk::CommandBuffer cb, int32_t scatteringOrder) {
 
-    cb.bindPipeline(bindpoint::eCompute, *scatteringDensityPipeline);
-    cb.bindDescriptorSets(
-      bindpoint::eCompute, *scatteringDensityLayoutDef.pipelineLayout,
-      scatteringDensityLayoutDef.set.set(), scatteringDensitySet, nullptr);
-    cb.dispatch(dim.width / 8, dim.height / 8, dim.depth / 1);
+  auto dim = delta_scattering_density_texture->extent();
+  delta_scattering_density_texture->transitToLayout(
+    cb, layout::eGeneral, access::eShaderWrite, stage::eComputeShader);
 
-    cb.pipelineBarrier(
-      stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
-      deltaScatteringDensityTexture.barrier(
-        layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader));
-  };
+  cb.bindPipeline(bindpoint::eCompute, *scatteringDensityPipeline);
+  cb.bindDescriptorSets(
+    bindpoint::eCompute, *scatteringDensityLayoutDef.pipelineLayout,
+    scatteringDensityLayoutDef.set.set(), scatteringDensitySet, nullptr);
+  cb.pushConstants<int32_t>(
+    *scatteringDensityLayoutDef.pipelineLayout, shader::eCompute, 0, scatteringOrder);
+  cb.dispatch(dim.width / 8, dim.height / 8, dim.depth / 1);
+
+  cb.pipelineBarrier(
+    stage::eComputeShader, stage::eComputeShader, {}, nullptr, nullptr,
+    delta_scattering_density_texture->barrier(
+      layout::eShaderReadOnlyOptimal, access::eShaderRead, stage::eComputeShader));
 }
 }

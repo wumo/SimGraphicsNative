@@ -2,13 +2,15 @@
 #extension GL_GOOGLE_include_directive : require
 #include "sky.h"
 
-layout(set = 0, binding = 1) uniform UniformInit { bool cumulate; };
-layout(set = 0, binding = 2) uniform LFRUniform { mat3 luminance_from_radiance; };
-layout(set = 0, binding = 3) uniform sampler2D transmittance;
+layout(push_constant) uniform LRRUniform {
+  mat4 luminance_from_radiance;
+  bool cumulate;
+};
+layout(set = 0, binding = 1) uniform sampler2D transmittance;
 
-layout(set = 0, binding = 4, rgba32f) uniform image3D delta_rayleigh;
-layout(set = 0, binding = 5, rgba32f) uniform image3D delta_mie;
-layout(set = 0, binding = 6, rgba32f) uniform image3D scattering;
+layout(set = 0, binding = 2, rgba32f) uniform image3D delta_rayleigh;
+layout(set = 0, binding = 3, rgba32f) uniform image3D delta_mie;
+layout(set = 0, binding = 4, rgba32f) uniform image3D scattering;
 
 layout(constant_id = 0) const uint lx = 1;
 layout(constant_id = 1) const uint ly = 1;
@@ -23,8 +25,8 @@ void main() {
   ComputeSingleScatteringTexture(
     ATMOSPHERE, transmittance, coord + vec3(0.5, 0.5, 0), deltaRayleighResult, deltaMie);
   vec4 scatteringResult = vec4(
-    luminance_from_radiance * deltaRayleighResult,
-    (luminance_from_radiance * deltaMie).r);
+    mat3(luminance_from_radiance) * deltaRayleighResult,
+    (mat3(luminance_from_radiance) * deltaMie).r);
 
   imageStore(delta_rayleigh, coord, vec4(deltaRayleighResult, 0));
   imageStore(delta_mie, coord, vec4(deltaMie, 0));

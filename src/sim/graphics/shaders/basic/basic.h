@@ -73,7 +73,7 @@ bool isZero(float val) {
 
 struct PatchData {
   mat4 model;
-  float minHeight, maxHeight;
+  float minHeight, heightRange;
   uint materialID, heightTex, normalTex;
 };
 

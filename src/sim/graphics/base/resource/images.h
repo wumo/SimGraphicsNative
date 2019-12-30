@@ -27,12 +27,12 @@ public:
 public:
   __only_move__(Texture);
   Texture(
-    const VmaAllocator &allocator, vk::ImageCreateInfo info,
+    const VmaAllocator &allocator, const vk::ImageCreateInfo& info,
     VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-    const vk::MemoryPropertyFlags &flags = {}, std::string name = "");
+    const vk::MemoryPropertyFlags &flags = {}, const std::string& name = "");
   Texture(
     const VmaAllocator &allocator, vk::ImageCreateInfo info,
-    VmaAllocationCreateInfo allocInfo, std::string name = "");
+    VmaAllocationCreateInfo allocInfo, const std::string& name = "");
 
   void setLayout(
     const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
@@ -85,8 +85,8 @@ public:
   void setSampler(vk::UniqueSampler &&sampler);
   void createImageView(
     const vk::Device &device, vk::ImageViewType viewType,
-    vk::ImageAspectFlags aspectMask);
-  void createImageView(const vk::Device &device, vk::ImageViewCreateInfo info);
+    const vk::ImageAspectFlags& aspectMask);
+  void createImageView(const vk::Device &device, const vk::ImageViewCreateInfo& info);
 
   void clear(
     const vk::CommandBuffer &cb, const std::array<float, 4> &color = {1, 1, 1, 1});
@@ -138,7 +138,7 @@ protected:
   vk::UniqueSampler _sampler;
   vk::ImageLayout currentLayout;
   vk::AccessFlags srcAccess;
-  vk::PipelineStageFlagBits srcStage;
+  vk::PipelineStageFlagBits srcStage{vk::PipelineStageFlagBits::eAllCommands};
   vk::ImageCreateInfo _info;
   static vk::AccessFlags guessSrcAccess(const vk::ImageLayout &oldLayout);
   static vk::AccessFlags guessDstAccess(const vk::ImageLayout &newLayout);

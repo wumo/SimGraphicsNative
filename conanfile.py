@@ -31,11 +31,15 @@ class SimGraphicsNativeConan(ConanFile):
     "shared": True,
   }
 
-  def build(self):
+  def configure_cmake(self):
     cmake = CMake(self)
     cmake.definitions["BUILD_TEST"] = False
     cmake.definitions["BUILD_SHARED"] = self.options.shared
     cmake.configure(source_folder=self.name)
+    return cmake
+
+  def build(self):
+    cmake = self.configure_cmake()
     cmake.build()
 
   def imports(self):
@@ -46,7 +50,8 @@ class SimGraphicsNativeConan(ConanFile):
     self.copy("*", dst="bin/assets/public", src="resources")
 
   def package(self):
-    self.copy("*.h", dst="include", src=f"{self.name}/src")
+    cmake = self.configure_cmake()
+    cmake.install()
     self.copy("*.dll", dst="bin", src="bin", keep_path=False)
     self.copy("*.so", dst="bin", src="bin", keep_path=False)
     self.copy("*.so", dst="lib", src="lib", keep_path=False)

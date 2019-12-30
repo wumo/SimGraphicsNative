@@ -23,7 +23,7 @@ function(compileshader shaderSrc outputDir)
       set(outputFiles ${outputFiles} ${outptuFile})
       add_custom_command(OUTPUT ${outptuFile}
         COMMAND ${CMAKE_COMMAND} -E make_directory "${outputDir}/${relativeDir}"
-        COMMAND ${glsl} -V ${file} -o ${outptuFile} --vn ${cxxName}
+        COMMAND ${glsl} -V ${file} -I${shaderSrc} -o ${outptuFile} --vn ${cxxName}
         DEPENDS ${file} ${headers})
     endif()
   endforeach()
@@ -31,8 +31,8 @@ function(compileshader shaderSrc outputDir)
   add_library(compileShader INTERFACE)
   target_include_directories(compileShader INTERFACE ${outputFiles})
   add_dependencies(compileShader generateShaderHeaders)
-  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-    target_precompile_headers(compileShader INTERFACE ${outputFiles})
-  endif()
-  #  add_custom_target(compileShader ALL DEPENDS ${outputFiles})
+  #  if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+  #    message(STATUS "Precompiled headers enabled.")
+  #    target_precompile_headers(compileShader INTERFACE ${outputFiles})
+  #  endif()
 endfunction()

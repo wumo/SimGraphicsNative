@@ -4,8 +4,6 @@
 #include "buffers.h"
 #include "sim/util/syntactic_sugar.h"
 
-#include <stb_image.h>
-
 namespace sim::graphics {
 
 uint32_t calcMipLevels(uint32_t dim) {
@@ -31,16 +29,14 @@ void Texture::resolve(
 }
 
 Texture::Texture(
-  const VmaAllocator &allocator, vk::ImageCreateInfo info, VmaMemoryUsage memoryUsage,
-  const vk::MemoryPropertyFlags &flags, std::string name)
-  : Texture{allocator,
-            std::move(info),
-            {{}, memoryUsage, VkMemoryPropertyFlags(flags)},
-            name} {}
+  const VmaAllocator &allocator, const vk::ImageCreateInfo &info,
+  VmaMemoryUsage memoryUsage, const vk::MemoryPropertyFlags &flags,
+  const std::string &name)
+  : Texture{allocator, info, {{}, memoryUsage, VkMemoryPropertyFlags(flags)}, name} {}
 
 Texture::Texture(
   const VmaAllocator &allocator, vk::ImageCreateInfo info,
-  VmaAllocationCreateInfo allocInfo, std::string name) {
+  VmaAllocationCreateInfo allocInfo, const std::string &name) {
   currentLayout = info.initialLayout;
   _info = info;
   vmaImage = UniquePtr(new VmaImage{allocator}, [](VmaImage *ptr) {
@@ -66,7 +62,8 @@ Texture::Texture(
 }
 
 void Texture::createImageView(
-  const vk::Device &device, vk::ImageViewType viewType, vk::ImageAspectFlags aspectMask) {
+  const vk::Device &device, vk::ImageViewType viewType,
+  const vk::ImageAspectFlags &aspectMask) {
   vk::ImageViewCreateInfo viewCreateInfo{
     {},
     vmaImage->image,
@@ -78,7 +75,8 @@ void Texture::createImageView(
   _imageView = device.createImageViewUnique(viewCreateInfo);
 }
 
-void Texture::createImageView(const vk::Device &device, vk::ImageViewCreateInfo info) {
+void Texture::createImageView(
+  const vk::Device &device, const vk::ImageViewCreateInfo &info) {
   _imageView = device.createImageViewUnique(info);
 }
 

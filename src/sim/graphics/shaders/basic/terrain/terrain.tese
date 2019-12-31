@@ -2,7 +2,7 @@
 #extension GL_GOOGLE_include_directive : require
 #include "../basic.h"
 
-layout(triangles, equal_spacing, cw) in;
+layout(quads, equal_spacing, cw) in;
 
 layout(location = 0) in vec2 inUV0[];
 layout(location = 1) patch in PatchData data;
@@ -21,12 +21,15 @@ layout(set = 0, binding = 5) uniform sampler2D textures[maxNumTextures];
 
 void main() {
   outMaterialID = data.materialID;
-  outUV0 = BaryLerp(inUV0[0], inUV0[1], inUV0[2], gl_TessCoord);
+  vec2 uv1 = mix(inUV0[0], inUV0[1], gl_TessCoord.x);
+  vec2 uv2 = mix(inUV0[3], inUV0[2], gl_TessCoord.x);
+  outUV0 = mix(uv1, uv2, gl_TessCoord.y);
 
   mat4 model = data.model;
 
-  vec4 pos = BaryLerp(
-    gl_in[0].gl_Position, gl_in[1].gl_Position, gl_in[2].gl_Position, gl_TessCoord);
+  vec4 pos1 = mix(gl_in[0].gl_Position, gl_in[1].gl_Position, gl_TessCoord.x);
+  vec4 pos2 = mix(gl_in[3].gl_Position, gl_in[2].gl_Position, gl_TessCoord.x);
+  vec4 pos = mix(pos1, pos2, gl_TessCoord.y);
   float height =
     data.minHeight + texture(textures[data.heightTex], outUV0).r * data.heightRange;
   pos.y += height;

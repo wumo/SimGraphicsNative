@@ -34,12 +34,13 @@ public:
   * @param y the 'height' direction of the rectangle from the center.
   */
   PrimitiveBuilder &rectangle(glm::vec3 center, glm::vec3 x, glm::vec3 y);
-  PrimitiveBuilder &gridMesh(
-    uint32_t nx, uint32_t ny, glm::vec3 center = {0.f, 0.f, 0.f}, glm::vec3 x = {0, 0, 1},
-    glm::vec3 y = {1, 0, 0}, float wx = 1, float wy = 1);
   PrimitiveBuilder &grid(
     uint32_t nx, uint32_t ny, glm::vec3 center = {0.f, 0.f, 0.f}, glm::vec3 x = {0, 0, 1},
     glm::vec3 y = {1, 0, 0}, float wx = 1, float wy = 1);
+  PrimitiveBuilder &gridPatch(
+    uint32_t nx, uint32_t ny, glm::vec3 center = {0.f, 0.f, 0.f}, glm::vec3 x = {0, 0, 1},
+    glm::vec3 y = {1, 0, 0}, float wx = 1, float wy = 1);
+
   /**
   * generate a circle
   * @param center the center of the circle

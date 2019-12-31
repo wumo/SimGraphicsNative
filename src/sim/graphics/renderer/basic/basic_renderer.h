@@ -63,7 +63,7 @@ protected:
     vk::UniquePipeline opaqueTri, opaqueLine, opaqueTriWireframe;
     vk::UniquePipeline deferred, deferredIBL, deferredSky;
     vk::UniquePipeline transTri, transLine;
-    vk::UniquePipeline terrain, terrainWireframe, terrainTess, terrainTessWireframe;
+    vk::UniquePipeline terrainTess, terrainTessWireframe;
   } Pipelines;
 
   struct {

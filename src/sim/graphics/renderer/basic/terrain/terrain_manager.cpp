@@ -56,7 +56,7 @@ void TerrainManager::loadSingle(
 
   auto gridPrimitive = mm.newPrimitive(
     PrimitiveBuilder(mm)
-      .grid(
+      .gridPatch(
         numVertexX, numVertexY, {center.x, 0, center.z}, {0, 0, 1}, {1, 0, 0},
         aabb.range().z / numVertexX, aabb.range().x / numVertexX)
       .newPrimitive(PrimitiveTopology::Patches));

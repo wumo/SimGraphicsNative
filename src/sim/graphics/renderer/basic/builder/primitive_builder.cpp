@@ -118,39 +118,6 @@ PrimitiveBuilder &PrimitiveBuilder::rectangle(
   return *this;
 }
 
-PrimitiveBuilder &PrimitiveBuilder::gridMesh(
-  const uint32_t nx, const uint32_t ny, const vec3 center, const vec3 x, const vec3 y,
-  const float wx, const float wy) {
-  auto _x = normalize(x);
-  auto _y = normalize(y);
-  auto normal = cross(_x, _y);
-  auto origin = center + _x * (nx * wx / 2.f) - _y * (ny * wy / 2.f);
-  _x *= -wx;
-  _y *= wy;
-  auto u = 1.f / nx;
-  auto v = 1.f / ny;
-  const auto vertexID = currentVertexID();
-  for(uint32_t row = 0; row <= ny; ++row)
-    for(uint32_t column = 0; column <= nx; ++column) {
-      auto p = origin + float(column) * _x + float(row) * _y;
-      append(_positions, {p});
-      append(_normals, {normal});
-      append(_uvs, {{column * u, row * v}});
-      aabb.merge(p);
-    }
-  for(uint32_t row = 0; row < ny; ++row)
-    for(uint32_t column = 0; column < nx; ++column) {
-      auto s0 = (nx + 1) * row;
-      auto s1 = (nx + 1) * (row + 1);
-      append(
-        _indices,
-        {s0 + column + vertexID, s1 + column + vertexID, s1 + column + 1 + vertexID,
-         s0 + column + vertexID, s1 + column + 1 + vertexID, s0 + column + 1 + vertexID});
-    }
-
-  return *this;
-}
-
 PrimitiveBuilder &PrimitiveBuilder::box(vec3 center, vec3 x, vec3 y, float half_z) {
   auto z = normalize(cross(x, y)) * half_z;
   rectangle(center + x, y, z);  // front
@@ -337,6 +304,42 @@ PrimitiveBuilder &PrimitiveBuilder::grid(
                     s1 + column + vertexID,
                     s1 + column + 1 + vertexID,
                     s0 + column + vertexID,
+                    s1 + column + 1 + vertexID,
+                    s0 + column + 1 + vertexID,
+                  });
+    }
+  return *this;
+}
+
+PrimitiveBuilder &PrimitiveBuilder::gridPatch(
+  const uint32_t nx, const uint32_t ny, const vec3 center, const vec3 x, const vec3 y,
+  const float wx, const float wy) {
+  auto _x = normalize(x);
+  auto _y = normalize(y);
+  auto normal = cross(_x, _y);
+  auto origin = center + _x * (nx * wx / 2.f) - _y * (ny * wy / 2.f);
+  _x *= -wx;
+  _y *= wy;
+  auto u = 1.f / nx;
+  auto v = 1.f / ny;
+  const auto vertexID = currentVertexID();
+  auto i = 0u;
+  for(uint32_t row = 0; row <= ny; ++row)
+    for(uint32_t column = 0; column <= nx; ++column) {
+      auto p = origin + float(column) * _x + float(row) * _y;
+      _positions.push_back(p);
+      _normals.push_back(normal);
+      _uvs.emplace_back(column * u, row * v);
+      aabb.merge(p);
+    }
+  for(uint32_t row = 0; row < ny; ++row)
+    for(uint32_t column = 0; column < nx; ++column) {
+      auto s0 = (nx + 1) * row;
+      auto s1 = (nx + 1) * (row + 1);
+      append(
+        _indices, {
+                    s0 + column + vertexID,
+                    s1 + column + vertexID,
                     s1 + column + 1 + vertexID,
                     s0 + column + 1 + vertexID,
                   });

@@ -16,9 +16,9 @@ enum class SamplerAddressMode {
 struct SamplerDef {
   Filter magFilter{Filter::FiltereLinear}, minFilter{Filter::FiltereLinear};
   SamplerMipmapMode mipmapMode{SamplerMipmapMode::SamplerMipmapModeeLinear};
-  SamplerAddressMode addressModeU{SamplerAddressMode::SamplerAddressModeeRepeat},
-    addressModeV{SamplerAddressMode::SamplerAddressModeeRepeat},
-    addressModeW{SamplerAddressMode::SamplerAddressModeeRepeat};
+  SamplerAddressMode addressModeU{SamplerAddressMode::SamplerAddressModeeClampToEdge},
+    addressModeV{SamplerAddressMode::SamplerAddressModeeClampToEdge},
+    addressModeW{SamplerAddressMode::SamplerAddressModeeClampToEdge};
   float mipLodBias{0.f};
   bool anisotropyEnable{false};
   float maxAnisotropy{0.f};

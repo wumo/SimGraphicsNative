@@ -66,7 +66,7 @@ auto main(int argc, const char **argv) -> int {
   //    {{-50, -10, 50}, {50, 10, -50}}, 10, 10, 538.33f / 2625, 16.f);
   tm.loadPatches(
     "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
-    {{-50, -10, 50}, {50, 10, -50}}, 2, 2, 538.33f / 2625, 16.f);
+    {{-50, -10, 50}, {50, 10, -50}}, 1, 1, 538.33f / 2625, 16.f);
 
   //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   //  mm.useEnvironmentMap(envCube);

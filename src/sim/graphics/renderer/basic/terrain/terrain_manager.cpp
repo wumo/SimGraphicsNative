@@ -38,14 +38,13 @@ void TerrainManager::loadSingle(
   uint32_t numVertexX, uint32_t numVertexY, float seaLevelRatio, float tesselationLevel) {
   vec3 center = aabb.center();
   float seaLevelHeight = clamp(seaLevelRatio, 0.f, 1.f) * aabb.range().y;
-  float seaBoxCenter = aabb.min.y + seaLevelHeight / 2;
   float panning = 1.f;
-  auto horizonPrimitive = mm.newPrimitive(
-    PrimitiveBuilder(mm)
-      .box(
-        {center.x, seaBoxCenter - panning, center.z}, {0, 0, aabb.halfRange().z},
-        {aabb.halfRange().x, 0, 0}, seaLevelHeight / 2 + panning)
-      .newPrimitive());
+  auto horizonPrimitive =
+    mm.newPrimitive(PrimitiveBuilder(mm)
+                      .rectangle(
+                        {center.x, aabb.min.y + seaLevelHeight, center.z},
+                        {0, 0, aabb.halfRange().z}, {aabb.halfRange().x, 0, 0})
+                      .newPrimitive());
 
   auto horizonMaterial = mm.newMaterial(MaterialType::eTranslucent);
   horizonMaterial->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});

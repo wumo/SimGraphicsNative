@@ -26,7 +26,7 @@ void PanningCamera::updateCamera(Input &input) {
   auto len = length(front);
   camera.setLocation(
     camera.location() +
-    normalize(front) * 10.f * float(input.scrollYOffset) * len / 100.f);
+    normalize(front) * len * glm::clamp(float(input.scrollYOffset) / 10.f, -1.f, 1.f));
   input.scrollYOffset = 0;
 
   auto right = normalize(cross(front, camera.worldUp()));

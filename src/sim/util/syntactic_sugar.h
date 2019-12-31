@@ -86,8 +86,8 @@ void concat(std::stringstream &ss, T &&s, Args &&... args) {
   concat(ss, args...);
 }
 
-template<typename T, typename... Args>
-std::string toString(T &&s, Args &&... args) {
+template<typename... Args>
+std::string toString(Args &&... args) {
   std::stringstream ss;
   concat(ss, args...);
   return ss.str();

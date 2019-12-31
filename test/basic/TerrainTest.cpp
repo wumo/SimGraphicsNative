@@ -22,7 +22,30 @@ auto main(int argc, const char **argv) -> int {
 
   auto &camera = mm.camera();
   camera.setLocation({2.f, 2.f, 2.f});
-//  mm.addLight(LightType ::Directional, {-1, -1, -1});
+  //  mm.addLight(LightType ::Directional, {-1, -1, -1});
+
+  auto primitives =
+    mm.newPrimitives(PrimitiveBuilder(mm).axis({}, 2.f, 0.01f, 0.05f, 50).newPrimitive());
+  auto yellowMat = mm.newMaterial();
+  yellowMat->setColorFactor({Yellow, 1.f});
+  auto redMat = mm.newMaterial();
+  redMat->setColorFactor({Red, 1.f});
+  auto greenMat = mm.newMaterial();
+  greenMat->setColorFactor({Green, 1.f});
+  auto blueMat = mm.newMaterial();
+  blueMat->setColorFactor({Blue, 1.f});
+
+  auto originMesh = mm.newMesh(primitives[0], yellowMat);
+  auto xMesh = mm.newMesh(primitives[1], redMat);
+  auto yMesh = mm.newMesh(primitives[2], greenMat);
+  auto zMesh = mm.newMesh(primitives[3], blueMat);
+  auto axisNode = mm.newNode();
+  Node::addMesh(axisNode, originMesh);
+  Node::addMesh(axisNode, xMesh);
+  Node::addMesh(axisNode, yMesh);
+  Node::addMesh(axisNode, zMesh);
+  auto axisModel = mm.newModel({axisNode});
+  auto axis = mm.newModelInstance(axisModel);
 
   std::string name = "DamagedHelmet";
   auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
@@ -38,9 +61,12 @@ auto main(int argc, const char **argv) -> int {
   auto instance = mm.newModelInstance(model, t);
 
   auto &tm = mm.terrrainManager();
-  tm.loadSingle(
-    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
-    {{-50, -10, 50}, {50, 10, -50}}, 10, 10, 538.33f / 2625, 16.f);
+  //  tm.loadSingle(
+  //    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
+  //    {{-50, -10, 50}, {50, 10, -50}}, 10, 10, 538.33f / 2625, 16.f);
+  tm.loadPatches(
+    "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
+    {{-50, -10, 50}, {50, 10, -50}}, 2, 2, 538.33f / 2625, 16.f);
 
   //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   //  mm.useEnvironmentMap(envCube);

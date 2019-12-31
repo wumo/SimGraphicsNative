@@ -8,24 +8,26 @@ TerrainManager::TerrainManager(sim::graphics::renderer::basic::BasicModelManager
 void TerrainManager::loadPatches(
   const std::string &terrainFolder, const std::string &heightMapPrefix,
   const std::string &normalMapPrefix, const std::string &albedoMapPrefix,
-  uint32_t patchNumX, uint32_t patchNumY, glm::vec3 origin, float patchScale,
-  float minHeight, float maxHeight, float seaLevel) {
+  uint32_t patchNumX, uint32_t patchNumY, const AABB &aabb, uint32_t numVertexX,
+  uint32_t numVertexY, float seaLevelRatio, float tesselationLevel) {
 
-  std::vector<std::vector<Ptr<Texture2D>>> heightTexes, normalTexes, albedoTexes;
-  heightTexes.resize(patchNumX);
-  normalTexes.resize(patchNumX);
-  albedoTexes.resize(patchNumX);
+  auto range = aabb.range();
+
+  auto &_min = aabb.min;
+  auto &_max = aabb.max;
+  float unitX = range.x / patchNumX;
+  float unitZ = range.z / patchNumY;
+
   for(int nx = 0; nx < patchNumX; ++nx) {
     for(int ny = 0; ny < patchNumY; ++ny) {
-      auto heightTex = mm.newGrayTexture(
-        toString(terrainFolder, "/", heightMapPrefix, "_", nx, "_", ny, ".png"));
-      auto normalTex = mm.newTexture(
-        toString(terrainFolder, "/", normalMapPrefix, "_", nx, "_", ny, ".png"));
-      auto albedoTex = mm.newTexture(
-        toString(terrainFolder, "/", albedoMapPrefix, "_", nx, "_", ny, ".png"));
-      heightTexes[nx].push_back(heightTex);
-      normalTexes[nx].push_back(normalTex);
-      albedoTexes[nx].push_back(albedoTex);
+      std::string heightMap = toString(heightMapPrefix, "_", nx, "_", ny, ".png");
+      std::string normalMap = toString(normalMapPrefix, "_", nx, "_", ny, ".png");
+      std::string albedoMap = toString(albedoMapPrefix, "_", nx, "_", ny, ".png");
+      loadSingle(
+        terrainFolder, heightMap, normalMap, albedoMap,
+        {_min + vec3{(patchNumY - 1 - ny) * unitX, _min.y, -nx * unitZ},
+         _min + vec3{(patchNumY - ny) * unitX, _max.y, -(nx + 1) * unitZ}},
+        numVertexX, numVertexY, seaLevelRatio, tesselationLevel);
     }
   }
 }

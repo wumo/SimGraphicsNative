@@ -5,18 +5,10 @@ public:
   explicit TerrainManager(BasicModelManager &mm);
 
   /**
+   * World Machine tiled map
    *
-   * @param terrainFolder
-   * @param heightMapPrefix
-   * @param normalMapPrefix
-   * @param albedoMapPrefix
-   * @param patchNumX
-   * @param patchNumY
-   * @param aabb
-   * @param numVertexX
-   * @param numVertexY
-   * @param seaLevelRatio
-   * @param tesselationLevel
+   * Note: "Tiled Build Options" should check "Share edge vertices" box to prevent seam hole
+   * between patches.
    */
   void loadPatches(
     const std::string &terrainFolder, const std::string &heightMapPrefix,

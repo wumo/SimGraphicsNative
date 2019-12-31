@@ -10,6 +10,7 @@ struct CameraUBO {
   // mat4 projInv;
   vec4 eye;
   vec4 r, v;
+  vec4 frustumPlanes[6];
   float w, h, fov;
   float zNear, zFar;
 };

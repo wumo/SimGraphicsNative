@@ -20,6 +20,13 @@ layout(constant_id = 0) const uint maxNumTextures = 1;
 layout(set = 0, binding = 0) uniform Camera { CameraUBO cam; };
 layout(set = 0, binding = 5) uniform sampler2D textures[maxNumTextures];
 
+bool frustumCheck(vec4 pos) {
+  // Check sphere against frustum planes
+  for(int i = 0; i < 6; i++)
+    if(dot(pos, cam.frustumPlanes[i]) < 0.0) return false;
+  return true;
+}
+
 float calcTessLevel(
   vec4 p0, vec4 p1, vec2 uv0, vec2 uv1, float tessWidth, mat4 modelView) {
   vec4 center = (p0 + p1) / 2;
@@ -70,17 +77,29 @@ void main() {
     p3.y +=
       data.minHeight + texture(textures[data.heightTex], inUV0[3]).r * data.heightRange;
 
-    gl_TessLevelOuter[0] =
-      calcTessLevel(p3, p0, inUV0[3], inUV0[0], tessWidth, modelView);
-    gl_TessLevelOuter[1] =
-      calcTessLevel(p0, p1, inUV0[0], inUV0[1], tessWidth, modelView);
-    gl_TessLevelOuter[2] =
-      calcTessLevel(p1, p2, inUV0[1], inUV0[2], tessWidth, modelView);
-    gl_TessLevelOuter[3] =
-      calcTessLevel(p2, p3, inUV0[2], inUV0[3], tessWidth, modelView);
+    bool visible = frustumCheck(p0) || frustumCheck(p1) || frustumCheck(p2) ||
+                   frustumCheck(p3);
 
-    gl_TessLevelInner[0] = mix(gl_TessLevelOuter[0], gl_TessLevelOuter[3], 0.5);
-    gl_TessLevelInner[1] = mix(gl_TessLevelOuter[2], gl_TessLevelOuter[1], 0.5);
+    if(visible) {
+      gl_TessLevelOuter[0] =
+        calcTessLevel(p3, p0, inUV0[3], inUV0[0], tessWidth, modelView);
+      gl_TessLevelOuter[1] =
+        calcTessLevel(p0, p1, inUV0[0], inUV0[1], tessWidth, modelView);
+      gl_TessLevelOuter[2] =
+        calcTessLevel(p1, p2, inUV0[1], inUV0[2], tessWidth, modelView);
+      gl_TessLevelOuter[3] =
+        calcTessLevel(p2, p3, inUV0[2], inUV0[3], tessWidth, modelView);
+
+      gl_TessLevelInner[0] = mix(gl_TessLevelOuter[0], gl_TessLevelOuter[3], 0.5);
+      gl_TessLevelInner[1] = mix(gl_TessLevelOuter[2], gl_TessLevelOuter[1], 0.5);
+    } else {
+      gl_TessLevelOuter[0] = 0.0;
+      gl_TessLevelOuter[1] = 0.0;
+      gl_TessLevelOuter[2] = 0.0;
+      gl_TessLevelOuter[3] = 0.0;
+      gl_TessLevelInner[0] = 0.0;
+      gl_TessLevelInner[1] = 0.0;
+    }
   }
 
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;

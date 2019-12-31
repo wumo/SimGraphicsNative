@@ -2,6 +2,49 @@
 #include "sim/graphics/base/glm_common.h"
 
 namespace sim::graphics::renderer::basic {
+class Frustum {
+public:
+  enum side { LEFT = 0, RIGHT = 1, TOP = 2, BOTTOM = 3, BACK = 4, FRONT = 5 };
+  std::array<glm::vec4, 6> planes{};
+
+  explicit Frustum(glm::mat4 matrix) {
+    planes[LEFT].x = matrix[0].w + matrix[0].x;
+    planes[LEFT].y = matrix[1].w + matrix[1].x;
+    planes[LEFT].z = matrix[2].w + matrix[2].x;
+    planes[LEFT].w = matrix[3].w + matrix[3].x;
+
+    planes[RIGHT].x = matrix[0].w - matrix[0].x;
+    planes[RIGHT].y = matrix[1].w - matrix[1].x;
+    planes[RIGHT].z = matrix[2].w - matrix[2].x;
+    planes[RIGHT].w = matrix[3].w - matrix[3].x;
+
+    planes[TOP].x = matrix[0].w - matrix[0].y;
+    planes[TOP].y = matrix[1].w - matrix[1].y;
+    planes[TOP].z = matrix[2].w - matrix[2].y;
+    planes[TOP].w = matrix[3].w - matrix[3].y;
+
+    planes[BOTTOM].x = matrix[0].w + matrix[0].y;
+    planes[BOTTOM].y = matrix[1].w + matrix[1].y;
+    planes[BOTTOM].z = matrix[2].w + matrix[2].y;
+    planes[BOTTOM].w = matrix[3].w + matrix[3].y;
+
+    planes[BACK].x = matrix[0].w + matrix[0].z;
+    planes[BACK].y = matrix[1].w + matrix[1].z;
+    planes[BACK].z = matrix[2].w + matrix[2].z;
+    planes[BACK].w = matrix[3].w + matrix[3].z;
+
+    planes[FRONT].x = matrix[0].w - matrix[0].z;
+    planes[FRONT].y = matrix[1].w - matrix[1].z;
+    planes[FRONT].z = matrix[2].w - matrix[2].z;
+    planes[FRONT].w = matrix[3].w - matrix[3].z;
+
+    for(auto &plane: planes) {
+      float length = sqrtf(plane.x * plane.x + plane.y * plane.y + plane.z * plane.z);
+      plane /= length;
+    }
+  }
+};
+
 class PerspectiveCamera {
   friend class BasicModelManager;
 
@@ -15,6 +58,7 @@ public:
     //    glm::mat4 projInv;
     glm::vec4 eye;
     glm::vec4 r, v;
+    Frustum frustum;
     float w, h, fov;
     float zNear, zFar;
   };
@@ -105,11 +149,21 @@ private:
   UBO flush() {
     auto proj = flushProjection();
     auto view = flushView();
+    auto projView = proj * view;
     auto v = glm::vec4(normalize(_focus - _location), 1);
     auto r = glm::vec4(normalize(cross(glm::vec3(v), _worldUp)), 1);
-    return {view, proj,   proj * view,   glm::vec4(_location, 1.0),
-            r,    v,      float(_width), float(_height),
-            _fov, _zNear, _zFar};
+    return {view,
+            proj,
+            projView,
+            glm::vec4(_location, 1.0),
+            r,
+            v,
+            Frustum{projView},
+            float(_width),
+            float(_height),
+            _fov,
+            _zNear,
+            _zFar};
   }
 
   bool incoherent() const { return _view_incoherent || _proj_incoherent; }

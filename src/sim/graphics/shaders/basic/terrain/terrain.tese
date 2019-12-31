@@ -2,8 +2,6 @@
 #extension GL_GOOGLE_include_directive : require
 #include "../basic.h"
 
-layout(constant_id = 0) const uint maxNumTextures = 1;
-
 layout(triangles, equal_spacing, cw) in;
 
 layout(location = 0) in vec2 inUV0[];
@@ -15,6 +13,8 @@ layout(location = 0) out vs {
   vec2 outUV0;
   out flat uint outMaterialID;
 };
+
+layout(constant_id = 0) const uint maxNumTextures = 1;
 
 layout(set = 0, binding = 0) uniform Camera { CameraUBO cam; };
 layout(set = 0, binding = 5) uniform sampler2D textures[maxNumTextures];

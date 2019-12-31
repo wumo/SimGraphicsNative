@@ -21,11 +21,11 @@ auto main(int argc, const char **argv) -> int {
   auto &mm = app.modelManager();
 
   auto &camera = mm.camera();
-  camera.setLocation({2.f, 2.f, 2.f});
+  camera.setLocation({40.f, 40.f, 40.f});
   //  mm.addLight(LightType ::Directional, {-1, -1, -1});
 
   auto primitives =
-    mm.newPrimitives(PrimitiveBuilder(mm).axis({}, 2.f, 0.01f, 0.05f, 50).newPrimitive());
+    mm.newPrimitives(PrimitiveBuilder(mm).axis({}, 20.f, 0.1f, 0.5f, 50).newPrimitive());
   auto yellowMat = mm.newMaterial();
   yellowMat->setColorFactor({Yellow, 1.f});
   auto redMat = mm.newMaterial();
@@ -56,17 +56,17 @@ auto main(int argc, const char **argv) -> int {
   auto scale = 1 / std::max(std::max(range.x, range.y), range.z);
   auto center = aabb.center();
   auto halfRange = aabb.halfRange();
-  Transform t{{-center * scale}, glm::vec3{scale}};
+  Transform t{vec3{0, 10, 0} + vec3{-center * scale}, glm::vec3{scale}};
   //  t.translation = -center;
   auto instance = mm.newModelInstance(model, t);
 
   auto &tm = mm.terrrainManager();
   //  tm.loadSingle(
   //    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
-  //    {{-50, -10, 50}, {50, 10, -50}}, 10, 10, 538.33f / 2625, 16.f);
+  //    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 64.f);
   tm.loadPatches(
     "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
-    {{-50, -10, 50}, {50, 10, -50}}, 1, 1, 538.33f / 2625, 16.f);
+    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 40.f);
 
   //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   //  mm.useEnvironmentMap(envCube);

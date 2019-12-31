@@ -44,7 +44,8 @@ void BasicRenderer::createTerrainPipeline(
     pipelineMaker.topology(vk::PrimitiveTopology::ePatchList).tesselationState(3);
     pipelineMaker
       .shader(shader::eVertex, terrain_tess_vert, __ArraySize__(terrain_tess_vert))
-      .shader(shader::eTessellationControl, terrain_tesc, __ArraySize__(terrain_tesc))
+      .shader(
+        shader::eTessellationControl, terrain_tesc, __ArraySize__(terrain_tesc), &spInfo)
       .shader(
         shader::eTessellationEvaluation, terrain_tese, __ArraySize__(terrain_tese),
         &spInfo)

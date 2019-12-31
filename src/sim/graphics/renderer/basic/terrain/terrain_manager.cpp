@@ -35,7 +35,7 @@ void TerrainManager::loadPatches(
 void TerrainManager::loadSingle(
   const std::string &terrainFolder, const std::string &heightMap,
   const std::string &normalMap, const std::string &albedoMap, const AABB &aabb,
-  uint32_t numVertexX, uint32_t numVertexY, float seaLevelRatio, float tesselationLevel) {
+  uint32_t numVertexX, uint32_t numVertexY, float seaLevelRatio, float tesselationWidth) {
   vec3 center = aabb.center();
   float seaLevelHeight = clamp(seaLevelRatio, 0.f, 1.f) * aabb.range().y;
   float panning = 1.f;
@@ -61,7 +61,7 @@ void TerrainManager::loadSingle(
         aabb.range().z / numVertexX, aabb.range().x / numVertexX)
       .newPrimitive(PrimitiveTopology::Patches));
   gridPrimitive->setAabb(aabb);
-  gridPrimitive->setTesselationLevel(tesselationLevel);
+  gridPrimitive->setTesselationLevel(tesselationWidth);
 
   auto gridMaterial = mm.newMaterial(MaterialType::eTerrain);
   auto gridMesh = mm.newMesh(gridPrimitive, gridMaterial);

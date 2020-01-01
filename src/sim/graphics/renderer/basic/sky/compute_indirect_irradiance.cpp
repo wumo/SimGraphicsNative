@@ -1,9 +1,7 @@
 #include "sky_model.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
-#include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeIndirectIrradiance_comp.h"
-#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
+#include "sim/graphics/compiledShaders/basic/sky/indirect_irradiance_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -33,8 +31,7 @@ void SkyModel::createIndirectIrradianceSets() {
 
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
-    computeIndirectIrradiance_comp, __ArraySize__(computeIndirectIrradiance_comp),
-    &spInfo);
+    indirect_irradiance_comp, __ArraySize__(indirect_irradiance_comp), &spInfo);
   indirectIrradiancePipeline =
     pipelineMaker.createUnique(nullptr, *indirectIrradianceLayoutDef.pipelineLayout);
 }

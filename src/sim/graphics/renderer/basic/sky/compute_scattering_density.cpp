@@ -1,7 +1,7 @@
 #include "sky_model.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeScatteringDensity_comp.h"
+#include "sim/graphics/compiledShaders/basic/sky/scattering_density_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -32,7 +32,7 @@ void SkyModel::createScatteringDensitySets() {
 
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
-    computeScatteringDensity_comp, __ArraySize__(computeScatteringDensity_comp), &spInfo);
+    scattering_density_comp, __ArraySize__(scattering_density_comp), &spInfo);
   scatteringDensityPipeline =
     pipelineMaker.createUnique(nullptr, *scatteringDensityLayoutDef.pipelineLayout);
 }

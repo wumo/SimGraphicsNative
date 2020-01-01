@@ -1,8 +1,7 @@
 #include "sky_model.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
-#include "sim/graphics/base/pipeline/descriptors.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeMultipleScattering_comp.h"
+#include "sim/graphics/compiledShaders/basic/sky/multiple_scattering_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -30,8 +29,7 @@ void SkyModel::createMultipleScatteringSets() {
   auto spInfo = sp.entry<uint32_t>(8).entry<uint32_t>(8).entry<uint32_t>(1).create();
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
-    computeMultipleScattering_comp, __ArraySize__(computeMultipleScattering_comp),
-    &spInfo);
+    multiple_scattering_comp, __ArraySize__(multiple_scattering_comp), &spInfo);
   multipleScatteringPipeline =
     pipelineMaker.createUnique(nullptr, *multipleScatteringLayoutDef.pipelineLayout);
 }

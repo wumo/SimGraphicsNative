@@ -1,5 +1,5 @@
 #include "sky_model.h"
-#include "sim/graphics/compiledShaders/basic/sky/computeSingleScattering_comp.h"
+#include "sim/graphics/compiledShaders/basic/sky/single_scattering_comp.h"
 #include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
 
 namespace sim::graphics::renderer::basic {
@@ -29,7 +29,7 @@ void SkyModel::createSingleScatteringSets() {
 
   ComputePipelineMaker pipelineMaker{device.getDevice()};
   pipelineMaker.shader(
-    computeSingleScattering_comp, __ArraySize__(computeSingleScattering_comp), &spInfo);
+    single_scattering_comp, __ArraySize__(single_scattering_comp), &spInfo);
   singleScatteringPipeline =
     pipelineMaker.createUnique(nullptr, *singleScatteringLayoutDef.pipelineLayout);
 }

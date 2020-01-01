@@ -1,5 +1,5 @@
-#ifndef ATMOSPHERE_H
-#define ATMOSPHERE_H
+#ifndef SKY_ATMOSPHERE_H
+#define SKY_ATMOSPHERE_H
 
 #include "sky.h"
 

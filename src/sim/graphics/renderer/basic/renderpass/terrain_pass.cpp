@@ -1,8 +1,8 @@
 #include "../basic_renderer.h"
-#include "sim/graphics/compiledShaders/basic/gbuffer_frag.h"
-#include "sim/graphics/compiledShaders/basic/terrain/terrain_tess_vert.h"
-#include "sim/graphics/compiledShaders/basic/terrain/terrain_tesc.h"
-#include "sim/graphics/compiledShaders/basic/terrain/terrain_tese.h"
+#include "sim/graphics/compiledShaders/deferred/gbuffer_frag.h"
+#include "sim/graphics/compiledShaders/terrain/terrain_tess_vert.h"
+#include "sim/graphics/compiledShaders/terrain/terrain_tesc.h"
+#include "sim/graphics/compiledShaders/terrain/terrain_tese.h"
 
 namespace sim::graphics::renderer::basic {
 using shader = vk::ShaderStageFlagBits;

@@ -106,6 +106,9 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/sky/compute_scattering_density.cpp
   src/sim/graphics/renderer/basic/sky/compute_single_scattering.cpp
   
+  src/sim/graphics/renderer/basic/ocean/ocean_render_pass.cpp
+  src/sim/graphics/renderer/basic/ocean/ocean_render_pass.h
+  
   src/sim/graphics/renderer/basic/renderpass/infinite_plane.cpp
   src/sim/graphics/renderer/basic/renderpass/deferred_pass.cpp
   src/sim/graphics/renderer/basic/renderpass/opaque_pass.cpp

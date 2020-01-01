@@ -1,7 +1,7 @@
 #ifndef BASIC_DEFERRED_H
 #define BASIC_DEFERRED_H
 
-#include "basic.h"
+#include "../basic.h"
 #include "../tonemap.h"
 
 layout(location = 0) out vec4 outColor;
@@ -54,7 +54,7 @@ layout(set = SKY_SET, binding = 2) uniform sampler2D transmittance_texture;
 layout(set = SKY_SET, binding = 3) uniform sampler3D scattering_texture;
 layout(set = SKY_SET, binding = 4) uniform sampler2D irradiance_texture;
 
-  #include "sky/atmosphere.h"
+  #include "../sky/atmosphere.h"
 
   #define USE_LUMINANCE
 
@@ -66,7 +66,7 @@ layout(set = SKY_SET, binding = 4) uniform sampler2D irradiance_texture;
   #endif
 
 #endif
-#include "brdf.h"
+#include "../brdf.h"
 
 vec3 view_ray(CameraUBO cam) {
   vec3 origin = vec3(cam.eye);

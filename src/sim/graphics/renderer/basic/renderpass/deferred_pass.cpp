@@ -1,11 +1,11 @@
 #include "../basic_renderer.h"
-#include "sim/graphics/compiledShaders/basic/quad_vert.h"
-#include "sim/graphics/compiledShaders/basic/deferred_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_ms_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_ibl_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_ibl_ms_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_sky_frag.h"
-#include "sim/graphics/compiledShaders/basic/deferred_sky_ms_frag.h"
+#include "sim/graphics/compiledShaders/quad_vert.h"
+#include "sim/graphics/compiledShaders/deferred/deferred_frag.h"
+#include "sim/graphics/compiledShaders/deferred/deferred_ms_frag.h"
+#include "sim/graphics/compiledShaders/deferred/deferred_ibl_frag.h"
+#include "sim/graphics/compiledShaders/deferred/deferred_ibl_ms_frag.h"
+#include "sim/graphics/compiledShaders/deferred/deferred_sky_frag.h"
+#include "sim/graphics/compiledShaders/deferred/deferred_sky_ms_frag.h"
 
 namespace sim::graphics::renderer::basic {
 using shader = vk::ShaderStageFlagBits;

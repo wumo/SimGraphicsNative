@@ -1,6 +1,5 @@
 #include "sky_model.h"
-#include "sim/graphics/compiledShaders/basic/sky/single_scattering_comp.h"
-#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
+#include "sim/graphics/compiledShaders/sky/single_scattering_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;

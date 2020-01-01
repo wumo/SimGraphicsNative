@@ -1,7 +1,5 @@
 #include "sky_model.h"
-#include "sim/graphics/base/pipeline/render_pass.h"
-#include "sim/graphics/compiledShaders/basic/sky/transmittance_comp.h"
-#include "sim/graphics/base/pipeline/descriptor_pool_maker.h"
+#include "sim/graphics/compiledShaders/sky/transmittance_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;
@@ -21,8 +19,7 @@ void SkyModel::createTransmittanceSets() {
 
   SpecializationMaker sp{};
   auto spInfo = sp.entry<uint32_t>(8).entry<uint32_t>(8).entry<uint32_t>(1).create();
-  pipelineMaker.shader(
-    transmittance_comp, __ArraySize__(transmittance_comp), &spInfo);
+  pipelineMaker.shader(transmittance_comp, __ArraySize__(transmittance_comp), &spInfo);
 
   transmittancePipeline =
     pipelineMaker.createUnique(nullptr, *transmittanceLayoutDef.pipelineLayout);

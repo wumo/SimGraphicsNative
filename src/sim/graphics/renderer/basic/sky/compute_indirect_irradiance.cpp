@@ -1,7 +1,5 @@
 #include "sky_model.h"
-#include "sim/graphics/base/pipeline/render_pass.h"
-#include "sim/graphics/base/pipeline/pipeline.h"
-#include "sim/graphics/compiledShaders/basic/sky/indirect_irradiance_comp.h"
+#include "sim/graphics/compiledShaders/sky/indirect_irradiance_comp.h"
 
 namespace sim::graphics::renderer::basic {
 using address = vk::SamplerAddressMode;

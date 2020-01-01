@@ -1,6 +1,6 @@
 #include "../basic_renderer.h"
-#include "sim/graphics/compiledShaders/basic/basic_vert.h"
-#include "sim/graphics/compiledShaders/basic/translucent_frag.h"
+#include "sim/graphics/compiledShaders/basic_vert.h"
+#include "sim/graphics/compiledShaders/translucent_frag.h"
 
 namespace sim::graphics::renderer::basic {
 using shader = vk::ShaderStageFlagBits;

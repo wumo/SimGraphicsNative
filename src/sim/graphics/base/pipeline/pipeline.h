@@ -197,7 +197,11 @@ class ComputePipelineMaker {
 public:
   explicit ComputePipelineMaker(const vk::Device &device);
 
-  void shader(ShaderModule &shader, const vk::SpecializationInfo *pSpecializationInfo);
+  void shader(
+    ShaderModule &shader, const vk::SpecializationInfo *pSpecializationInfo = nullptr);
+  void shader(
+    const std::string &filename,
+    const vk::SpecializationInfo *pSpecializationInfo = nullptr);
   void shader(
     const uint32_t *opcodes, size_t size,
     const vk::SpecializationInfo *pSpecializationInfo = nullptr);

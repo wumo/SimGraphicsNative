@@ -141,10 +141,11 @@ public:
 class IndexBuffer: public DeviceBuffer {
 public:
   IndexBuffer(const VmaAllocator &allocator, vk::DeviceSize size)
-    : DeviceBuffer{
-        allocator,
-        vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        size} {}
+    : DeviceBuffer{allocator,
+                   vk::BufferUsageFlagBits::eIndexBuffer |
+                     vk::BufferUsageFlagBits::eTransferDst |
+                     vk::BufferUsageFlagBits::eStorageBuffer,
+                   size} {}
 
   template<class Type, class Allocator>
   IndexBuffer(Device &device, const std::vector<Type, Allocator> &value)
@@ -201,10 +202,11 @@ public:
 class VertexBuffer: public DeviceBuffer {
 public:
   VertexBuffer(const VmaAllocator &allocator, vk::DeviceSize size)
-    : DeviceBuffer{
-        allocator,
-        vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
-        size} {}
+    : DeviceBuffer{allocator,
+                   vk::BufferUsageFlagBits::eVertexBuffer |
+                     vk::BufferUsageFlagBits::eTransferDst |
+                     vk::BufferUsageFlagBits::eStorageBuffer,
+                   size} {}
 
   template<class Type, class Allocator>
   VertexBuffer(Device &device, const std::vector<Type, Allocator> &value)

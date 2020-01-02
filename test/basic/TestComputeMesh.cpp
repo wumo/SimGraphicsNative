@@ -68,8 +68,20 @@ auto main(int argc, const char **argv) -> int {
     "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
     {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 40.f);
 
-  
-//  mm.computeMesh("",)
+  auto seaPrimitive =
+    mm.newPrimitive(PrimitiveBuilder(mm)
+                      .grid(10, 10, {0, 10, 0})
+                      .newPrimitive(PrimitiveTopology::Triangles, DynamicType::Dynamic));
+
+  auto seaMat = mm.newMaterial();
+  seaMat->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});
+  auto seaMesh = mm.newMesh(seaPrimitive, seaMat);
+  auto seaNode = mm.newNode();
+  Node::addMesh(seaNode, seaMesh);
+  auto seaModel = mm.newModel({seaNode});
+  auto sea = mm.newModelInstance(seaModel);
+
+  mm.computeMesh("assets/private/shaders/sine-wave.comp.spv", seaPrimitive, 11, 11);
 
   auto &sky = mm.skyManager();
   sky.enable();

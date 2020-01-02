@@ -38,7 +38,6 @@ void TerrainManager::loadSingle(
   uint32_t numVertexX, uint32_t numVertexY, float seaLevelRatio, float tesselationWidth) {
   vec3 center = aabb.center();
   float seaLevelHeight = clamp(seaLevelRatio, 0.f, 1.f) * aabb.range().y;
-  float panning = 1.f;
   auto horizonPrimitive =
     mm.newPrimitive(PrimitiveBuilder(mm)
                       .rectangle(

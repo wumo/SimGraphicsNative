@@ -79,7 +79,9 @@ public:
 
   void useEnvironmentMap(Ptr<TextureImageCube> envMap);
 
-  void computeMesh(const std::string &shaderPath, Ptr<Primitive> primitive);
+  void computeMesh(
+    const std::string &shaderPath, Ptr<Primitive> primitive, uint32_t dispatchNumX = 1,
+    uint32_t dispatchNumY = 1, uint32_t dispatchNumZ = 1);
 
   Ptr<Light> addLight(
     LightType type = LightType ::Directional, glm::vec3 direction = {0.f, -1.f, 0.f},
@@ -122,8 +124,11 @@ private:
 private:
   void resize(vk::Extent2D extent);
   void updateScene(
-    vk::CommandBuffer transferCB, vk::CommandBuffer computeCB, uint32_t imageIndex);
+    vk::CommandBuffer transferCB, vk::CommandBuffer computeCB, uint32_t imageIndex,
+    float elapsedDuration);
   void updateTextures();
+  void computeMesh(
+    vk::CommandBuffer computeCB, uint32_t imageIndex, float elapsedDuration);
 
   void drawScene(vk::CommandBuffer cb, uint32_t imageIndex);
 
@@ -186,12 +191,12 @@ private:
 
   struct {
     vk::DescriptorSet basicSet, deferredSet, iblSet;
+    vk::DescriptorSet computeMeshSet;
     vk::UniqueDescriptorPool descriptorPool;
   } Sets;
 
   struct {
     bool wireframe{false};
-    std::vector<vk::UniquePipeline> computePipes;
   } RenderPass;
 
   uPtr<DynamicMeshManager> dynamicMeshManager_;
@@ -238,15 +243,29 @@ private:
     __set__(sky, SkyManager::SkySetDef);
   } basicLayout;
 
-  struct CullSetDef: DescriptorSetDef {
-    __uniform__(cam, shader::eCompute);
-    __buffer__(aabbs, shader::eCompute);
-    __buffer__(meshes, shader::eCompute);
-    __buffer__(drawCMDs, shader::eCompute);
-  } cullSetDef;
+  struct ComputeSetDef: DescriptorSetDef {
+    __buffer__(positions, shader::eCompute);
+    __buffer__(normals, shader::eCompute);
+  } computeMeshSetDef;
+
+  struct ComputeMeshConstant {
+    uint32_t positionOffset;
+    uint32_t normalOffset;
+    uint32_t vertexCount;
+    float time;
+  } computeMeshConstant;
 
   struct ComputeMeshLayoutDef: PipelineLayoutDef {
-    __set__(cull, CullSetDef);
-  } computeMeshLayout;
+    __push_constant__(constant, shader::eCompute, ComputeMeshConstant);
+    __set__(set, ComputeSetDef);
+  } computeMeshLayoutDef;
+
+  struct ComputeMeshDef {
+    uint32_t dispatchNumX, dispatchNumY, dispatchNumZ;
+    Ptr<Primitive> primitive;
+    vk::UniquePipeline pipeline;
+  };
+
+  std::vector<ComputeMeshDef> computeMeshes;
 };
 }

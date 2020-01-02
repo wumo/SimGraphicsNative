@@ -498,6 +498,15 @@ auto ComputePipelineMaker::shader(
 }
 
 void ComputePipelineMaker::shader(
+  const std::string &filename, const vk::SpecializationInfo *pSpecializationInfo) {
+  _shader = u<ShaderModule>(device, filename, pSpecializationInfo);
+  _stage.module = _shader->module();
+  _stage.pName = "main";
+  _stage.stage = vk::ShaderStageFlagBits::eCompute;
+  _stage.pSpecializationInfo = _shader->specialization();
+}
+
+void ComputePipelineMaker::shader(
   const uint32_t *opcodes, size_t size,
   const vk::SpecializationInfo *pSpecializationInfo) {
   _shader = u<ShaderModule>(device, opcodes, size, pSpecializationInfo);

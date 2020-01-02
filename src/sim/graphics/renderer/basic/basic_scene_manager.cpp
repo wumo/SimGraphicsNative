@@ -73,14 +73,20 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
     deferredSetDef.init(vkDevice);
     iblSetDef.init(vkDevice);
 
+    computeMeshSetDef.init(vkDevice);
+    computeMeshLayoutDef.set(computeMeshSetDef);
+    computeMeshLayoutDef.init(vkDevice);
+
     basicLayout.basic(basicSetDef);
     basicLayout.deferred(deferredSetDef);
     basicLayout.ibl(iblSetDef);
     basicLayout.sky(skyManager_->skySetDef);
     basicLayout.init(vkDevice);
 
-    Sets.descriptorPool =
-      DescriptorPoolMaker().pipelineLayout(basicLayout).createUnique(vkDevice);
+    Sets.descriptorPool = DescriptorPoolMaker()
+                            .pipelineLayout(basicLayout)
+                            .pipelineLayout(computeMeshLayoutDef)
+                            .createUnique(vkDevice);
 
     Sets.basicSet = basicSetDef.createSet(*Sets.descriptorPool);
     Sets.deferredSet = deferredSetDef.createSet(*Sets.descriptorPool);
@@ -117,6 +123,13 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
     }
 
     basicSetDef.update(Sets.basicSet);
+  }
+
+  {
+    Sets.computeMeshSet = computeMeshSetDef.createSet(*Sets.descriptorPool);
+    computeMeshSetDef.positions(Buffer.position->buffer());
+    computeMeshSetDef.normals(Buffer.normal->buffer());
+    computeMeshSetDef.update(Sets.computeMeshSet);
   }
 
   {
@@ -201,7 +214,7 @@ Ptr<Primitive> BasicSceneManager::newPrimitive(
 
   return Ptr<Primitive>::add(
     Scene.primitives,
-    {*this, indexRange, positionRange, normalRange, uvRange, aabb, topology});
+    {*this, indexRange, positionRange, normalRange, uvRange, aabb, topology, type});
 }
 
 Ptr<Primitive> BasicSceneManager::newPrimitive(const PrimitiveBuilder &primitiveBuilder) {
@@ -233,7 +246,7 @@ Ptr<Primitive> BasicSceneManager::newDynamicPrimitive(
   auto indexRange = Buffer.indices->add(device_, numIndices * config.numFrame);
   return Ptr<Primitive>::add(
     Scene.primitives, {*this, indexRange, positionRange, normalRange, uvRange, aabb,
-                       topology, DynamicType::Static});
+                       topology, DynamicType::Dynamic});
 }
 
 Ptr<Texture2D> BasicSceneManager::newTexture(
@@ -323,7 +336,23 @@ void BasicSceneManager::useEnvironmentMap(Ptr<TextureImageCube> envMap) {
 }
 
 void BasicSceneManager::computeMesh(
-  const std::string &shaderPath, Ptr<Primitive> primitive) {}
+  const std::string &shaderPath, Ptr<Primitive> primitive, uint32_t dispatchNumX,
+  uint32_t dispatchNumY, uint32_t dispatchNumZ) {
+  errorIf(
+    primitive->type() != DynamicType::Dynamic,
+    "compute mesh should be dynamic primitive!");
+  errorIf(
+    computeMeshes.size() + 1 > modelConfig.maxNumDynamicMeshes,
+    "exceeding max number of dynamic meshes!");
+
+  ComputePipelineMaker pipelineMaker{vkDevice};
+  pipelineMaker.shader(shaderPath);
+
+  vk::UniquePipeline pipeline =
+    pipelineMaker.createUnique(nullptr, *computeMeshLayoutDef.pipelineLayout);
+  computeMeshes.push_back(
+    {dispatchNumX, dispatchNumY, dispatchNumZ, primitive, std::move(pipeline)});
+}
 
 Ptr<Light> BasicSceneManager::addLight(
   LightType type, glm::vec3 direction, glm::vec3 color, glm::vec3 location) {
@@ -331,13 +360,16 @@ Ptr<Light> BasicSceneManager::addLight(
 }
 
 void BasicSceneManager::updateScene(
-  vk::CommandBuffer transferCB, vk::CommandBuffer computeCB, uint32_t imageIndex) {
+  vk::CommandBuffer transferCB, vk::CommandBuffer computeCB, uint32_t imageIndex,
+  float elapsedDuration) {
   if(Scene.camera.incoherent()) Buffer.camera->update(device_, Scene.camera.flush());
 
   if(Scene.lighting.incoherent())
     Buffer.lighting->update(device_, Scene.lighting.flush());
 
   updateTextures();
+
+  computeMesh(computeCB, imageIndex, elapsedDuration);
 }
 
 void BasicSceneManager::updateTextures() {
@@ -350,6 +382,32 @@ void BasicSceneManager::updateTextures() {
       Image.sampler2Ds.data() + Image.lastImagesCount);
     Image.lastImagesCount = uint32_t(Image.textures.size());
     basicSetDef.update(Sets.basicSet);
+  }
+}
+
+void BasicSceneManager::computeMesh(
+  vk::CommandBuffer cb, uint32_t imageIndex, float elapsedDuration) {
+  static float time = 0;
+  time += elapsedDuration;
+
+  cb.bindDescriptorSets(
+    bindpoint::eCompute, *computeMeshLayoutDef.pipelineLayout,
+    computeMeshLayoutDef.set.set(), Sets.computeMeshSet, nullptr);
+
+  uint32_t total = computeMeshes.size();
+  for(int i = 0; i < total; ++i) {
+    auto &comp = computeMeshes[i];
+    auto &positionRange = comp.primitive->position();
+    auto &normalRange = comp.primitive->normal();
+    computeMeshConstant = {
+      positionRange.offset + imageIndex * positionRange.size / config.numFrame,
+      normalRange.offset + imageIndex * normalRange.size / config.numFrame,
+      positionRange.size / config.numFrame, time};
+
+    cb.bindPipeline(bindpoint::eCompute, *comp.pipeline);
+    cb.pushConstants<ComputeMeshConstant>(
+      *computeMeshLayoutDef.pipelineLayout, shader::eCompute, 0, computeMeshConstant);
+    cb.dispatch(comp.dispatchNumX, comp.dispatchNumY, comp.dispatchNumZ);
   }
 }
 

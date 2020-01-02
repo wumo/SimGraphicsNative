@@ -214,7 +214,7 @@ void BasicRenderer::updateFrame(
   auto &cb = graphicsCmdBuffers[imageIndex];
   updater(imageIndex, elapsedDuration);
 
-  mm->updateScene(transfeCB, compCB, imageIndex);
+  mm->updateScene(transfeCB, compCB, imageIndex,elapsedDuration);
 
   cb.resetQueryPool(*queryPool, 0, pipelineStats.size());
 

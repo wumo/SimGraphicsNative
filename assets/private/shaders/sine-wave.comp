@@ -7,8 +7,8 @@ layout(push_constant) uniform ComputeUniform {
   uint vertexCount;
   float time;
 };
-layout(set = 0, binding = 0) buffer Vertices { vec3 positions[]; };
-layout(set = 0, binding = 1) buffer Normals { vec3 normals[]; };
+layout(set = 0, binding = 0, std430) buffer Vertices { float positions[]; };
+layout(set = 0, binding = 1, std430) buffer Normals { float normals[]; };
 
 layout(constant_id = 0) const uint lx = 1;
 layout(constant_id = 1) const uint ly = 1;
@@ -17,8 +17,8 @@ layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 void main() {
   uint numRow = gl_NumWorkGroups.x * gl_WorkGroupSize.x;
-  uint idx = gl_GlobalInvocationID.x * numRow + gl_GlobalInvocationID.y;
+  uint idx = gl_GlobalInvocationID.y * numRow + gl_GlobalInvocationID.x;
   uint posIdx = positionOffset + idx;
   uint normalIdx = normalOffset + idx;
-  positions[posIdx] += vec3(0, 1000, 0);
+  positions[posIdx * 3 + 1] = time;
 }

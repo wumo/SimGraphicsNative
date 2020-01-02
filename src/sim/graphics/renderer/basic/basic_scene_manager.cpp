@@ -226,12 +226,12 @@ auto BasicSceneManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
   std::vector<Ptr<Primitive>> primitives;
   for(auto &primitive: primitiveBuilder.primitives()) {
     primitives.push_back(newPrimitive(
-      primitiveBuilder.positions().data() + primitive.position().offset,
-      primitive.position().size,
-      primitiveBuilder.normals().data() + primitive.normal().offset,
-      primitive.normal().size, primitiveBuilder.uvs().data() + primitive.uv().offset,
-      primitive.uv().size, primitiveBuilder.indices().data() + primitive.index().offset,
-      primitive.index().size, primitive.aabb(), primitive.topology(), primitive.type()));
+      primitiveBuilder.positions().data() + primitive._position.offset,
+      primitive._position.size,
+      primitiveBuilder.normals().data() + primitive._normal.offset,
+      primitive._normal.size, primitiveBuilder.uvs().data() + primitive._uv.offset,
+      primitive._uv.size, primitiveBuilder.indices().data() + primitive._index.offset,
+      primitive._index.size, primitive._aabb, primitive._topology, primitive._type));
   }
   return primitives;
 }
@@ -404,10 +404,12 @@ void BasicSceneManager::computeMesh(
       normalRange.offset + imageIndex * normalRange.size / config.numFrame,
       positionRange.size / config.numFrame, time};
 
+    debugMarker_.begin(cb, toString("compute mesh: ", i, " frame:", imageIndex).c_str());
     cb.bindPipeline(bindpoint::eCompute, *comp.pipeline);
     cb.pushConstants<ComputeMeshConstant>(
       *computeMeshLayoutDef.pipelineLayout, shader::eCompute, 0, computeMeshConstant);
     cb.dispatch(comp.dispatchNumX, comp.dispatchNumY, comp.dispatchNumZ);
+    debugMarker_.end(cb);
   }
 }
 

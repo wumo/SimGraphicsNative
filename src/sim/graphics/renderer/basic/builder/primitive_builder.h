@@ -120,7 +120,7 @@ public:
   const std::vector<Vertex::Normal> &normals() const;
   const std::vector<Vertex::UV> &uvs() const;
   const std::vector<uint32_t> &indices() const;
-  const std::vector<Primitive> &primitives() const;
+  const std::vector<Primitive::UBO> &primitives() const;
 
 private:
   uint32_t currentVertexID() const;
@@ -132,6 +132,6 @@ private:
   std::vector<Vertex::UV> _uvs;
   std::vector<uint32_t> _indices;
   AABB aabb;
-  std::vector<Primitive> _primitives;
+  std::vector<Primitive::UBO> _primitives;
 };
 }

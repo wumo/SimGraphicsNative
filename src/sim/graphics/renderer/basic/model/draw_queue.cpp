@@ -65,6 +65,23 @@ void DrawQueue::mark(DebugMarker &debugMarker) {
   debugMarker.name(staticDrawQueues[2]->buffer(), "drawTransparentCMDs buffer");
   debugMarker.name(staticDrawQueues[3]->buffer(), "drawTransparentLineCMDs buffer");
   debugMarker.name(staticDrawQueues[4]->buffer(), "drawTerrainCMDs buffer");
+  for(int i = 0; i < numFrame; ++i) {
+    debugMarker.name(
+      dynamicDrawQueues[i][0]->buffer(),
+      toString("dynamicDrawQueues ", i, " drawOpaqueCMDs buffer").c_str());
+    debugMarker.name(
+      dynamicDrawQueues[i][1]->buffer(),
+      toString("dynamicDrawQueues ", i, " drawLineCMDs buffer").c_str());
+    debugMarker.name(
+      dynamicDrawQueues[i][2]->buffer(),
+      toString("dynamicDrawQueues ", i, " drawTransparentCMDs buffer").c_str());
+    debugMarker.name(
+      dynamicDrawQueues[i][3]->buffer(),
+      toString("dynamicDrawQueues ", i, " drawTransparentLineCMDs buffer").c_str());
+    debugMarker.name(
+      dynamicDrawQueues[i][4]->buffer(),
+      toString("dynamicDrawQueues ", i, " drawTerrainCMDs buffer").c_str());
+  }
 }
 vk::Buffer DrawQueue::buffer(DrawType drawType) {
   return staticDrawQueues[static_cast<uint32_t>(drawType)]->buffer();

@@ -26,7 +26,7 @@ public:
 private:
   void generateEnvMap(
     EnvMap envMap, TextureImageCube &cubeMap, TextureImageCube &envCube,
-    HostVertexBuffer &vbo, HostIndexBuffer &ibo, const Primitive &primitive);
+    HostVertexBuffer &vbo, HostIndexBuffer &ibo, const Primitive::UBO &primitive);
 
 private:
   Device &device;

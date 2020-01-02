@@ -60,7 +60,7 @@ EnvMaps EnvMapGenerator::generateEnvMap(TextureImageCube &envCube) {
 
 void EnvMapGenerator::generateEnvMap(
   EnvMap envMap, TextureImageCube &cubeMap, TextureImageCube &envCube,
-  HostVertexBuffer &vbo, HostIndexBuffer &ibo, const Primitive &primitive) {
+  HostVertexBuffer &vbo, HostIndexBuffer &ibo, const Primitive::UBO &primitive) {
   std::string envMapName;
   switch(envMap) {
     case EnvMap::Irradiance: envMapName = "Irradiance EnvMap"; break;
@@ -238,7 +238,7 @@ void EnvMapGenerator::generateEnvMap(
         const vk::DeviceSize zeroOffset{0};
         cb.bindVertexBuffers(0, vbo.buffer(), zeroOffset);
         cb.bindIndexBuffer(ibo.buffer(), zeroOffset, vk::IndexType::eUint32);
-        cb.drawIndexed(primitive.index().size, 1, 0, 0, 0);
+        cb.drawIndexed(primitive._index.size, 1, 0, 0, 0);
         cb.endRenderPass();
 
         offscreen.setLayout(

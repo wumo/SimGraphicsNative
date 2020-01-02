@@ -13,7 +13,9 @@ const std::vector<Vertex::Position> &PrimitiveBuilder::positions() const {
 const std::vector<Vertex::Normal> &PrimitiveBuilder::normals() const { return _normals; }
 const std::vector<Vertex::UV> &PrimitiveBuilder::uvs() const { return _uvs; }
 const std::vector<uint32_t> &PrimitiveBuilder::indices() const { return _indices; }
-const std::vector<Primitive> &PrimitiveBuilder::primitives() const { return _primitives; }
+const std::vector<Primitive::UBO> &PrimitiveBuilder::primitives() const {
+  return _primitives;
+}
 
 PrimitiveBuilder &PrimitiveBuilder::newPrimitive(
   PrimitiveTopology topology, DynamicType type) {
@@ -26,23 +28,26 @@ PrimitiveBuilder &PrimitiveBuilder::newPrimitive(
     uvRange = {0, uint32_t(_uvs.size())};
   } else {
     auto &last = _primitives.back();
-    indexRange = {last.index().endOffset(),
-                  uint32_t(_indices.size()) - last.index().endOffset()};
-    positionRange = {last.position().endOffset(),
-                     uint32_t(_positions.size()) - last.position().endOffset()};
-    normalRange = {last.normal().endOffset(),
-                   uint32_t(_normals.size()) - last.normal().endOffset()};
-    uvRange = {last.uv().endOffset(), uint32_t(_uvs.size()) - last.uv().endOffset()};
+    indexRange = {last._index.endOffset(),
+                  uint32_t(_indices.size()) - last._index.endOffset()};
+    positionRange = {last._position.endOffset(),
+                     uint32_t(_positions.size()) - last._position.endOffset()};
+    normalRange = {last._normal.endOffset(),
+                   uint32_t(_normals.size()) - last._normal.endOffset()};
+    uvRange = {last._uv.endOffset(), uint32_t(_uvs.size()) - last._uv.endOffset()};
   }
-  _primitives.emplace_back(
-    mm, indexRange, positionRange, normalRange, uvRange, aabb, topology, type);
+  Primitive::UBO primitive{indexRange, positionRange, normalRange, uvRange};
+  primitive._aabb = aabb;
+  primitive._topology = topology;
+  primitive._type = type;
+  _primitives.push_back(primitive);
   aabb = {};
   return *this;
 }
 
 uint32_t PrimitiveBuilder::currentVertexID() const {
   return uint32_t(_positions.size()) -
-         (_primitives.empty() ? 0u : _primitives.back().position().endOffset());
+         (_primitives.empty() ? 0u : _primitives.back()._position.endOffset());
 }
 
 PrimitiveBuilder &PrimitiveBuilder::from(

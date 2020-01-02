@@ -56,7 +56,7 @@ protected:
   std::vector<vk::UniqueFramebuffer> framebuffers{};
 
   struct {
-    uint32_t gBuffer, deferred, translucent, combine;
+    uint32_t gBuffer, deferred, translucent, combine,resolve;
   } Subpasses{};
 
   struct {

@@ -97,6 +97,8 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/ibl/generate_brdflut.cpp
   src/sim/graphics/renderer/basic/ibl/generate_envmap.cpp
   
+  src/sim/graphics/renderer/basic/render_pass.cpp
+  
   src/sim/graphics/renderer/basic/sky/sky_renderer.cpp
   src/sim/graphics/renderer/basic/sky/sky_model.cpp
   src/sim/graphics/renderer/basic/sky/compute_transmittance.cpp
@@ -140,11 +142,11 @@ set(basicRendererHeaders
   src/sim/graphics/renderer/basic/loader/gltf_loader.h
   src/sim/graphics/renderer/basic/util/panning_camera.h
   src/sim/graphics/renderer/basic/ibl/envmap_generator.h
+  src/sim/graphics/renderer/basic/render_pass.h
   src/sim/graphics/renderer/basic/sky/sky_renderer.h
   src/sim/graphics/renderer/basic/sky/sky_model.h
   src/sim/graphics/renderer/basic/sky/constants.h
   src/sim/graphics/renderer/basic/renderpass/infinite_plane.h
-  
   )
 
 list(APPEND headers ${basicRendererHeaders})

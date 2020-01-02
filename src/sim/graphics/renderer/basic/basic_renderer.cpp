@@ -95,11 +95,18 @@ void BasicRenderer::createRenderPass() {
                          .input(emissive)
                          .input(depth)
                          .index();
-  auto &spMaker = maker.subpass(bindpoint::eGraphics).color(color).depthStencil(depth);
-  if(config.sampleCount > 1)
-    spMaker.resolve(presentImage); //resolve using tiled on chip memory.
-  Subpasses.translucent = spMaker.index();
 
+  Subpasses.translucent =
+    maker.subpass(bindpoint::eGraphics).color(color).depthStencil(depth).index();
+  if(config.sampleCount > 1)
+    Subpasses.resolve = maker.subpass(bindpoint::eGraphics)
+                          .color(color)
+                          .resolve(presentImage)
+                          .index(); //resolve using tiled on chip memory.
+  else
+    Subpasses.resolve = maker.subpass(bindpoint::eGraphics)
+                          .color(color)
+                          .index(); //resolve using tiled on chip memory.
   maker.dependency(VK_SUBPASS_EXTERNAL, Subpasses.gBuffer)
     .srcStageMask(stage::eBottomOfPipe)
     .dstStageMask(stage::eColorAttachmentOutput)
@@ -118,7 +125,13 @@ void BasicRenderer::createRenderPass() {
     .srcAccessMask(access::eColorAttachmentWrite)
     .dstAccessMask(access::eDepthStencilAttachmentRead)
     .dependencyFlags(vk::DependencyFlagBits::eByRegion);
-  maker.dependency(Subpasses.translucent, VK_SUBPASS_EXTERNAL)
+  maker.dependency(Subpasses.translucent, Subpasses.resolve)
+    .srcStageMask(stage::eColorAttachmentOutput)
+    .dstStageMask(stage::eColorAttachmentOutput)
+    .srcAccessMask(access::eColorAttachmentWrite)
+    .dstAccessMask(access::eColorAttachmentRead)
+    .dependencyFlags(vk::DependencyFlagBits::eByRegion);
+  maker.dependency(Subpasses.resolve, VK_SUBPASS_EXTERNAL)
     .srcStageMask(stage::eColorAttachmentOutput)
     .dstStageMask(stage::eBottomOfPipe)
     .srcAccessMask(access::eColorAttachmentWrite)

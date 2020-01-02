@@ -420,6 +420,10 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentLines), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::TransparentLines), stride);
+
+  debugMarker.begin(cb, "Subpass resolve");
+  cb.nextSubpass(vk::SubpassContents::eInline);
+  debugMarker.end(cb);
   debugMarker.end(cb);
 }
 

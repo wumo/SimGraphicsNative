@@ -5,7 +5,7 @@
 namespace sim::graphics::renderer::basic {
 using namespace glm;
 
-GLTFLoader::GLTFLoader(BasicModelManager &mm): mm(mm) {}
+GLTFLoader::GLTFLoader(BasicSceneManager &mm): mm(mm) {}
 Ptr<Model> GLTFLoader::load(const std::string &file) {
   tinygltf::Model model;
   tinygltf::TinyGLTF loader;

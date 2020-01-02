@@ -18,7 +18,7 @@ auto main(int argc, const char **argv) -> int {
   //  FeatureConfig featureConfig{};
   BasicRenderer app{config, {}, featureConfig, {true, false}};
 
-  auto &mm = app.modelManager();
+  auto &mm = app.sceneManager();
 
   auto &camera = mm.camera();
   camera.setLocation({40.f, 40.f, 40.f});
@@ -60,7 +60,7 @@ auto main(int argc, const char **argv) -> int {
   //  t.translation = -center;
   auto instance = mm.newModelInstance(model, t);
 
-  auto &tm = mm.terrrainManager();
+  auto &tm = mm.terrainManager();
   //  tm.loadSingle(
   //    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
   //    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 64.f);
@@ -71,11 +71,12 @@ auto main(int argc, const char **argv) -> int {
   //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   //  mm.useEnvironmentMap(envCube);
 
-  mm.useSky();
+  auto &sky = mm.skyManager();
+  sky.enable();
   auto kPi = glm::pi<float>();
   float sun_zenith_angle_radians_{0};
   float sun_azimuth_angle_radians_{kPi / 2};
-  mm.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+  sky.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
   mm.debugInfo();
 

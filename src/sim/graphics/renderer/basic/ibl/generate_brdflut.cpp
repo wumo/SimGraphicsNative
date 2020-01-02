@@ -1,5 +1,5 @@
 #include "envmap_generator.h"
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"

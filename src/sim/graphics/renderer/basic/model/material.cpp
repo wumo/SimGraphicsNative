@@ -1,9 +1,9 @@
 #include "material.h"
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
-Material::Material(BasicModelManager &mm, MaterialType type)
+Material::Material(BasicSceneManager &mm, MaterialType type)
   : mm{mm}, _type{type}, ubo{mm.allocateMaterialUBO()} {
   *ubo.ptr = Material::UBO{};
   ubo.ptr->type = static_cast<uint32_t>(_type);

@@ -35,7 +35,7 @@ public:
 };
 
 class Model {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
   friend class ModelInstance;
 
 public:

@@ -2,12 +2,12 @@
 #include "sim/graphics/base/vulkan_base.h"
 #include "sim/graphics/base/resource/buffers.h"
 #include "sim/graphics/base/resource/images.h"
-#include "basic_model_manager.h"
+#include "basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
 class BasicRenderer: public VulkanBase {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
 
 public:
   explicit BasicRenderer(
@@ -16,7 +16,7 @@ public:
 
   ~BasicRenderer() override = default;
 
-  BasicModelManager &modelManager() const;
+  BasicSceneManager &sceneManager() const;
 
 protected:
   void createQueryPool();
@@ -45,7 +45,7 @@ protected:
   bool enableSampleShading{true};
   float minSampleShading{1};
 
-  uPtr<BasicModelManager> mm{};
+  uPtr<BasicSceneManager> mm{};
   vk::UniquePipelineCache pipelineCache;
   vk::UniqueQueryPool queryPool;
   std::vector<uint64_t> pipelineStats;

@@ -1,10 +1,10 @@
 #include "model_instance.h"
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
 MeshInstance::MeshInstance(
-  BasicModelManager &mm, const Ptr<Primitive> &primitive, const Ptr<Material> &material,
+  BasicSceneManager &mm, const Ptr<Primitive> &primitive, const Ptr<Material> &material,
   const Ptr<Node> &node, const Ptr<ModelInstance> &instance)
   : _mm{mm},
     _primitive(primitive),
@@ -51,7 +51,7 @@ void ModelInstance::generateMeshInstances(Ptr<ModelInstance> instance, Ptr<Node>
 }
 
 ModelInstance::ModelInstance(
-  BasicModelManager &mm, Ptr<Model> model, const Transform &transform)
+  BasicSceneManager &mm, Ptr<Model> model, const Transform &transform)
   : _mm{mm}, _model{model}, _ubo{mm.allocateMatrixUBO()} {
   setTransform(transform);
 }

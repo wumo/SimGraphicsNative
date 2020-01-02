@@ -25,9 +25,9 @@ BasicRenderer::BasicRenderer(
   createQueryPool();
 }
 
-BasicModelManager &BasicRenderer::modelManager() const { return *mm; }
+BasicSceneManager &BasicRenderer::sceneManager() const { return *mm; }
 
-void BasicRenderer::createModelManager() { mm = u<BasicModelManager>(*this); }
+void BasicRenderer::createModelManager() { mm = u<BasicSceneManager>(*this); }
 
 void BasicRenderer::createQueryPool() {
   using flag = vk::QueryPipelineStatisticFlagBits;
@@ -214,7 +214,7 @@ void BasicRenderer::updateFrame(
   auto &cb = graphicsCmdBuffers[imageIndex];
   updater(imageIndex, elapsedDuration);
 
-  mm->updateScene(transfeCB, imageIndex);
+  mm->updateScene(transfeCB, compCB, imageIndex);
 
   cb.resetQueryPool(*queryPool, 0, pipelineStats.size());
 

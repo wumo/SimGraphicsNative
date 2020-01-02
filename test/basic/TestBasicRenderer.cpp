@@ -11,7 +11,7 @@ auto main(int argc, const char **argv) -> int {
 
   BasicRenderer app{{}, {}, {}, {true, false}};
 
-  auto &mm = app.modelManager();
+  auto &mm = app.sceneManager();
 
   auto &camera = mm.camera();
   camera.setLocation({2.f, 2.f, 2.f});

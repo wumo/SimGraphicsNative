@@ -9,10 +9,10 @@
 
 namespace sim::graphics::renderer::basic {
 
-class BasicModelManager;
+class BasicSceneManager;
 
 class Node {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
   friend class Mesh;
   friend class ModelInstance;
   friend class MeshInstance;
@@ -22,7 +22,7 @@ public:
   static void addChild(Ptr<Node> parent, Ptr<Node> child);
 
   explicit Node(
-    BasicModelManager &mm, const Transform &transform, const std::string &name);
+    BasicSceneManager &mm, const Transform &transform, const std::string &name);
 
   std::string &name();
   void setName(const std::string &name);
@@ -40,7 +40,7 @@ private:
   void updateMatrix();
 
 private:
-  BasicModelManager &mm;
+  BasicSceneManager &mm;
 
   std::string _name{};
   Transform _transform{};

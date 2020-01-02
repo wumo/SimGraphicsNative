@@ -42,7 +42,7 @@ private:
 
 enum class LightType : uint32_t { Directional = 1u, Point = 2u, Spot = 3u };
 
-class BasicModelManager;
+class BasicSceneManager;
 
 struct Light {
   // ref in shaders
@@ -58,7 +58,7 @@ struct Light {
 
 public:
   explicit Light(
-    BasicModelManager &mm, LightType type, glm::vec3 direction, glm::vec3 color,
+    BasicSceneManager &mm, LightType type, glm::vec3 direction, glm::vec3 color,
     glm::vec3 location);
 
   LightType type() const;
@@ -75,7 +75,7 @@ public:
   void setRange(float range);
 
 private:
-  BasicModelManager &_mm;
+  BasicSceneManager &_mm;
   LightType _type{LightType ::Directional};
   glm::vec3 _color{1.f};
   glm::vec3 _direction{0.f, -1.f, 0.f};

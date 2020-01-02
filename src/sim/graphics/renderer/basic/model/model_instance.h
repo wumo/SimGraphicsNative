@@ -3,10 +3,10 @@
 
 namespace sim::graphics::renderer::basic {
 class ModelInstance;
-class BasicModelManager;
+class BasicSceneManager;
 
 class MeshInstance {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
   friend class ModelInstance;
 
   // ref in shaders
@@ -16,14 +16,14 @@ class MeshInstance {
 
 public:
   MeshInstance(
-    BasicModelManager &mm, const Ptr<Primitive> &primitive, const Ptr<Material> &material,
+    BasicSceneManager &mm, const Ptr<Primitive> &primitive, const Ptr<Material> &material,
     const Ptr<Node> &node, const Ptr<ModelInstance> &instance);
 
 private:
   void setVisible(bool visible);
 
 private:
-  BasicModelManager &_mm;
+  BasicSceneManager &_mm;
 
   Ptr<Primitive> _primitive{};
   Ptr<Material> _material{};
@@ -37,7 +37,7 @@ private:
 };
 
 class ModelInstance {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
   friend class MeshInstance;
 
 public:
@@ -48,7 +48,7 @@ private:
 
 public:
   explicit ModelInstance(
-    BasicModelManager &mm, Ptr<Model> model, const Transform &transform);
+    BasicSceneManager &mm, Ptr<Model> model, const Transform &transform);
 
   const Transform &transform() const;
   void setTransform(const Transform &transform);
@@ -57,7 +57,7 @@ public:
   void setVisible(bool visible);
 
 private:
-  BasicModelManager &_mm;
+  BasicSceneManager &_mm;
 
   Transform _transform;
   Ptr<Model> _model;

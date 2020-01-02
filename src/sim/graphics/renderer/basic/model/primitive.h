@@ -14,7 +14,7 @@ enum class PrimitiveTopology : uint32_t {
 };
 enum class DynamicType : uint32_t { Static = 1u, Dynamic = 2u };
 
-class BasicModelManager;
+class BasicSceneManager;
 
 class Primitive {
   friend class MeshInstance;
@@ -38,7 +38,7 @@ public:
    * @param topology once set, cannot change.
    */
   Primitive(
-    BasicModelManager &mm, const Range &index, const Range &position, const Range &normal,
+    BasicSceneManager &mm, const Range &index, const Range &position, const Range &normal,
     const Range &uv, const AABB &aabb, const PrimitiveTopology &topology,
     const DynamicType &_type = DynamicType::Static);
   const Range &index() const;
@@ -54,7 +54,7 @@ public:
   PrimitiveTopology topology() const;
 
 private:
-  BasicModelManager &mm;
+  BasicSceneManager &mm;
 
   Range _index, _position, _normal, _uv, _joint0, _weight0;
   AABB _aabb;

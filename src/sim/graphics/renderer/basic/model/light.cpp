@@ -1,10 +1,10 @@
 #include "light.h"
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
 Light::Light(
-  BasicModelManager &mm, LightType type, glm::vec3 direction, glm::vec3 color,
+  BasicSceneManager &mm, LightType type, glm::vec3 direction, glm::vec3 color,
   glm::vec3 location)
   : _mm{mm},
     _type{type},

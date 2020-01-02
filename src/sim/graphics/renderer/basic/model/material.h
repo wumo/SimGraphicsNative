@@ -22,10 +22,10 @@ enum class MaterialType : uint32_t {
   eTerrain = 0x40u
 };
 
-class BasicModelManager;
+class BasicSceneManager;
 
 class Material {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
   friend class Mesh;
   friend class MeshInstance;
 
@@ -46,7 +46,7 @@ public:
    *
    * @param type  once set, cannot change.
    */
-  explicit Material(BasicModelManager &mm, MaterialType type);
+  explicit Material(BasicSceneManager &mm, MaterialType type);
 
   const Ptr<Texture2D> &colorTex() const;
   Material &setColorTex(const Ptr<Texture2D> &colorTex);
@@ -73,7 +73,7 @@ public:
   MaterialType type() const;
 
 private:
-  BasicModelManager &mm;
+  BasicSceneManager &mm;
 
   Ptr<Texture2D> _colorTex{}, _pbrTex{}, _normalTex{}, _occlusionTex{},
     _emissiveTex{}, _heightTex{};

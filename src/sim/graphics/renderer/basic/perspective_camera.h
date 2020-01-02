@@ -46,7 +46,7 @@ public:
 };
 
 class PerspectiveCamera {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
 
 public:
   // ref in shaders

@@ -18,19 +18,20 @@
 #include "builder/primitive_builder.h"
 #include "perspective_camera.h"
 #include "terrain/terrain_manager.h"
-#include "sky/sky_renderer.h"
+#include "sim/graphics/renderer/basic/sky/sky_manager.h"
+#include "ocean/ocean_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
 class BasicRenderer;
 
-class BasicModelManager {
+class BasicSceneManager {
   using flag = vk::DescriptorBindingFlagBitsEXT;
   using shader = vk::ShaderStageFlagBits;
   friend class BasicRenderer;
 
 public:
-  explicit BasicModelManager(BasicRenderer &renderer);
+  explicit BasicSceneManager(BasicRenderer &renderer);
 
   Ptr<Primitive> newPrimitive(
     const std::vector<Vertex::Position> &positions,
@@ -72,17 +73,17 @@ public:
 
   void useEnvironmentMap(Ptr<TextureImageCube> envMap);
 
-  void useSky();
-  void setSunPosition(float sun_zenith_angle_radians, float sun_azimuth_angle_radians);
-
-  void computeMesh(const std::string &imagePath, Ptr<Primitive> primitive);
+  void computeMesh(const std::string &shaderPath, Ptr<Primitive> primitive);
 
   Ptr<Light> addLight(
     LightType type = LightType ::Directional, glm::vec3 direction = {0.f, -1.f, 0.f},
     glm::vec3 color = {1.f, 1.f, 1.f}, glm::vec3 location = {0.f, 1.f, 0.f});
 
   PerspectiveCamera &camera();
-  TerrainManager &terrrainManager();
+
+  SkyManager &skyManager();
+  TerrainManager &terrainManager();
+  OceanManager &oceanManager();
 
   Ptr<Primitive> primitive(uint32_t index);
   Ptr<Material> material(uint32_t index);
@@ -92,6 +93,8 @@ public:
   void setWireframe(bool wireframe);
   bool wireframe();
   void debugInfo();
+  DebugMarker &debugMarker();
+  Device &device();
 
 private:
   friend class Material;
@@ -111,7 +114,8 @@ private:
 
 private:
   void resize(vk::Extent2D extent);
-  void updateScene(vk::CommandBuffer cb, uint32_t imageIndex);
+  void updateScene(
+    vk::CommandBuffer transferCB, vk::CommandBuffer computeCB, uint32_t imageIndex);
   void updateTextures();
 
   void drawScene(vk::CommandBuffer cb, uint32_t imageIndex);
@@ -120,8 +124,8 @@ private:
 
 private:
   BasicRenderer &renderer;
-  DebugMarker &debugMarker;
-  Device &device;
+  DebugMarker &debugMarker_;
+  Device &device_;
   vk::Device vkDevice;
   const Config &config;
   const ModelConfig &modelConfig;
@@ -174,7 +178,7 @@ private:
   } Image;
 
   struct {
-    vk::DescriptorSet basicSet, deferredSet, iblSet, skySet;
+    vk::DescriptorSet basicSet, deferredSet, iblSet;
     vk::UniqueDescriptorPool descriptorPool;
   } Sets;
 
@@ -184,8 +188,8 @@ private:
   } RenderPass;
 
   uPtr<TerrainManager> terrainMgr;
-
-  uPtr<SkyRenderer> skyRenderer;
+  uPtr<SkyManager> skyMgr;
+  uPtr<OceanManager> oceanMgr;
 
   struct BasicSetDef: DescriptorSetDef {
     __uniform__(
@@ -219,19 +223,11 @@ private:
     __sampler__(brdfLUT, shader::eFragment);
   } iblSetDef;
 
-  struct SkySetDef: DescriptorSetDef {
-    __uniform__(atmosphere, vk::ShaderStageFlagBits::eFragment);
-    __uniform__(sun, vk::ShaderStageFlagBits::eFragment);
-    __sampler__(transmittance, vk::ShaderStageFlagBits::eFragment);
-    __sampler__(scattering, vk::ShaderStageFlagBits::eFragment);
-    __sampler__(irradiance, vk::ShaderStageFlagBits::eFragment);
-  } skySetDef;
-
   struct BasicLayoutDef: PipelineLayoutDef {
     __set__(basic, BasicSetDef);
     __set__(deferred, DeferredSetDef);
     __set__(ibl, IBLSetDef);
-    __set__(sky, SkySetDef);
+    __set__(sky, SkyManager::SkySetDef);
   } basicLayout;
 
   struct CullSetDef: DescriptorSetDef {

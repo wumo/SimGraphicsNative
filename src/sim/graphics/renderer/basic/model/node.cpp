@@ -1,9 +1,9 @@
 #include "node.h"
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
-Node::Node(BasicModelManager &mm, const Transform &transform, const std::string &name)
+Node::Node(BasicSceneManager &mm, const Transform &transform, const std::string &name)
   : mm{mm}, _transform{transform}, _name{name}, ubo{mm.allocateMatrixUBO()} {
   *ubo.ptr = _transform.toMatrix();
 }

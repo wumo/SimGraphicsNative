@@ -71,7 +71,7 @@ set(headers
   )
 
 set(basicRendererSrc
-  src/sim/graphics/renderer/basic/basic_model_manager.cpp
+  src/sim/graphics/renderer/basic/basic_scene_manager.cpp
   src/sim/graphics/renderer/basic/basic_renderer.cpp
   src/sim/graphics/renderer/basic/builder/primitive_builder.cpp
   
@@ -99,9 +99,9 @@ set(basicRendererSrc
   
   src/sim/graphics/renderer/basic/framegraph/frame_graph.cpp
   
-  src/sim/graphics/renderer/basic/render_pass.cpp
+  src/sim/graphics/renderer/basic/framegraph/render_pass.cpp
   
-  src/sim/graphics/renderer/basic/sky/sky_renderer.cpp
+  src/sim/graphics/renderer/basic/sky/sky_manager.cpp
   src/sim/graphics/renderer/basic/sky/sky_model.cpp
   src/sim/graphics/renderer/basic/sky/compute_transmittance.cpp
   src/sim/graphics/renderer/basic/sky/compute_direct_irradiance.cpp
@@ -111,17 +111,17 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/sky/compute_single_scattering.cpp
   
   src/sim/graphics/renderer/basic/ocean/ocean_render_pass.cpp
-  src/sim/graphics/renderer/basic/ocean/ocean_render_pass.h
+  src/sim/graphics/renderer/basic/ocean/ocean_manager.cpp
   
-  src/sim/graphics/renderer/basic/renderpass/infinite_plane.cpp
-  src/sim/graphics/renderer/basic/renderpass/deferred_pass.cpp
-  src/sim/graphics/renderer/basic/renderpass/opaque_pass.cpp
-  src/sim/graphics/renderer/basic/renderpass/translucent_pass.cpp
-  src/sim/graphics/renderer/basic/renderpass/terrain_pass.cpp
+  src/sim/graphics/renderer/basic/renderpasses/infinite_plane.cpp
+  src/sim/graphics/renderer/basic/renderpasses/deferred_pass.cpp
+  src/sim/graphics/renderer/basic/renderpasses/opaque_pass.cpp
+  src/sim/graphics/renderer/basic/renderpasses/translucent_pass.cpp
+  src/sim/graphics/renderer/basic/renderpasses/terrain_pass.cpp
   )
 
 set(basicRendererHeaders
-  src/sim/graphics/renderer/basic/basic_model_manager.h
+  src/sim/graphics/renderer/basic/basic_scene_manager.h
   src/sim/graphics/renderer/basic/basic_renderer.h
   src/sim/graphics/renderer/basic/model_config.h
   src/sim/graphics/renderer/basic/perspective_camera.h
@@ -145,11 +145,13 @@ set(basicRendererHeaders
   src/sim/graphics/renderer/basic/util/panning_camera.h
   src/sim/graphics/renderer/basic/ibl/envmap_generator.h
   src/sim/graphics/renderer/basic/framegraph/frame_graph.h
-  src/sim/graphics/renderer/basic/render_pass.h
-  src/sim/graphics/renderer/basic/sky/sky_renderer.h
+  src/sim/graphics/renderer/basic/framegraph/render_pass.h
+  src/sim/graphics/renderer/basic/ocean/ocean_manager.h
+  src/sim/graphics/renderer/basic/ocean/ocean_render_pass.h
+  src/sim/graphics/renderer/basic/sky/sky_manager.h
   src/sim/graphics/renderer/basic/sky/sky_model.h
   src/sim/graphics/renderer/basic/sky/constants.h
-  src/sim/graphics/renderer/basic/renderpass/infinite_plane.h
+  src/sim/graphics/renderer/basic/renderpasses/infinite_plane.h
   )
 
 list(APPEND headers ${basicRendererHeaders})

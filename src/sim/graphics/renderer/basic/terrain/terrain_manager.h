@@ -1,8 +1,9 @@
 #pragma once
 namespace sim::graphics::renderer::basic {
+class BasicSceneManager;
 class TerrainManager {
 public:
-  explicit TerrainManager(BasicModelManager &mm);
+  explicit TerrainManager(BasicSceneManager &mm);
 
   /**
    * World Machine tiled map
@@ -23,6 +24,6 @@ public:
     float tesselationWidth = 64.0f);
 
 private:
-  BasicModelManager &mm;
+  BasicSceneManager &mm;
 };
 }

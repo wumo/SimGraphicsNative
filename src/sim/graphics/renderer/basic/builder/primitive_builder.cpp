@@ -1,11 +1,11 @@
 #include "primitive_builder.h"
 #include "sim/util/syntactic_sugar.h"
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 using namespace glm;
 
-PrimitiveBuilder::PrimitiveBuilder(BasicModelManager &mm): mm(mm) {}
+PrimitiveBuilder::PrimitiveBuilder(BasicSceneManager &mm): mm(mm) {}
 
 const std::vector<Vertex::Position> &PrimitiveBuilder::positions() const {
   return _positions;

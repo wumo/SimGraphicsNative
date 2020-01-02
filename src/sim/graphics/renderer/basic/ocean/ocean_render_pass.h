@@ -1,5 +1,5 @@
 #pragma once
-#include "../render_pass.h"
+#include "sim/graphics/renderer/basic/framegraph/render_pass.h"
 
 namespace sim::graphics::renderer::basic {
 class OceanRenderPass {

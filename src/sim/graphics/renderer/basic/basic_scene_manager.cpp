@@ -1,4 +1,4 @@
-#include "basic_model_manager.h"
+#include "basic_scene_manager.h"
 #include "basic_renderer.h"
 #include "sim/graphics/util/colors.h"
 #include "loader/gltf_loader.h"
@@ -10,10 +10,10 @@ using namespace glm;
 using namespace material;
 using bindpoint = vk::PipelineBindPoint;
 
-BasicModelManager::BasicModelManager(BasicRenderer &renderer)
+BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
   : renderer{renderer},
-    debugMarker{renderer.debugMarker},
-    device{*renderer.device},
+    debugMarker_{renderer.debugMarker},
+    device_{*renderer.device},
     config{renderer.config},
     modelConfig{renderer.modelConfig},
     vkDevice{renderer.vkDevice} {
@@ -58,18 +58,21 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
       u<HostManagedStorageUBOBuffer<MeshInstance::UBO>>(allocator, totalMeshes);
   }
 
+  terrainMgr = u<TerrainManager>(*this);
+  skyMgr = u<SkyManager>(*this);
+  oceanMgr = u<OceanManager>(*this);
+
   {
     basicSetDef.textures.descriptorCount() = uint32_t(modelConfig.maxNumTexture);
     basicSetDef.init(vkDevice);
 
     deferredSetDef.init(vkDevice);
     iblSetDef.init(vkDevice);
-    skySetDef.init(vkDevice);
 
     basicLayout.basic(basicSetDef);
     basicLayout.deferred(deferredSetDef);
     basicLayout.ibl(iblSetDef);
-    basicLayout.sky(skySetDef);
+    basicLayout.sky(skyMgr->skySetDef);
     basicLayout.init(vkDevice);
 
     Sets.descriptorPool =
@@ -78,7 +81,7 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     Sets.basicSet = basicSetDef.createSet(*Sets.descriptorPool);
     Sets.deferredSet = deferredSetDef.createSet(*Sets.descriptorPool);
     Sets.iblSet = iblSetDef.createSet(*Sets.descriptorPool);
-    Sets.skySet = skySetDef.createSet(*Sets.descriptorPool);
+    skyMgr->createDescriptorSets(*Sets.descriptorPool);
   }
 
   {
@@ -91,10 +94,10 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     basicSetDef.lights(Buffer.lights->buffer());
 
     { // empty texture;
-      Image.textures.emplace_back(device, 1, 1);
+      Image.textures.emplace_back(device_, 1, 1);
       glm::vec4 color{1.f, 1.f, 1.f, 1.f};
       Image.textures.back().upload(
-        device, reinterpret_cast<const unsigned char *>(&color), sizeof(color));
+        device_, reinterpret_cast<const unsigned char *>(&color), sizeof(color));
       Image.textures.back().setSampler(SamplerMaker().createUnique(vkDevice));
 
       // bind unused textures to empty texture;
@@ -112,49 +115,45 @@ BasicModelManager::BasicModelManager(BasicRenderer &renderer)
     basicSetDef.update(Sets.basicSet);
   }
 
-  terrainMgr = u<TerrainManager>(*this);
-
-  skyRenderer = u<SkyRenderer>(device, debugMarker);
-
   {
-    debugMarker.name(Buffer.position->buffer(), "position buffer");
-    debugMarker.name(Buffer.normal->buffer(), "normal buffer");
-    debugMarker.name(Buffer.uv->buffer(), "uv buffer");
-    debugMarker.name(Buffer.joint0->buffer(), "joint0 buffer");
-    debugMarker.name(Buffer.weight0->buffer(), "weight0 buffer");
-    debugMarker.name(Buffer.transforms->buffer(), "transforms buffer");
-    debugMarker.name(Buffer.materials->buffer(), "materials buffer");
-    debugMarker.name(Buffer.primitives->buffer(), "primitives buffer");
-    debugMarker.name(Buffer.meshInstances->buffer(), "mesh instances buffer");
-    Buffer.drawQueue->mark(debugMarker);
-    debugMarker.name(Buffer.camera->buffer(), "camera buffer");
-    debugMarker.name(Buffer.lighting->buffer(), "lighting buffer");
-    debugMarker.name(Buffer.lights->buffer(), "lights buffer");
+    debugMarker_.name(Buffer.position->buffer(), "position buffer");
+    debugMarker_.name(Buffer.normal->buffer(), "normal buffer");
+    debugMarker_.name(Buffer.uv->buffer(), "uv buffer");
+    debugMarker_.name(Buffer.joint0->buffer(), "joint0 buffer");
+    debugMarker_.name(Buffer.weight0->buffer(), "weight0 buffer");
+    debugMarker_.name(Buffer.transforms->buffer(), "transforms buffer");
+    debugMarker_.name(Buffer.materials->buffer(), "materials buffer");
+    debugMarker_.name(Buffer.primitives->buffer(), "primitives buffer");
+    debugMarker_.name(Buffer.meshInstances->buffer(), "mesh instances buffer");
+    Buffer.drawQueue->mark(debugMarker_);
+    debugMarker_.name(Buffer.camera->buffer(), "camera buffer");
+    debugMarker_.name(Buffer.lighting->buffer(), "lighting buffer");
+    debugMarker_.name(Buffer.lights->buffer(), "lights buffer");
   }
 }
 
-Allocation<Material::UBO> BasicModelManager::allocateMaterialUBO() {
+Allocation<Material::UBO> BasicSceneManager::allocateMaterialUBO() {
   return Buffer.materials->allocate();
 }
-Allocation<Light::UBO> BasicModelManager::allocateLightUBO() {
+Allocation<Light::UBO> BasicSceneManager::allocateLightUBO() {
   return Buffer.lights->allocate();
 }
-Allocation<glm::mat4> BasicModelManager::allocateMatrixUBO() {
+Allocation<glm::mat4> BasicSceneManager::allocateMatrixUBO() {
   return Buffer.transforms->allocate();
 }
-Allocation<Primitive::UBO> BasicModelManager::allocatePrimitiveUBO() {
+Allocation<Primitive::UBO> BasicSceneManager::allocatePrimitiveUBO() {
   return Buffer.primitives->allocate();
 }
-Allocation<MeshInstance::UBO> BasicModelManager::allocateMeshInstanceUBO() {
+Allocation<MeshInstance::UBO> BasicSceneManager::allocateMeshInstanceUBO() {
   return Buffer.meshInstances->allocate();
 }
-auto BasicModelManager::allocateDrawCMD(
+auto BasicSceneManager::allocateDrawCMD(
   const Ptr<Primitive> &primitive, const Ptr<Material> &material)
   -> Allocation<vk::DrawIndexedIndirectCommand> {
   return Buffer.drawQueue->allocate(primitive, material);
 }
 
-void BasicModelManager::resize(vk::Extent2D extent) {
+void BasicSceneManager::resize(vk::Extent2D extent) {
   Scene.camera.changeDimension(extent.width, extent.height);
 
   deferredSetDef.position(renderer.attachments.position->imageView());
@@ -166,44 +165,46 @@ void BasicModelManager::resize(vk::Extent2D extent) {
   deferredSetDef.update(Sets.deferredSet);
 }
 
-PerspectiveCamera &BasicModelManager::camera() { return Scene.camera; }
+PerspectiveCamera &BasicSceneManager::camera() { return Scene.camera; }
+SkyManager &BasicSceneManager::skyManager() { return *skyMgr; }
+TerrainManager &BasicSceneManager::terrainManager() { return *terrainMgr; }
+OceanManager &BasicSceneManager::oceanManager() { return *oceanMgr; }
 
-TerrainManager &BasicModelManager::terrrainManager() { return *terrainMgr; }
-
-Ptr<Primitive> BasicModelManager::newPrimitive(
+Ptr<Primitive> BasicSceneManager::newPrimitive(
   const std::vector<Vertex::Position> &positions,
   const std::vector<Vertex::Normal> &normals, const std::vector<Vertex::UV> &uvs,
   const std::vector<uint32_t> &indices, const AABB &aabb,
   const PrimitiveTopology &topology) {
 
-  auto positionRange = Buffer.position->add(device, positions.data(), positions.size());
-  auto normalRange = Buffer.normal->add(device, normals.data(), normals.size());
-  auto uvRange = Buffer.uv->add(device, uvs.data(), uvs.size());
-  auto indexRange = Buffer.indices->add(device, indices.data(), indices.size());
+  auto positionRange = Buffer.position->add(device_, positions.data(), positions.size());
+  auto normalRange = Buffer.normal->add(device_, normals.data(), normals.size());
+  auto uvRange = Buffer.uv->add(device_, uvs.data(), uvs.size());
+  auto indexRange = Buffer.indices->add(device_, indices.data(), indices.size());
 
   return Ptr<Primitive>::add(
     Scene.primitives,
     {*this, indexRange, positionRange, normalRange, uvRange, aabb, topology});
 }
 
-Ptr<Primitive> BasicModelManager::newPrimitive(const PrimitiveBuilder &primitiveBuilder) {
+Ptr<Primitive> BasicSceneManager::newPrimitive(const PrimitiveBuilder &primitiveBuilder) {
   return newPrimitives(primitiveBuilder)[0];
 }
 
-auto BasicModelManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
+auto BasicSceneManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
   -> std::vector<Ptr<Primitive>> {
   std::vector<Ptr<Primitive>> primitives;
   for(auto &primitive: primitiveBuilder.primitives()) {
     auto positionRange = Buffer.position->add(
-      device, primitiveBuilder.positions().data() + primitive.position().offset,
+      device_, primitiveBuilder.positions().data() + primitive.position().offset,
       primitive.position().size);
     auto normalRange = Buffer.normal->add(
-      device, primitiveBuilder.normals().data() + primitive.normal().offset,
+      device_, primitiveBuilder.normals().data() + primitive.normal().offset,
       primitive.normal().size);
     auto uvRange = Buffer.uv->add(
-      device, primitiveBuilder.uvs().data() + primitive.uv().offset, primitive.uv().size);
+      device_, primitiveBuilder.uvs().data() + primitive.uv().offset,
+      primitive.uv().size);
     auto indexRange = Buffer.indices->add(
-      device, primitiveBuilder.indices().data() + primitive.index().offset,
+      device_, primitiveBuilder.indices().data() + primitive.index().offset,
       primitive.index().size);
     primitives.push_back(Ptr<Primitive>::add(
       Scene.primitives, {*this, indexRange, positionRange, normalRange, uvRange,
@@ -212,71 +213,71 @@ auto BasicModelManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
   return primitives;
 }
 
-Ptr<Texture2D> BasicModelManager::newTexture(
+Ptr<Texture2D> BasicSceneManager::newTexture(
   const std::string &imagePath, const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
-  auto t =
-    Texture2D::loadFromFile(device, imagePath, vk::Format::eR8G8B8A8Srgb, generateMipmap);
+  auto t = Texture2D::loadFromFile(
+    device_, imagePath, vk::Format::eR8G8B8A8Srgb, generateMipmap);
   t.setSampler(SamplerMaker(samplerDef).createUnique(vkDevice));
   return Ptr<Texture2D>::add(Image.textures, std::move(t));
 }
 
-Ptr<Texture2D> BasicModelManager::newTexture(
+Ptr<Texture2D> BasicSceneManager::newTexture(
   const unsigned char *bytes, size_t size, uint32_t width, uint32_t height,
   const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
-  auto t = Texture2D::loadFromBytes(device, bytes, size, width, height, generateMipmap);
+  auto t = Texture2D::loadFromBytes(device_, bytes, size, width, height, generateMipmap);
   t.setSampler(SamplerMaker(samplerDef).createUnique(vkDevice));
   return Ptr<Texture2D>::add(Image.textures, std::move(t));
 }
 
-Ptr<TextureImageCube> BasicModelManager::newCubeTexture(
+Ptr<TextureImageCube> BasicSceneManager::newCubeTexture(
   const std::string &imagePath, const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
 
   TextureImageCube texture =
-    TextureImageCube::loadFromFile(device, imagePath, generateMipmap);
+    TextureImageCube::loadFromFile(device_, imagePath, generateMipmap);
   SamplerMaker maker{samplerDef};
   maker.maxLod(float(texture.getInfo().mipLevels));
-  texture.setSampler(maker.createUnique(device.getDevice()));
+  texture.setSampler(maker.createUnique(device_.getDevice()));
 
   return Ptr<TextureImageCube>::add(Image.cubeTextures, std::move(texture));
 }
 
-Ptr<Texture2D> BasicModelManager::newGrayTexture(
+Ptr<Texture2D> BasicSceneManager::newGrayTexture(
   const std::string &imagePath, const SamplerDef &samplerDef, bool generateMipmap) {
   ensureTextures(1);
   auto t = Texture2D::loadFromGrayScaleFile(
-    device, imagePath, vk::Format::eR16Unorm, generateMipmap);
+    device_, imagePath, vk::Format::eR16Unorm, generateMipmap);
   t.setSampler(SamplerMaker(samplerDef).createUnique(vkDevice));
   return Ptr<Texture2D>::add(Image.textures, std::move(t));
 }
 
-Ptr<Material> BasicModelManager::newMaterial(MaterialType type) {
+Ptr<Material> BasicSceneManager::newMaterial(MaterialType type) {
   return Ptr<Material>::add(Scene.materials, Material{*this, type});
 }
 
-Ptr<Mesh> BasicModelManager::newMesh(Ptr<Primitive> primitive, Ptr<Material> material) {
+Ptr<Mesh> BasicSceneManager::newMesh(Ptr<Primitive> primitive, Ptr<Material> material) {
   return Ptr<Mesh>::add(Scene.meshes, Mesh{primitive, material});
 }
 
-Ptr<Node> BasicModelManager::newNode(
+Ptr<Node> BasicSceneManager::newNode(
   const Transform &transform, const std::string &name) {
   return Ptr<Node>::add(Scene.nodes, Node{*this, transform, name});
 }
 
-Ptr<Model> BasicModelManager::newModel(
+Ptr<Model> BasicSceneManager::newModel(
   std::vector<Ptr<Node>> &&nodes, std::vector<Animation> &&animations) {
   return Ptr<Model>::add(
     Scene.models, std::move(Model{std::move(nodes), std::move(animations)}));
 }
 
-Ptr<Model> BasicModelManager::loadModel(const std::string &file) {
+Ptr<Model> BasicSceneManager::loadModel(const std::string &file) {
   GLTFLoader loader{*this};
   return loader.load(file);
 }
 
-Ptr<ModelInstance> BasicModelManager::newModelInstance(
+Ptr<ModelInstance> BasicSceneManager::newModelInstance(
   Ptr<Model> model, const Transform &transform) {
   auto instance =
     Ptr<ModelInstance>::add(Scene.instances, ModelInstance{*this, model, transform});
@@ -284,8 +285,8 @@ Ptr<ModelInstance> BasicModelManager::newModelInstance(
   return instance;
 }
 
-void BasicModelManager::useEnvironmentMap(Ptr<TextureImageCube> envMap) {
-  EnvMapGenerator envMapGenerator{device, *this};
+void BasicSceneManager::useEnvironmentMap(Ptr<TextureImageCube> envMap) {
+  EnvMapGenerator envMapGenerator{device_, *this};
   Image.brdfLUT = envMapGenerator.generateBRDFLUT();
   auto cubes = envMapGenerator.generateEnvMap(*envMap);
   Image.irradiance = std::move(cubes.irradiance);
@@ -298,40 +299,25 @@ void BasicModelManager::useEnvironmentMap(Ptr<TextureImageCube> envMap) {
   iblSetDef.update(Sets.iblSet);
 }
 
-void BasicModelManager::useSky() {
-  skyRenderer->updateModel();
+void BasicSceneManager::computeMesh(
+  const std::string &shaderPath, Ptr<Primitive> primitive) {}
 
-  skySetDef.atmosphere(skyRenderer->model().atmosphereUBO().buffer());
-  skySetDef.sun(skyRenderer->model().sunUBO().buffer());
-  skySetDef.transmittance(skyRenderer->model().transmittanceTexture());
-  skySetDef.scattering(skyRenderer->model().scatteringTexture());
-  skySetDef.irradiance(skyRenderer->model().irradianceTexture());
-  skySetDef.update(Sets.skySet);
-}
-
-void BasicModelManager::setSunPosition(
-  float sun_zenith_angle_radians, float sun_azimuth_angle_radians) {
-  skyRenderer->model().updateSunPosition(
-    sun_zenith_angle_radians, sun_azimuth_angle_radians);
-}
-
-void BasicModelManager::computeMesh(
-  const std::string &imagePath, Ptr<Primitive> primitive) {}
-
-Ptr<Light> BasicModelManager::addLight(
+Ptr<Light> BasicSceneManager::addLight(
   LightType type, glm::vec3 direction, glm::vec3 color, glm::vec3 location) {
   return Ptr<Light>::add(Scene.lights, Light{*this, type, direction, color, location});
 }
 
-void BasicModelManager::updateScene(vk::CommandBuffer cb, uint32_t imageIndex) {
-  if(Scene.camera.incoherent()) Buffer.camera->update(device, Scene.camera.flush());
+void BasicSceneManager::updateScene(
+  vk::CommandBuffer transferCB, vk::CommandBuffer computeCB, uint32_t imageIndex) {
+  if(Scene.camera.incoherent()) Buffer.camera->update(device_, Scene.camera.flush());
 
-  if(Scene.lighting.incoherent()) Buffer.lighting->update(device, Scene.lighting.flush());
+  if(Scene.lighting.incoherent())
+    Buffer.lighting->update(device_, Scene.lighting.flush());
 
   updateTextures();
 }
 
-void BasicModelManager::updateTextures() {
+void BasicSceneManager::updateTextures() {
   if(Image.textures.size() > Image.lastImagesCount) {
     for(int i = Image.lastImagesCount; i < Image.textures.size(); ++i)
       Image.sampler2Ds[i] = {Image.textures[i].sampler(), Image.textures[i].imageView(),
@@ -344,7 +330,7 @@ void BasicModelManager::updateTextures() {
   }
 }
 
-void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
+void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   vk::DeviceSize zero{0};
   auto stride = sizeof(vk::DrawIndexedIndirectCommand);
 
@@ -358,17 +344,17 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     cb.bindDescriptorSets(
       bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.ibl.set(),
       Sets.iblSet, nullptr);
-  if(skyRenderer->enabled())
+  if(skyMgr->enabled())
     cb.bindDescriptorSets(
       bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.sky.set(),
-      Sets.skySet, nullptr);
+      skyMgr->skySet, nullptr);
 
   cb.bindVertexBuffers(0, Buffer.position->buffer(), zero);
   cb.bindVertexBuffers(1, Buffer.normal->buffer(), zero);
   cb.bindVertexBuffers(2, Buffer.uv->buffer(), zero);
   cb.bindIndexBuffer(Buffer.indices->buffer(), zero, vk::IndexType::eUint32);
 
-  debugMarker.begin(cb, "Subpass opaque tri");
+  debugMarker_.begin(cb, "Subpass opaque tri");
   if(RenderPass.wireframe)
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueTriWireframe);
   else
@@ -376,9 +362,9 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueTriangles), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueTriangles), stride);
-  debugMarker.end(cb);
+  debugMarker_.end(cb);
 
-  debugMarker.begin(cb, "Subpass terrain");
+  debugMarker_.begin(cb, "Subpass terrain");
   if(RenderPass.wireframe)
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrainTessWireframe);
   else
@@ -387,47 +373,47 @@ void BasicModelManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::Terrain), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::Terrain), stride);
-  debugMarker.end(cb);
+  debugMarker_.end(cb);
 
-  debugMarker.begin(cb, "Subpass opaque line");
+  debugMarker_.begin(cb, "Subpass opaque line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueLine);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueLines), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueLines), stride);
-  debugMarker.end(cb);
+  debugMarker_.end(cb);
 
-  debugMarker.begin(cb, "Subpass deferred shading");
+  debugMarker_.begin(cb, "Subpass deferred shading");
   cb.nextSubpass(vk::SubpassContents::eInline);
   if(Image.useEnvironmentMap)
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredIBL);
-  else if(skyRenderer->enabled())
+  else if(skyMgr->enabled())
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredSky);
   else
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferred);
   cb.draw(3, 1, 0, 0);
-  debugMarker.end(cb);
+  debugMarker_.end(cb);
 
-  debugMarker.begin(cb, "Subpass translucent tri");
+  debugMarker_.begin(cb, "Subpass translucent tri");
   cb.nextSubpass(vk::SubpassContents::eInline);
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transTri);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentTriangles), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::TransparentTriangles), stride);
-  debugMarker.end(cb);
+  debugMarker_.end(cb);
 
-  debugMarker.begin(cb, "Subpass translucent line");
+  debugMarker_.begin(cb, "Subpass translucent line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transLine);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentLines), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::TransparentLines), stride);
 
-  debugMarker.begin(cb, "Subpass resolve");
+  debugMarker_.begin(cb, "Subpass resolve");
   cb.nextSubpass(vk::SubpassContents::eInline);
-  debugMarker.end(cb);
-  debugMarker.end(cb);
+  debugMarker_.end(cb);
+  debugMarker_.end(cb);
 }
 
-void BasicModelManager::debugInfo() {
+void BasicSceneManager::debugInfo() {
   auto totalMeshes = modelConfig.maxNumMeshes + modelConfig.maxNumLineMeshes +
                      modelConfig.maxNumTransparentMeshes +
                      modelConfig.maxNumTransparentLineMeshes;
@@ -440,28 +426,32 @@ void BasicModelManager::debugInfo() {
     ", textures: ", Image.textures.size(), "/", modelConfig.maxNumTexture,
     ", lights: ", Scene.lights.size(), "/", modelConfig.maxNumLights);
 }
-void BasicModelManager::ensureTextures(uint32_t toAdd) const {
+
+DebugMarker &BasicSceneManager::debugMarker() { return debugMarker_; }
+Device &BasicSceneManager::device() { return device_; }
+
+void BasicSceneManager::ensureTextures(uint32_t toAdd) const {
   errorIf(
     Image.textures.size() + toAdd > modelConfig.maxNumTexture,
     "exceeding maximum number of textures!");
 }
-Ptr<Primitive> BasicModelManager::primitive(uint32_t index) {
+Ptr<Primitive> BasicSceneManager::primitive(uint32_t index) {
   assert(index < Scene.primitives.size());
   return Ptr<Primitive>{&Scene.primitives, index};
 }
-Ptr<Material> BasicModelManager::material(uint32_t index) {
+Ptr<Material> BasicSceneManager::material(uint32_t index) {
   assert(index < Scene.materials.size());
   return Ptr<Material>{&Scene.materials, index};
 }
-Ptr<Model> BasicModelManager::model(uint32_t index) {
+Ptr<Model> BasicSceneManager::model(uint32_t index) {
   assert(index < Scene.models.size());
   return Ptr<Model>{&Scene.models, index};
 }
-Ptr<ModelInstance> BasicModelManager::modelInstance(uint32_t index) {
+Ptr<ModelInstance> BasicSceneManager::modelInstance(uint32_t index) {
   assert(index < Scene.instances.size());
   return Ptr<ModelInstance>{&Scene.instances, index};
 }
 
-void BasicModelManager::setWireframe(bool wireframe) { RenderPass.wireframe = wireframe; }
-bool BasicModelManager::wireframe() { return RenderPass.wireframe; }
+void BasicSceneManager::setWireframe(bool wireframe) { RenderPass.wireframe = wireframe; }
+bool BasicSceneManager::wireframe() { return RenderPass.wireframe; }
 }

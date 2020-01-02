@@ -1,11 +1,11 @@
 #pragma once
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 #include <tinygltf/tiny_gltf.h>
 
 namespace sim::graphics::renderer::basic {
 class GLTFLoader {
 public:
-  explicit GLTFLoader(BasicModelManager &mm);
+  explicit GLTFLoader(BasicSceneManager &mm);
 
   Ptr<Model> load(const std::string &file);
 
@@ -21,7 +21,7 @@ private:
 
   void loadAnimations(const tinygltf::Model &model);
 
-  BasicModelManager &mm;
+  BasicSceneManager &mm;
 
   std::vector<uint32_t> indices;
   std::vector<Vertex::Position> positions;

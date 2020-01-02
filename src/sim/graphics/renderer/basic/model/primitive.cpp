@@ -1,10 +1,10 @@
 #include "primitive.h"
-#include "../basic_model_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
 Primitive::Primitive(
-  BasicModelManager &mm, const Range &index, const Range &position, const Range &normal,
+  BasicSceneManager &mm, const Range &index, const Range &position, const Range &normal,
   const Range &uv, const AABB &aabb, const PrimitiveTopology &topology,
   const DynamicType &_type)
   : mm{mm},

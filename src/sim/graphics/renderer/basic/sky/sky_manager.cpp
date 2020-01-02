@@ -1,5 +1,5 @@
-#include "sky_renderer.h"
-#include "../basic_model_manager.h"
+#include "sky_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -10,14 +10,32 @@ constexpr double kSunSolidAngle = kPi * kSunAngularRadius * kSunAngularRadius;
 constexpr double kLengthUnitInMeters = 1000.0;
 }
 
-SkyRenderer::SkyRenderer(Device &device, DebugMarker &debugMarker)
-  : device(device), debugMarker{debugMarker} {}
+SkyManager::SkyManager(BasicSceneManager &mm)
+  : mm{mm}, device{mm.device()}, debugMarker(mm.debugMarker()) {
+  skySetDef.init(device.getDevice());
+}
 
-bool SkyRenderer::enabled() const { return _model.get() != nullptr; }
+void SkyManager::createDescriptorSets(vk::DescriptorPool descriptorPool) {
+  skySet = skySetDef.createSet(descriptorPool);
+}
 
-SkyModel &SkyRenderer::model() { return *_model; }
+void SkyManager::enable() {
+  if(_model.get() == nullptr) {
+    updateModel();
+    skySetDef.atmosphere(_model->atmosphereUBO().buffer());
+    skySetDef.sun(_model->sunUBO().buffer());
+    skySetDef.transmittance(_model->transmittanceTexture());
+    skySetDef.scattering(_model->scatteringTexture());
+    skySetDef.irradiance(_model->irradianceTexture());
+    skySetDef.update(skySet);
+  }
+}
 
-void SkyRenderer::updateModel() {
+bool SkyManager::enabled() const { return _model.get() != nullptr; }
+
+SkyModel &SkyManager::model() { return *_model; }
+
+void SkyManager::updateModel() {
   // Values from "Reference Solar Spectral Irradiance: ASTM G-173", ETR column
   // (see http://rredc.nrel.gov/solar/spectra/am1.5/ASTMG173/ASTMG173.html),
   // summed and averaged in each bin (e.g. the value for 360nm is the average
@@ -111,4 +129,8 @@ void SkyRenderer::updateModel() {
   debugLog("Generating sky map took ", tDiff, " ms");
 }
 
+void SkyManager::setSunPosition(
+  float sun_zenith_angle_radians, float sun_azimuth_angle_radians) {
+  _model->updateSunPosition(sun_zenith_angle_radians, sun_azimuth_angle_radians);
+}
 }

@@ -7,7 +7,7 @@
 namespace sim::graphics::renderer::basic {
 
 class Mesh {
-  friend class BasicModelManager;
+  friend class BasicSceneManager;
   friend class Node;
 
 public:

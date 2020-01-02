@@ -237,8 +237,8 @@ void VulkanBase::createSyncObjects() {
 
     semaphores[i].renderWaits.push_back(*semaphores[i].imageAvailable);
     semaphores[i].renderWaits.push_back(*semaphores[i].computeFinished);
-    semaphores[i].renderWaitStages.emplace_back(stage::eBottomOfPipe);
-    semaphores[i].renderWaitStages.emplace_back(stage::eBottomOfPipe);
+    semaphores[i].renderWaitStages.emplace_back(stage::eAllCommands);
+    semaphores[i].renderWaitStages.emplace_back(stage::eAllCommands);
 
     inFlightFrameFences[i] = _device.createFenceUnique(fenceInfo);
   }

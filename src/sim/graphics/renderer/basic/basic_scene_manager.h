@@ -107,6 +107,8 @@ public:
   const Config &config() const;
   const ModelConfig &modelConfig() const;
 
+  
+  
 private:
   friend class Material;
   friend class Node;
@@ -114,6 +116,7 @@ private:
   friend class ModelInstance;
   friend class Light;
   friend class Primitive;
+  friend class OceanManager;
 
   Allocation<Material::UBO> allocateMaterialUBO();
   Allocation<Light::UBO> allocateLightUBO();

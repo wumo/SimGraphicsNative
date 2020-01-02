@@ -22,7 +22,7 @@ auto main(int argc, const char **argv) -> int {
 
   auto &camera = mm.camera();
   camera.setLocation({40.f, 40.f, 40.f});
-  mm.addLight(LightType ::Directional, {1, -1, 1});
+//  mm.addLight(LightType ::Directional, {1, -1, 1});
 
   auto primitives =
     mm.newPrimitives(PrimitiveBuilder(mm).axis({}, 20.f, 0.1f, 0.5f, 50).newPrimitive());
@@ -70,7 +70,7 @@ auto main(int argc, const char **argv) -> int {
                       .grid(10, 10, {0, 10, 0})
                       .newPrimitive(PrimitiveTopology::Triangles, DynamicType::Dynamic));
 
-  auto seaMat = mm.newMaterial();
+  auto seaMat = mm.newMaterial(MaterialType::eBRDF);
   seaMat->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});
   seaMat->setPbrFactor({0, 0.5, 0.3, 0});
   auto seaMesh = mm.newMesh(seaPrimitive, seaMat);
@@ -82,7 +82,9 @@ auto main(int argc, const char **argv) -> int {
   mm.computeMesh("assets/private/shaders/sine-wave.comp.spv", seaPrimitive, 11, 11);
 
   auto &ocean = mm.oceanManager();
-//  ocean.newField(const AABB &aabb, uint32_t numVertexX, uint32_t numVertexY);
+  auto field = ocean.newField();
+
+  field->setTransform({vec3{0, 10, 0}});
 
   auto &sky = mm.skyManager();
   sky.enable();

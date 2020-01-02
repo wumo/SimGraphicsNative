@@ -86,12 +86,14 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
     Sets.descriptorPool = DescriptorPoolMaker()
                             .pipelineLayout(basicLayout)
                             .pipelineLayout(computeMeshLayoutDef)
+                            .pipelineLayout(oceanManager_->oceanLayoutDef)
                             .createUnique(vkDevice);
 
     Sets.basicSet = basicSetDef.createSet(*Sets.descriptorPool);
     Sets.deferredSet = deferredSetDef.createSet(*Sets.descriptorPool);
     Sets.iblSet = iblSetDef.createSet(*Sets.descriptorPool);
     skyManager_->createDescriptorSets(*Sets.descriptorPool);
+    oceanManager_->createDescriptorSets(*Sets.descriptorPool);
   }
 
   {
@@ -390,27 +392,31 @@ void BasicSceneManager::computeMesh(
   static float time = 0;
   time += elapsedDuration;
 
-  cb.bindDescriptorSets(
-    bindpoint::eCompute, *computeMeshLayoutDef.pipelineLayout,
-    computeMeshLayoutDef.set.set(), Sets.computeMeshSet, nullptr);
+  if(!computeMeshes.empty()) {
+    cb.bindDescriptorSets(
+      bindpoint::eCompute, *computeMeshLayoutDef.pipelineLayout,
+      computeMeshLayoutDef.set.set(), Sets.computeMeshSet, nullptr);
 
-  uint32_t total = computeMeshes.size();
-  for(int i = 0; i < total; ++i) {
-    auto &comp = computeMeshes[i];
-    auto &positionRange = comp.primitive->position();
-    auto &normalRange = comp.primitive->normal();
-    computeMeshConstant = {
-      positionRange.offset + imageIndex * positionRange.size / config_.numFrame,
-      normalRange.offset + imageIndex * normalRange.size / config_.numFrame,
-      positionRange.size / config_.numFrame, time};
+    uint32_t total = computeMeshes.size();
+    for(int i = 0; i < total; ++i) {
+      auto &comp = computeMeshes[i];
+      auto &positionRange = comp.primitive->position();
+      auto &normalRange = comp.primitive->normal();
+      computeMeshConstant = {
+        positionRange.offset + imageIndex * positionRange.size / config_.numFrame,
+        normalRange.offset + imageIndex * normalRange.size / config_.numFrame,
+        positionRange.size / config_.numFrame, time};
 
-    debugMarker_.begin(cb, toString("compute mesh: ", i, " frame:", imageIndex).c_str());
-    cb.bindPipeline(bindpoint::eCompute, *comp.pipeline);
-    cb.pushConstants<ComputeMeshConstant>(
-      *computeMeshLayoutDef.pipelineLayout, shader::eCompute, 0, computeMeshConstant);
-    cb.dispatch(comp.dispatchNumX, comp.dispatchNumY, comp.dispatchNumZ);
-    debugMarker_.end(cb);
+      debugMarker_.begin(
+        cb, toString("compute mesh: ", i, " frame:", imageIndex).c_str());
+      cb.bindPipeline(bindpoint::eCompute, *comp.pipeline);
+      cb.pushConstants<ComputeMeshConstant>(
+        *computeMeshLayoutDef.pipelineLayout, shader::eCompute, 0, computeMeshConstant);
+      cb.dispatch(comp.dispatchNumX, comp.dispatchNumY, comp.dispatchNumZ);
+      debugMarker_.end(cb);
+    }
   }
+  if(oceanManager_->enabled()) oceanManager_->compute(cb, imageIndex, elapsedDuration);
 }
 
 void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {

@@ -124,9 +124,9 @@ void main() {
 
     // outColor.rgb = vec3(perceptualRoughness);
     // outColor.rgb = vec3(metallic);
-    // outColor.rgb = normal;
+//     outColor.rgb = normal;
     // outColor.rgb = LINEARtoSRGB(baseColor.rgb);
-    // outColor.rgb = vec3(ao);
+//     outColor.rgb = vec3(ao);
     // outColor.rgb = LINEARtoSRGB(emissive);
     // outColor.rgb = vec3(f0);
     //  outColor = toneMap(vec4(color, 1.0), lighting.exposure);

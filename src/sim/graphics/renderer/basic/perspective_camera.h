@@ -50,7 +50,7 @@ class PerspectiveCamera {
 
 public:
   // ref in shaders
-  struct UBO {
+  struct alignas(sizeof(glm::vec4)) UBO {
     glm::mat4 view;
     glm::mat4 proj;
     glm::mat4 projView;

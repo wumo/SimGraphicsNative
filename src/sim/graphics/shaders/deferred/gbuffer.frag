@@ -1,6 +1,6 @@
 #version 450
 #extension GL_GOOGLE_include_directive : require
-#include "basic.h"
+#include "../basic.h"
 #include "../tonemap.h"
 
 layout(constant_id = 0) const uint maxNumTextures = 1;

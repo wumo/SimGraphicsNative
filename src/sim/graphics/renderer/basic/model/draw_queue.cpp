@@ -43,7 +43,7 @@ uint32_t DrawQueue::index(Ptr<Primitive> primitive, Ptr<Material> material) {
   auto base = 0u;
   switch(material->type()) {
     case MaterialType::eBRDF:
-    case MaterialType::eBRDFSG: break;
+    case MaterialType::eBRDFSG:
     case MaterialType::eReflective:
     case MaterialType::eRefractive:
     case MaterialType::eNone:

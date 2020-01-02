@@ -1,24 +1,25 @@
 #ifndef SIM_WAVE_FFT_COMMON_H
 #define SIM_WAVE_FFT_COMMON_H
 
-layout(set = 0, binding = 0) uniform WaveUniform {
-  int meshOffset;
-  float patchSize;
-  float windSpeed;
-  float waveAmplitude;
-  float choppyScale;
-  float timeScale;
-  float windDx, windDy;
-  float ampFactor;
-  float time;
-};
-layout(set = 0, binding = 1, std430) buffer BitReversalBuffer { int rev[]; };
-
 const int h0Idx = 0, htIdx = 1, hDxIdx = 2, hDzIdx = 3, slopeXIdx = 4, slopeZIdx = 5;
 struct Data {
   vec2 data[6];
 };
-layout(set = 0, binding = 2, std430) buffer OceanBuffer { Data datum[]; };
+
+layout(push_constant) uniform ComputeUniform {
+  int positionOffset;
+  int normalOffset;
+  int dataOffset;
+  float patchSize;
+  float choppyScale;
+  float timeScale;
+  float time;
+};
+
+layout(set = 0, binding = 0, std430) buffer BitReversalBuffer { int rev[]; };
+layout(set = 0, binding = 1, std430) buffer OceanBuffer { Data datum[]; };
+layout(set = 0, binding = 2, std430) buffer Positions { float positions[]; };
+layout(set = 0, binding = 3, std430) buffer Normals { float normals[]; };
 
 layout(constant_id = 0) const uint lx = 128;
 layout(constant_id = 1) const uint ly = 1;

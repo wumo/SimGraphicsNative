@@ -4,9 +4,9 @@
 #include "wave-fft-common.h"
 
 const float g = 9.8;
-const float w_0 = 2 * PI / 10.0f;
+const float w_0 = 2 * PI / 200.0f;
 
-float dispersion(vec2 k) { return sqrt(g * length(k)); }
+float dispersion(vec2 k) { return floor(sqrt(g * length(k)) / w_0) * w_0; }
 
 void main() {
   int column = int(gl_GlobalInvocationID.x);
@@ -17,8 +17,8 @@ void main() {
   int revId = rev[id];
   int idx = row * N + revId;
   int invIdx = (N - 1 - row) * N + (N - 1 - revId);
-  vec2 _h0 = datum[idx].data[h0Idx];
-  vec2 _invH0 = datum[invIdx].data[h0Idx];
+  vec2 _h0 = datum[dataOffset + idx].data[h0Idx];
+  vec2 _invH0 = datum[dataOffset + invIdx].data[h0Idx];
   vec2 k = {(-N / 2.f + revId) * 2 * PI / patchSize,
             (-N / 2.f + row) * 2 * PI / patchSize};
   float omegat = dispersion(k) * time * timeScale;
@@ -38,5 +38,5 @@ void main() {
   memoryBarrier();
   barrier();
   fft1D(id, category);
-  datum[row * N + id].data[category] = sharedData[id];
+  datum[dataOffset + row * N + id].data[category] = sharedData[id];
 }

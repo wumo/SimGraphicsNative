@@ -36,5 +36,6 @@ void Primitive::setTesselationLevel(float tesselationLevel) {
   _tesselationLevel = tesselationLevel;
   ubo.ptr->_tesselationLevel = _tesselationLevel;
 }
+DynamicType Primitive::type() const { return _type; }
 
 }

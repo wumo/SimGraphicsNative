@@ -18,6 +18,12 @@ struct ModelConfig {
     maxNumTransparentMeshes{1'000}, maxNumTransparentLineMeshes{1'000};
   /**max number of terrain mesh instances*/
   uint32_t maxNumTerranMeshes{1'000};
+  /**max number of dynamic mesh instances*/
+  uint32_t maxNumDynamicMeshes{1'000}, maxNumDynamicLineMeshes{1'000},
+    maxNumDynamicTransparentMeshes{1'000}, maxNumDynamicTransparentLineMeshes{1'000};
+  /**max number of terrain mesh instances*/
+  uint32_t maxNumDynamicTerranMeshes{1'000};
+
   /**max number of texture including 2d and cube map.*/
   uint32_t maxNumTexture{1000};
   /**max number of lights*/

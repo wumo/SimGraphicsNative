@@ -4,18 +4,39 @@ namespace sim::graphics::renderer::basic {
 DrawQueue::DrawQueue(
   const VmaAllocator &allocator, uint32_t maxNumMeshes, uint32_t maxNumLineMeshes,
   uint32_t maxNumTransparentMeshes, uint32_t maxNumTransparentLineMeshes,
-  uint32_t maxNumTerrainMeshes) {
-  queues = {u<HostIndirectUBOBuffer>(allocator, maxNumMeshes),
-            u<HostIndirectUBOBuffer>(allocator, maxNumLineMeshes),
-            u<HostIndirectUBOBuffer>(allocator, maxNumTransparentMeshes),
-            u<HostIndirectUBOBuffer>(allocator, maxNumTransparentLineMeshes),
-            u<HostIndirectUBOBuffer>(allocator, maxNumTerrainMeshes)};
+  uint32_t maxNumTerrainMeshes, uint32_t maxNumFrames, uint32_t maxNumDynamicMeshes,
+  uint32_t maxNumDynamicLineMeshes, uint32_t maxNumDynamicTransparentMeshes,
+  uint32_t maxNumDynamicTransparentLineMeshes, uint32_t maxNumDynamicTerrainMeshes)
+  : numFrame{maxNumFrames} {
+  staticDrawQueues = {u<HostIndirectUBOBuffer>(allocator, maxNumMeshes),
+                      u<HostIndirectUBOBuffer>(allocator, maxNumLineMeshes),
+                      u<HostIndirectUBOBuffer>(allocator, maxNumTransparentMeshes),
+                      u<HostIndirectUBOBuffer>(allocator, maxNumTransparentLineMeshes),
+                      u<HostIndirectUBOBuffer>(allocator, maxNumTerrainMeshes)};
+  dynamicDrawQueues.reserve(numFrame);
+  for(int i = 0; i < numFrame; ++i) {
+    dynamicDrawQueues.push_back(
+      {u<HostIndirectUBOBuffer>(allocator, maxNumDynamicMeshes),
+       u<HostIndirectUBOBuffer>(allocator, maxNumDynamicLineMeshes),
+       u<HostIndirectUBOBuffer>(allocator, maxNumDynamicTransparentMeshes),
+       u<HostIndirectUBOBuffer>(allocator, maxNumDynamicTransparentLineMeshes),
+       u<HostIndirectUBOBuffer>(allocator, maxNumDynamicTerrainMeshes)});
+  }
 }
 
 auto DrawQueue::allocate(const Ptr<Primitive> &primitive, const Ptr<Material> &material)
-  -> Allocation<vk::DrawIndexedIndirectCommand> {
+  -> std::vector<Allocation<vk::DrawIndexedIndirectCommand>> {
   auto idx = index(primitive, material);
-  return queues[idx]->allocate();
+  std::vector<Allocation<vk::DrawIndexedIndirectCommand>> results;
+  switch(primitive.get().type()) {
+    case DynamicType::Static: results.push_back(staticDrawQueues[idx]->allocate()); break;
+    case DynamicType::Dynamic:
+      results.reserve(numFrame);
+      for(int i = 0; i < numFrame; ++i)
+        results.push_back(dynamicDrawQueues[i][idx]->allocate());
+      break;
+  }
+  return std::move(results);
 }
 
 uint32_t DrawQueue::index(Ptr<Primitive> primitive, Ptr<Material> material) {
@@ -39,16 +60,23 @@ uint32_t DrawQueue::index(Ptr<Primitive> primitive, Ptr<Material> material) {
 }
 
 void DrawQueue::mark(DebugMarker &debugMarker) {
-  debugMarker.name(queues[0]->buffer(), "drawOpaqueCMDs buffer");
-  debugMarker.name(queues[1]->buffer(), "drawLineCMDs buffer");
-  debugMarker.name(queues[2]->buffer(), "drawTransparentCMDs buffer");
-  debugMarker.name(queues[3]->buffer(), "drawTransparentLineCMDs buffer");
-  debugMarker.name(queues[4]->buffer(), "drawTerrainCMDs buffer");
+  debugMarker.name(staticDrawQueues[0]->buffer(), "drawOpaqueCMDs buffer");
+  debugMarker.name(staticDrawQueues[1]->buffer(), "drawLineCMDs buffer");
+  debugMarker.name(staticDrawQueues[2]->buffer(), "drawTransparentCMDs buffer");
+  debugMarker.name(staticDrawQueues[3]->buffer(), "drawTransparentLineCMDs buffer");
+  debugMarker.name(staticDrawQueues[4]->buffer(), "drawTerrainCMDs buffer");
 }
-vk::Buffer DrawQueue::buffer(DrawQueue::DrawType drawType) {
-  return queues[static_cast<uint32_t>(drawType)]->buffer();
+vk::Buffer DrawQueue::buffer(DrawType drawType) {
+  return staticDrawQueues[static_cast<uint32_t>(drawType)]->buffer();
 }
 uint32_t DrawQueue::count(DrawType drawType) {
-  return queues[static_cast<uint32_t>(drawType)]->count();
+  return staticDrawQueues[static_cast<uint32_t>(drawType)]->count();
+}
+
+vk::Buffer DrawQueue::buffer(DrawType drawType, uint32_t frame) {
+  return dynamicDrawQueues[frame][static_cast<uint32_t>(drawType)]->buffer();
+}
+uint32_t DrawQueue::count(DrawType drawType, uint32_t frame) {
+  return dynamicDrawQueues[frame][static_cast<uint32_t>(drawType)]->count();
 }
 }

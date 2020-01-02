@@ -75,8 +75,8 @@ public:
 private:
   BasicSceneManager &mm;
 
-  Ptr<Texture2D> _colorTex{}, _pbrTex{}, _normalTex{}, _occlusionTex{},
-    _emissiveTex{}, _heightTex{};
+  Ptr<Texture2D> _colorTex{}, _pbrTex{}, _normalTex{}, _occlusionTex{}, _emissiveTex{},
+    _heightTex{};
   glm::vec4 _colorFactor{1.f};
   glm::vec4 _pbrFactor{0.f, 1.f, 0.f, 0.f};
   float _occlusionStrength{1.f};

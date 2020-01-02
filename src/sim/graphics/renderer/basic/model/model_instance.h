@@ -33,7 +33,7 @@ private:
   bool _visible{true};
 
   Allocation<MeshInstance::UBO> _ubo;
-  Allocation<vk::DrawIndexedIndirectCommand> _drawCMD;
+  std::vector<Allocation<vk::DrawIndexedIndirectCommand>> _drawCMDs;
 };
 
 class ModelInstance {

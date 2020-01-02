@@ -12,27 +12,33 @@ MeshInstance::MeshInstance(
     _node(node),
     _instance(instance),
     _ubo{mm.allocateMeshInstanceUBO()},
-    _drawCMD{mm.allocateDrawCMD(primitive, material)} {
+    _drawCMDs{mm.allocateDrawCMD(_primitive, _material)} {
   *_ubo.ptr = {_primitive->ubo.offset, _material ? _material->ubo.offset : -1u,
                _node ? _node->ubo.offset : -1u, _instance ? _instance->_ubo.offset : -1u};
-  setVisible(_visible);
+
   Range index, vertex;
   if(_primitive) {
     auto &p = _primitive.get();
     vertex = p.position();
     index = p.index();
   }
-  *_drawCMD.ptr = vk::DrawIndexedIndirectCommand{
-    index.size,   _instance ? (_visible ? 1u : 0u) : 0u,
-    index.offset, int32_t(vertex.offset),
-    _ubo.offset,
-  };
+  uint32_t numFrame = _drawCMDs.size();
+  for(int i = 0; i < _drawCMDs.size(); ++i) {
+    *_drawCMDs[i].ptr = vk::DrawIndexedIndirectCommand{
+      index.size / numFrame,
+      _instance ? (_visible ? 1u : 0u) : 0u,
+      index.offset + i * index.size / numFrame,
+      int32_t(vertex.offset + i * vertex.size / numFrame),
+      _ubo.offset,
+    };
+  }
 }
 
 void MeshInstance::setVisible(bool visible) {
   if(_visible != visible) {
     _visible = visible;
-    _drawCMD.ptr->instanceCount = _instance ? (_visible ? 1u : 0u) : 0u;
+    for(auto &drawCmd: _drawCMDs)
+      drawCmd.ptr->instanceCount = _instance ? (_visible ? 1u : 0u) : 0u;
   }
 }
 

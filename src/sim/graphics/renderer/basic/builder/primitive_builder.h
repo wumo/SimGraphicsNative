@@ -10,7 +10,8 @@ public:
   explicit PrimitiveBuilder(BasicSceneManager &mm);
 
   PrimitiveBuilder &newPrimitive(
-    PrimitiveTopology topology = PrimitiveTopology::Triangles);
+    PrimitiveTopology topology = PrimitiveTopology::Triangles,
+    DynamicType type = DynamicType::Static);
 
   /**
    * construct the mesh from predefined vertices and indices

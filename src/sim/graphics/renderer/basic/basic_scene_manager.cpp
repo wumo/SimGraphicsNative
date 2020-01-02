@@ -49,7 +49,10 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
     Buffer.drawQueue = u<DrawQueue>(
       allocator, modelConfig.maxNumMeshes, modelConfig.maxNumLineMeshes,
       modelConfig.maxNumTransparentMeshes, modelConfig.maxNumTransparentLineMeshes,
-      modelConfig.maxNumTerranMeshes);
+      modelConfig.maxNumTerranMeshes, config.numFrame, modelConfig.maxNumDynamicMeshes,
+      modelConfig.maxNumDynamicLineMeshes, modelConfig.maxNumDynamicTransparentMeshes,
+      modelConfig.maxNumDynamicTransparentLineMeshes,
+      modelConfig.maxNumDynamicTerranMeshes);
     auto totalMeshes = modelConfig.maxNumMeshes + modelConfig.maxNumLineMeshes +
                        modelConfig.maxNumTransparentMeshes +
                        modelConfig.maxNumTransparentLineMeshes +
@@ -58,9 +61,10 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
       u<HostManagedStorageUBOBuffer<MeshInstance::UBO>>(allocator, totalMeshes);
   }
 
-  terrainMgr = u<TerrainManager>(*this);
-  skyMgr = u<SkyManager>(*this);
-  oceanMgr = u<OceanManager>(*this);
+  dynamicMeshManager_ = u<DynamicMeshManager>(*this);
+  terrainManager_ = u<TerrainManager>(*this);
+  skyManager_ = u<SkyManager>(*this);
+  oceanManager_ = u<OceanManager>(*this);
 
   {
     basicSetDef.textures.descriptorCount() = uint32_t(modelConfig.maxNumTexture);
@@ -72,7 +76,7 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
     basicLayout.basic(basicSetDef);
     basicLayout.deferred(deferredSetDef);
     basicLayout.ibl(iblSetDef);
-    basicLayout.sky(skyMgr->skySetDef);
+    basicLayout.sky(skyManager_->skySetDef);
     basicLayout.init(vkDevice);
 
     Sets.descriptorPool =
@@ -81,7 +85,7 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
     Sets.basicSet = basicSetDef.createSet(*Sets.descriptorPool);
     Sets.deferredSet = deferredSetDef.createSet(*Sets.descriptorPool);
     Sets.iblSet = iblSetDef.createSet(*Sets.descriptorPool);
-    skyMgr->createDescriptorSets(*Sets.descriptorPool);
+    skyManager_->createDescriptorSets(*Sets.descriptorPool);
   }
 
   {
@@ -149,7 +153,7 @@ Allocation<MeshInstance::UBO> BasicSceneManager::allocateMeshInstanceUBO() {
 }
 auto BasicSceneManager::allocateDrawCMD(
   const Ptr<Primitive> &primitive, const Ptr<Material> &material)
-  -> Allocation<vk::DrawIndexedIndirectCommand> {
+  -> std::vector<Allocation<vk::DrawIndexedIndirectCommand>> {
   return Buffer.drawQueue->allocate(primitive, material);
 }
 
@@ -166,20 +170,34 @@ void BasicSceneManager::resize(vk::Extent2D extent) {
 }
 
 PerspectiveCamera &BasicSceneManager::camera() { return Scene.camera; }
-SkyManager &BasicSceneManager::skyManager() { return *skyMgr; }
-TerrainManager &BasicSceneManager::terrainManager() { return *terrainMgr; }
-OceanManager &BasicSceneManager::oceanManager() { return *oceanMgr; }
+DynamicMeshManager &BasicSceneManager::dynamicMeshManager() {
+  return *dynamicMeshManager_;
+}
+SkyManager &BasicSceneManager::skyManager() { return *skyManager_; }
+TerrainManager &BasicSceneManager::terrainManager() { return *terrainManager_; }
+OceanManager &BasicSceneManager::oceanManager() { return *oceanManager_; }
 
 Ptr<Primitive> BasicSceneManager::newPrimitive(
-  const std::vector<Vertex::Position> &positions,
-  const std::vector<Vertex::Normal> &normals, const std::vector<Vertex::UV> &uvs,
-  const std::vector<uint32_t> &indices, const AABB &aabb,
-  const PrimitiveTopology &topology) {
-
-  auto positionRange = Buffer.position->add(device_, positions.data(), positions.size());
-  auto normalRange = Buffer.normal->add(device_, normals.data(), normals.size());
-  auto uvRange = Buffer.uv->add(device_, uvs.data(), uvs.size());
-  auto indexRange = Buffer.indices->add(device_, indices.data(), indices.size());
+  const Vertex::Position *positions, uint32_t numPositions, const Vertex::Normal *normals,
+  uint32_t numNormals, const Vertex::UV *uvs, uint32_t numUVs, const uint32_t *indices,
+  uint32_t numIndices, const AABB &aabb, const PrimitiveTopology &topology,
+  const DynamicType &type) {
+  Range positionRange, normalRange, uvRange, indexRange;
+  switch(type) {
+    case DynamicType::Static:
+      positionRange = Buffer.position->add(device_, positions, numPositions);
+      normalRange = Buffer.normal->add(device_, normals, numNormals);
+      uvRange = Buffer.uv->add(device_, uvs, numUVs);
+      indexRange = Buffer.indices->add(device_, indices, numIndices);
+      break;
+    case DynamicType::Dynamic:
+      positionRange =
+        Buffer.position->add(device_, positions, numPositions, config.numFrame);
+      normalRange = Buffer.normal->add(device_, normals, numNormals, config.numFrame);
+      uvRange = Buffer.uv->add(device_, uvs, numUVs, config.numFrame);
+      indexRange = Buffer.indices->add(device_, indices, numIndices, config.numFrame);
+      break;
+  }
 
   return Ptr<Primitive>::add(
     Scene.primitives,
@@ -194,23 +212,28 @@ auto BasicSceneManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
   -> std::vector<Ptr<Primitive>> {
   std::vector<Ptr<Primitive>> primitives;
   for(auto &primitive: primitiveBuilder.primitives()) {
-    auto positionRange = Buffer.position->add(
-      device_, primitiveBuilder.positions().data() + primitive.position().offset,
-      primitive.position().size);
-    auto normalRange = Buffer.normal->add(
-      device_, primitiveBuilder.normals().data() + primitive.normal().offset,
-      primitive.normal().size);
-    auto uvRange = Buffer.uv->add(
-      device_, primitiveBuilder.uvs().data() + primitive.uv().offset,
-      primitive.uv().size);
-    auto indexRange = Buffer.indices->add(
-      device_, primitiveBuilder.indices().data() + primitive.index().offset,
-      primitive.index().size);
-    primitives.push_back(Ptr<Primitive>::add(
-      Scene.primitives, {*this, indexRange, positionRange, normalRange, uvRange,
-                         primitive.aabb(), primitive.topology()}));
+    primitives.push_back(newPrimitive(
+      primitiveBuilder.positions().data() + primitive.position().offset,
+      primitive.position().size,
+      primitiveBuilder.normals().data() + primitive.normal().offset,
+      primitive.normal().size, primitiveBuilder.uvs().data() + primitive.uv().offset,
+      primitive.uv().size, primitiveBuilder.indices().data() + primitive.index().offset,
+      primitive.index().size, primitive.aabb(), primitive.topology(), primitive.type()));
   }
   return primitives;
+}
+
+Ptr<Primitive> BasicSceneManager::newDynamicPrimitive(
+  uint32_t numVertices, uint32_t numIndices, const AABB &aabb,
+  const PrimitiveTopology &topology) {
+
+  auto positionRange = Buffer.position->add(device_, numVertices * config.numFrame);
+  auto normalRange = Buffer.normal->add(device_, numVertices * config.numFrame);
+  auto uvRange = Buffer.uv->add(device_, numVertices * config.numFrame);
+  auto indexRange = Buffer.indices->add(device_, numIndices * config.numFrame);
+  return Ptr<Primitive>::add(
+    Scene.primitives, {*this, indexRange, positionRange, normalRange, uvRange, aabb,
+                       topology, DynamicType::Static});
 }
 
 Ptr<Texture2D> BasicSceneManager::newTexture(
@@ -344,10 +367,10 @@ void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     cb.bindDescriptorSets(
       bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.ibl.set(),
       Sets.iblSet, nullptr);
-  if(skyMgr->enabled())
+  if(skyManager_->enabled())
     cb.bindDescriptorSets(
       bindpoint::eGraphics, *basicLayout.pipelineLayout, basicLayout.sky.set(),
-      skyMgr->skySet, nullptr);
+      skyManager_->skySet, nullptr);
 
   cb.bindVertexBuffers(0, Buffer.position->buffer(), zero);
   cb.bindVertexBuffers(1, Buffer.normal->buffer(), zero);
@@ -364,6 +387,12 @@ void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueTriangles), stride);
   debugMarker_.end(cb);
 
+  debugMarker_.begin(cb, "Subpass dynamic opaque tri");
+  cb.drawIndexedIndirect(
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueTriangles, imageIndex), 0,
+    Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueTriangles, imageIndex), stride);
+  debugMarker_.end(cb);
+
   debugMarker_.begin(cb, "Subpass terrain");
   if(RenderPass.wireframe)
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.terrainTessWireframe);
@@ -375,6 +404,12 @@ void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     Buffer.drawQueue->count(DrawQueue::DrawType::Terrain), stride);
   debugMarker_.end(cb);
 
+  debugMarker_.begin(cb, "Subpass dynamic terrain");
+  cb.drawIndexedIndirect(
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::Terrain, imageIndex), 0,
+    Buffer.drawQueue->count(DrawQueue::DrawType::Terrain, imageIndex), stride);
+  debugMarker_.end(cb);
+
   debugMarker_.begin(cb, "Subpass opaque line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.opaqueLine);
   cb.drawIndexedIndirect(
@@ -382,11 +417,17 @@ void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueLines), stride);
   debugMarker_.end(cb);
 
+  debugMarker_.begin(cb, "Subpass dynamic opaque line");
+  cb.drawIndexedIndirect(
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::OpaqueLines, imageIndex), 0,
+    Buffer.drawQueue->count(DrawQueue::DrawType::OpaqueLines, imageIndex), stride);
+  debugMarker_.end(cb);
+
   debugMarker_.begin(cb, "Subpass deferred shading");
   cb.nextSubpass(vk::SubpassContents::eInline);
   if(Image.useEnvironmentMap)
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredIBL);
-  else if(skyMgr->enabled())
+  else if(skyManager_->enabled())
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferredSky);
   else
     cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.deferred);
@@ -401,11 +442,24 @@ void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
     Buffer.drawQueue->count(DrawQueue::DrawType::TransparentTriangles), stride);
   debugMarker_.end(cb);
 
+  debugMarker_.begin(cb, "Subpass dynamic translucent tri");
+  cb.drawIndexedIndirect(
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentTriangles, imageIndex), 0,
+    Buffer.drawQueue->count(DrawQueue::DrawType::TransparentTriangles, imageIndex),
+    stride);
+  debugMarker_.end(cb);
+
   debugMarker_.begin(cb, "Subpass translucent line");
   cb.bindPipeline(bindpoint::eGraphics, *renderer.Pipelines.transLine);
   cb.drawIndexedIndirect(
     Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentLines), 0,
     Buffer.drawQueue->count(DrawQueue::DrawType::TransparentLines), stride);
+
+  debugMarker_.begin(cb, "Subpass dynamic translucent line");
+  cb.drawIndexedIndirect(
+    Buffer.drawQueue->buffer(DrawQueue::DrawType::TransparentLines, imageIndex), 0,
+    Buffer.drawQueue->count(DrawQueue::DrawType::TransparentLines, imageIndex), stride);
+  debugMarker_.end(cb);
 
   debugMarker_.begin(cb, "Subpass resolve");
   cb.nextSubpass(vk::SubpassContents::eInline);

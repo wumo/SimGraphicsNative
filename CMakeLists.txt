@@ -88,6 +88,8 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/model/transform.cpp
   src/sim/graphics/renderer/basic/model/vertex.cpp
   
+  src/sim/graphics/renderer/basic/model/dynamic/dynamic_mesh_manager.cpp
+  
   src/sim/graphics/renderer/basic/terrain/terrain_manager.cpp
   
   src/sim/graphics/renderer/basic/loader/gltf_loader.cpp
@@ -127,6 +129,7 @@ set(basicRendererHeaders
   src/sim/graphics/renderer/basic/perspective_camera.h
   src/sim/graphics/renderer/basic/builder/primitive_builder.h
   src/sim/graphics/renderer/basic/ptr.h
+  
   src/sim/graphics/renderer/basic/model/aabb.h
   src/sim/graphics/renderer/basic/model/basic_model.h
   src/sim/graphics/renderer/basic/model/model_buffer.h
@@ -140,6 +143,8 @@ set(basicRendererHeaders
   src/sim/graphics/renderer/basic/model/vertex.h
   src/sim/graphics/renderer/basic/model/node.h
   src/sim/graphics/renderer/basic/model/model_instance.h
+  src/sim/graphics/renderer/basic/model/dynamic/dynamic_mesh_manager.h
+  
   src/sim/graphics/renderer/basic/terrain/terrain_manager.h
   src/sim/graphics/renderer/basic/loader/gltf_loader.h
   src/sim/graphics/renderer/basic/util/panning_camera.h

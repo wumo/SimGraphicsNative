@@ -18,8 +18,8 @@ class BasicSceneManager;
 
 class Primitive {
   friend class MeshInstance;
+  friend class BasicSceneManager;
 
-public:
   //ref in shaders
   struct alignas(sizeof(glm::vec4)) UBO {
     Range _index, _position, _normal, _uv, _joint0, _weight0;
@@ -52,6 +52,7 @@ public:
   float tesselationLevel() const;
   void setTesselationLevel(float tesselationLevel);
   PrimitiveTopology topology() const;
+  DynamicType type() const;
 
 private:
   BasicSceneManager &mm;

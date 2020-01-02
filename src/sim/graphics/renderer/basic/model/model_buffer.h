@@ -27,6 +27,24 @@ public:
     _count += num;
     return {offset, num};
   }
+
+  Range add(Device &device, uint32_t num) {
+    errorIf(_count + num >= this->maxNum, "exceeding max number of data");
+    auto offset = _count;
+    _count += num;
+    return {offset, num};
+  }
+
+  Range add(Device &device, const T *ubo, uint32_t num, uint32_t numFrame) {
+    errorIf(_count + num * numFrame >= this->maxNum, "exceeding max number of data");
+    auto offset = _count;
+    for(int i = 0; i < numFrame; ++i) {
+      data->upload(device, ubo, num * sizeof(T), _count * sizeof(T));
+      _count += num;
+    }
+    return {offset, num * numFrame};
+  }
+
   uint32_t count() const { return _count; }
   vk::Buffer buffer() { return data->buffer(); }
 
@@ -50,6 +68,24 @@ public:
     _count += num;
     return {offset, num};
   }
+
+  Range add(Device &device, uint32_t num) {
+    errorIf(_count + num >= this->maxNum, "exceeding max number of data");
+    auto offset = _count;
+    _count += num;
+    return {offset, num};
+  }
+
+  Range add(Device &device, const uint32_t *ubo, uint32_t num, uint32_t numFrame) {
+    errorIf(_count + num * numFrame >= this->maxNum, "exceeding max number of data");
+    auto offset = _count;
+    for(int i = 0; i < numFrame; ++i) {
+      data->upload(device, ubo, num * sizeof(uint32_t), _count * sizeof(uint32_t));
+      _count += num;
+    }
+    return {offset, num * numFrame};
+  }
+
   uint32_t count() const { return _count; }
   vk::Buffer buffer() { return data->buffer(); }
 

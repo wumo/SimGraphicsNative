@@ -15,7 +15,8 @@ const std::vector<Vertex::UV> &PrimitiveBuilder::uvs() const { return _uvs; }
 const std::vector<uint32_t> &PrimitiveBuilder::indices() const { return _indices; }
 const std::vector<Primitive> &PrimitiveBuilder::primitives() const { return _primitives; }
 
-PrimitiveBuilder &PrimitiveBuilder::newPrimitive(PrimitiveTopology topology) {
+PrimitiveBuilder &PrimitiveBuilder::newPrimitive(
+  PrimitiveTopology topology, DynamicType type) {
   Range indexRange;
   Range positionRange, normalRange, uvRange;
   if(_primitives.empty()) {
@@ -34,7 +35,7 @@ PrimitiveBuilder &PrimitiveBuilder::newPrimitive(PrimitiveTopology topology) {
     uvRange = {last.uv().endOffset(), uint32_t(_uvs.size()) - last.uv().endOffset()};
   }
   _primitives.emplace_back(
-    mm, indexRange, positionRange, normalRange, uvRange, aabb, topology);
+    mm, indexRange, positionRange, normalRange, uvRange, aabb, topology, type);
   aabb = {};
   return *this;
 }

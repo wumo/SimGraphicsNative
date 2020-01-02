@@ -209,7 +209,9 @@ Ptr<Mesh> GLTFLoader::loadPrimitive(
 
   auto aabb = loadVertices(model, primitive);
   loadIndices(model, primitive);
-  auto _primitive = mm.newPrimitive(positions, normals, uvs, indices, aabb);
+  auto _primitive = mm.newPrimitive(
+    positions.data(), positions.size(), normals.data(), normals.size(), uvs.data(),
+    uvs.size(), indices.data(), indices.size(), aabb);
 
   auto material = primitive.material < 0 ? mm.material(0) :
                                            materials.at(primitive.material);

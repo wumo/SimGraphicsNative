@@ -20,6 +20,7 @@
 #include "terrain/terrain_manager.h"
 #include "sim/graphics/renderer/basic/sky/sky_manager.h"
 #include "ocean/ocean_manager.h"
+#include "model/dynamic/dynamic_mesh_manager.h"
 
 namespace sim::graphics::renderer::basic {
 
@@ -34,13 +35,18 @@ public:
   explicit BasicSceneManager(BasicRenderer &renderer);
 
   Ptr<Primitive> newPrimitive(
-    const std::vector<Vertex::Position> &positions,
-    const std::vector<Vertex::Normal> &normals, const std::vector<Vertex::UV> &uvs,
-    const std::vector<uint32_t> &indices, const AABB &aabb,
-    const PrimitiveTopology &topology = PrimitiveTopology::Triangles);
+    const Vertex::Position *positions, uint32_t numPositions,
+    const Vertex::Normal *normals, uint32_t numNormals, const Vertex::UV *uvs,
+    uint32_t numUVs, const uint32_t *indices, uint32_t numIndices, const AABB &aabb,
+    const PrimitiveTopology &topology = PrimitiveTopology::Triangles,
+    const DynamicType &type = DynamicType::Static);
 
   Ptr<Primitive> newPrimitive(const PrimitiveBuilder &primitiveBuilder);
   std::vector<Ptr<Primitive>> newPrimitives(const PrimitiveBuilder &primitiveBuilder);
+
+  Ptr<Primitive> newDynamicPrimitive(
+    uint32_t numVertices, uint32_t numIndices, const AABB &aabb,
+    const PrimitiveTopology &topology = PrimitiveTopology::Triangles);
 
   Ptr<Texture2D> newTexture(
     const std::string &imagePath, const SamplerDef &samplerDef = {},
@@ -81,6 +87,7 @@ public:
 
   PerspectiveCamera &camera();
 
+  DynamicMeshManager &dynamicMeshManager();
   SkyManager &skyManager();
   TerrainManager &terrainManager();
   OceanManager &oceanManager();
@@ -109,8 +116,8 @@ private:
   Allocation<glm::mat4> allocateMatrixUBO();
   Allocation<Primitive::UBO> allocatePrimitiveUBO();
   Allocation<MeshInstance::UBO> allocateMeshInstanceUBO();
-  Allocation<vk::DrawIndexedIndirectCommand> allocateDrawCMD(
-    const Ptr<Primitive> &primitive, const Ptr<Material> &material);
+  auto allocateDrawCMD(const Ptr<Primitive> &primitive, const Ptr<Material> &material)
+    -> std::vector<Allocation<vk::DrawIndexedIndirectCommand>>;
 
 private:
   void resize(vk::Extent2D extent);
@@ -187,9 +194,10 @@ private:
     std::vector<vk::UniquePipeline> computePipes;
   } RenderPass;
 
-  uPtr<TerrainManager> terrainMgr;
-  uPtr<SkyManager> skyMgr;
-  uPtr<OceanManager> oceanMgr;
+  uPtr<DynamicMeshManager> dynamicMeshManager_;
+  uPtr<TerrainManager> terrainManager_;
+  uPtr<SkyManager> skyManager_;
+  uPtr<OceanManager> oceanManager_;
 
   struct BasicSetDef: DescriptorSetDef {
     __uniform__(

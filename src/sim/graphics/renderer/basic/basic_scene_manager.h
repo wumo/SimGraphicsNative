@@ -104,6 +104,8 @@ public:
   void debugInfo();
   DebugMarker &debugMarker();
   Device &device();
+  const Config &config() const;
+  const ModelConfig &modelConfig() const;
 
 private:
   friend class Material;
@@ -139,8 +141,8 @@ private:
   DebugMarker &debugMarker_;
   Device &device_;
   vk::Device vkDevice;
-  const Config &config;
-  const ModelConfig &modelConfig;
+  const Config &config_;
+  const ModelConfig &modelConfig_;
 
   struct {
     uPtr<DeviceVertexBuffer<Vertex::Position>> position;

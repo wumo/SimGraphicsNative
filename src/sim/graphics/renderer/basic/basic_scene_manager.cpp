@@ -14,49 +14,49 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
   : renderer{renderer},
     debugMarker_{renderer.debugMarker},
     device_{*renderer.device},
-    config{renderer.config},
-    modelConfig{renderer.modelConfig},
+    config_{renderer.config},
+    modelConfig_{renderer.modelConfig},
     vkDevice{renderer.vkDevice} {
   {
     auto &allocator = renderer.device->allocator();
     Buffer.position =
-      u<DeviceVertexBuffer<Vertex::Position>>(allocator, modelConfig.maxNumVertex);
+      u<DeviceVertexBuffer<Vertex::Position>>(allocator, modelConfig_.maxNumVertex);
     Buffer.normal =
-      u<DeviceVertexBuffer<Vertex::Normal>>(allocator, modelConfig.maxNumVertex);
-    Buffer.uv = u<DeviceVertexBuffer<Vertex::UV>>(allocator, modelConfig.maxNumVertex);
+      u<DeviceVertexBuffer<Vertex::Normal>>(allocator, modelConfig_.maxNumVertex);
+    Buffer.uv = u<DeviceVertexBuffer<Vertex::UV>>(allocator, modelConfig_.maxNumVertex);
     Buffer.joint0 =
-      u<DeviceVertexBuffer<Vertex::Joint>>(allocator, modelConfig.maxNumVertex);
+      u<DeviceVertexBuffer<Vertex::Joint>>(allocator, modelConfig_.maxNumVertex);
     Buffer.weight0 =
-      u<DeviceVertexBuffer<Vertex::Weight>>(allocator, modelConfig.maxNumVertex);
-    Buffer.indices = u<DeviceIndexBuffer>(allocator, modelConfig.maxNumVertex);
+      u<DeviceVertexBuffer<Vertex::Weight>>(allocator, modelConfig_.maxNumVertex);
+    Buffer.indices = u<DeviceIndexBuffer>(allocator, modelConfig_.maxNumVertex);
 
     Buffer.transforms =
-      u<HostManagedStorageUBOBuffer<glm::mat4>>(allocator, modelConfig.maxNumTransform);
+      u<HostManagedStorageUBOBuffer<glm::mat4>>(allocator, modelConfig_.maxNumTransform);
 
     Buffer.materials = u<HostManagedStorageUBOBuffer<Material::UBO>>(
-      allocator, modelConfig.maxNumMaterial);
+      allocator, modelConfig_.maxNumMaterial);
 
     Buffer.primitives = u<HostManagedStorageUBOBuffer<Primitive::UBO>>(
-      allocator, modelConfig.maxNumPrimitives);
+      allocator, modelConfig_.maxNumPrimitives);
 
     Buffer.camera = u<HostUBOBuffer<PerspectiveCamera::UBO>>(allocator);
 
     Buffer.lighting = u<HostUBOBuffer<Lighting::UBO>>(allocator);
-    Scene.lighting.setNumLights(modelConfig.maxNumLights);
+    Scene.lighting.setNumLights(modelConfig_.maxNumLights);
     Buffer.lights =
-      u<HostManagedStorageUBOBuffer<Light::UBO>>(allocator, modelConfig.maxNumLights);
+      u<HostManagedStorageUBOBuffer<Light::UBO>>(allocator, modelConfig_.maxNumLights);
 
     Buffer.drawQueue = u<DrawQueue>(
-      allocator, modelConfig.maxNumMeshes, modelConfig.maxNumLineMeshes,
-      modelConfig.maxNumTransparentMeshes, modelConfig.maxNumTransparentLineMeshes,
-      modelConfig.maxNumTerranMeshes, config.numFrame, modelConfig.maxNumDynamicMeshes,
-      modelConfig.maxNumDynamicLineMeshes, modelConfig.maxNumDynamicTransparentMeshes,
-      modelConfig.maxNumDynamicTransparentLineMeshes,
-      modelConfig.maxNumDynamicTerranMeshes);
-    auto totalMeshes = modelConfig.maxNumMeshes + modelConfig.maxNumLineMeshes +
-                       modelConfig.maxNumTransparentMeshes +
-                       modelConfig.maxNumTransparentLineMeshes +
-                       modelConfig.maxNumTerranMeshes;
+      allocator, modelConfig_.maxNumMeshes, modelConfig_.maxNumLineMeshes,
+      modelConfig_.maxNumTransparentMeshes, modelConfig_.maxNumTransparentLineMeshes,
+      modelConfig_.maxNumTerranMeshes, config_.numFrame, modelConfig_.maxNumDynamicMeshes,
+      modelConfig_.maxNumDynamicLineMeshes, modelConfig_.maxNumDynamicTransparentMeshes,
+      modelConfig_.maxNumDynamicTransparentLineMeshes,
+      modelConfig_.maxNumDynamicTerranMeshes);
+    auto totalMeshes = modelConfig_.maxNumMeshes + modelConfig_.maxNumLineMeshes +
+                       modelConfig_.maxNumTransparentMeshes +
+                       modelConfig_.maxNumTransparentLineMeshes +
+                       modelConfig_.maxNumTerranMeshes;
     Buffer.meshInstances =
       u<HostManagedStorageUBOBuffer<MeshInstance::UBO>>(allocator, totalMeshes);
   }
@@ -67,7 +67,7 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
   oceanManager_ = u<OceanManager>(*this);
 
   {
-    basicSetDef.textures.descriptorCount() = uint32_t(modelConfig.maxNumTexture);
+    basicSetDef.textures.descriptorCount() = uint32_t(modelConfig_.maxNumTexture);
     basicSetDef.init(vkDevice);
 
     deferredSetDef.init(vkDevice);
@@ -111,8 +111,8 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
       Image.textures.back().setSampler(SamplerMaker().createUnique(vkDevice));
 
       // bind unused textures to empty texture;
-      Image.sampler2Ds.reserve(modelConfig.maxNumTexture);
-      for(auto i = 0u; i < modelConfig.maxNumTexture; ++i)
+      Image.sampler2Ds.reserve(modelConfig_.maxNumTexture);
+      for(auto i = 0u; i < modelConfig_.maxNumTexture; ++i)
         Image.sampler2Ds.emplace_back(
           Image.textures.back().sampler(), Image.textures.back().imageView(),
           vk::ImageLayout ::eShaderReadOnlyOptimal);
@@ -205,10 +205,10 @@ Ptr<Primitive> BasicSceneManager::newPrimitive(
       break;
     case DynamicType::Dynamic:
       positionRange =
-        Buffer.position->add(device_, positions, numPositions, config.numFrame);
-      normalRange = Buffer.normal->add(device_, normals, numNormals, config.numFrame);
-      uvRange = Buffer.uv->add(device_, uvs, numUVs, config.numFrame);
-      indexRange = Buffer.indices->add(device_, indices, numIndices, config.numFrame);
+        Buffer.position->add(device_, positions, numPositions, config_.numFrame);
+      normalRange = Buffer.normal->add(device_, normals, numNormals, config_.numFrame);
+      uvRange = Buffer.uv->add(device_, uvs, numUVs, config_.numFrame);
+      indexRange = Buffer.indices->add(device_, indices, numIndices, config_.numFrame);
       break;
   }
 
@@ -240,10 +240,10 @@ Ptr<Primitive> BasicSceneManager::newDynamicPrimitive(
   uint32_t numVertices, uint32_t numIndices, const AABB &aabb,
   const PrimitiveTopology &topology) {
 
-  auto positionRange = Buffer.position->add(device_, numVertices * config.numFrame);
-  auto normalRange = Buffer.normal->add(device_, numVertices * config.numFrame);
-  auto uvRange = Buffer.uv->add(device_, numVertices * config.numFrame);
-  auto indexRange = Buffer.indices->add(device_, numIndices * config.numFrame);
+  auto positionRange = Buffer.position->add(device_, numVertices * config_.numFrame);
+  auto normalRange = Buffer.normal->add(device_, numVertices * config_.numFrame);
+  auto uvRange = Buffer.uv->add(device_, numVertices * config_.numFrame);
+  auto indexRange = Buffer.indices->add(device_, numIndices * config_.numFrame);
   return Ptr<Primitive>::add(
     Scene.primitives, {*this, indexRange, positionRange, normalRange, uvRange, aabb,
                        topology, DynamicType::Dynamic});
@@ -342,7 +342,7 @@ void BasicSceneManager::computeMesh(
     primitive->type() != DynamicType::Dynamic,
     "compute mesh should be dynamic primitive!");
   errorIf(
-    computeMeshes.size() + 1 > modelConfig.maxNumDynamicMeshes,
+    computeMeshes.size() + 1 > modelConfig_.maxNumDynamicMeshes,
     "exceeding max number of dynamic meshes!");
 
   ComputePipelineMaker pipelineMaker{vkDevice};
@@ -400,9 +400,9 @@ void BasicSceneManager::computeMesh(
     auto &positionRange = comp.primitive->position();
     auto &normalRange = comp.primitive->normal();
     computeMeshConstant = {
-      positionRange.offset + imageIndex * positionRange.size / config.numFrame,
-      normalRange.offset + imageIndex * normalRange.size / config.numFrame,
-      positionRange.size / config.numFrame, time};
+      positionRange.offset + imageIndex * positionRange.size / config_.numFrame,
+      normalRange.offset + imageIndex * normalRange.size / config_.numFrame,
+      positionRange.size / config_.numFrame, time};
 
     debugMarker_.begin(cb, toString("compute mesh: ", i, " frame:", imageIndex).c_str());
     cb.bindPipeline(bindpoint::eCompute, *comp.pipeline);
@@ -528,17 +528,17 @@ void BasicSceneManager::drawScene(vk::CommandBuffer cb, uint32_t imageIndex) {
 }
 
 void BasicSceneManager::debugInfo() {
-  auto totalMeshes = modelConfig.maxNumMeshes + modelConfig.maxNumLineMeshes +
-                     modelConfig.maxNumTransparentMeshes +
-                     modelConfig.maxNumTransparentLineMeshes;
+  auto totalMeshes = modelConfig_.maxNumMeshes + modelConfig_.maxNumLineMeshes +
+                     modelConfig_.maxNumTransparentMeshes +
+                     modelConfig_.maxNumTransparentLineMeshes;
   sim::debugLog(
-    "vertices: ", Buffer.position->count(), "/", modelConfig.maxNumVertex,
-    ", indices: ", Buffer.indices->count(), "/", modelConfig.maxNumIndex,
-    ", transforms: ", Buffer.transforms->count(), "/", modelConfig.maxNumTransform,
+    "vertices: ", Buffer.position->count(), "/", modelConfig_.maxNumVertex,
+    ", indices: ", Buffer.indices->count(), "/", modelConfig_.maxNumIndex,
+    ", transforms: ", Buffer.transforms->count(), "/", modelConfig_.maxNumTransform,
     ", meshes: ", Scene.meshes.size(), "/", totalMeshes,
-    ", materials: ", Buffer.materials->count(), "/", modelConfig.maxNumMaterial,
-    ", textures: ", Image.textures.size(), "/", modelConfig.maxNumTexture,
-    ", lights: ", Scene.lights.size(), "/", modelConfig.maxNumLights);
+    ", materials: ", Buffer.materials->count(), "/", modelConfig_.maxNumMaterial,
+    ", textures: ", Image.textures.size(), "/", modelConfig_.maxNumTexture,
+    ", lights: ", Scene.lights.size(), "/", modelConfig_.maxNumLights);
 }
 
 DebugMarker &BasicSceneManager::debugMarker() { return debugMarker_; }
@@ -546,7 +546,7 @@ Device &BasicSceneManager::device() { return device_; }
 
 void BasicSceneManager::ensureTextures(uint32_t toAdd) const {
   errorIf(
-    Image.textures.size() + toAdd > modelConfig.maxNumTexture,
+    Image.textures.size() + toAdd > modelConfig_.maxNumTexture,
     "exceeding maximum number of textures!");
 }
 Ptr<Primitive> BasicSceneManager::primitive(uint32_t index) {
@@ -568,4 +568,6 @@ Ptr<ModelInstance> BasicSceneManager::modelInstance(uint32_t index) {
 
 void BasicSceneManager::setWireframe(bool wireframe) { RenderPass.wireframe = wireframe; }
 bool BasicSceneManager::wireframe() { return RenderPass.wireframe; }
+const Config &BasicSceneManager::config() const { return config_; }
+const ModelConfig &BasicSceneManager::modelConfig() const { return modelConfig_; }
 }

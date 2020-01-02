@@ -22,7 +22,7 @@ auto main(int argc, const char **argv) -> int {
 
   auto &camera = mm.camera();
   camera.setLocation({40.f, 40.f, 40.f});
-  //  mm.addLight(LightType ::Directional, {-1, -1, -1});
+  mm.addLight(LightType ::Directional, {1, -1, 1});
 
   auto primitives =
     mm.newPrimitives(PrimitiveBuilder(mm).axis({}, 20.f, 0.1f, 0.5f, 50).newPrimitive());
@@ -61,9 +61,6 @@ auto main(int argc, const char **argv) -> int {
   auto instance = mm.newModelInstance(model, t);
 
   auto &tm = mm.terrainManager();
-  //  tm.loadSingle(
-  //    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
-  //    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 64.f);
   tm.loadPatches(
     "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
     {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 40.f);
@@ -83,6 +80,9 @@ auto main(int argc, const char **argv) -> int {
   auto sea = mm.newModelInstance(seaModel);
 
   mm.computeMesh("assets/private/shaders/sine-wave.comp.spv", seaPrimitive, 11, 11);
+
+  auto &ocean = mm.oceanManager();
+//  ocean.newField(const AABB &aabb, uint32_t numVertexX, uint32_t numVertexY);
 
   auto &sky = mm.skyManager();
   sky.enable();

@@ -1,5 +1,4 @@
 #include <sim/graphics/renderer/basic/basic_scene_manager.h>
-#include "terrain_manager.h"
 namespace sim::graphics::renderer::basic {
 using namespace glm;
 TerrainManager::TerrainManager(sim::graphics::renderer::basic::BasicSceneManager &mm)

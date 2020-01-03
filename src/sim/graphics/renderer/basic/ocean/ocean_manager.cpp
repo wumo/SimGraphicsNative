@@ -52,8 +52,9 @@ Ptr<ModelInstance> OceanManager::newField(float patchSize, int N) {
                       .grid(N - 1, N - 1)
                       .newPrimitive(PrimitiveTopology::Triangles, DynamicType::Dynamic));
 
-  auto seaMat = mm.newMaterial(MaterialType::eBRDF);
-  seaMat->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});
+  auto seaMat = mm.newMaterial(MaterialType::eTranslucent);
+  //  seaMat->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.9f});
+  seaMat->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.8f});
   seaMat->setPbrFactor({0, 0.5, 0.3, 0});
   auto seaMesh = mm.newMesh(seaPrimitive, seaMat);
   auto seaNode = mm.newNode();
@@ -80,22 +81,28 @@ Ptr<ModelInstance> OceanManager::newField(float patchSize, int N) {
 }
 
 void OceanManager::updateWind(glm::vec2 windDirection, float windSpeed) {
-  windDx = windDirection.x;
-  windDy = windDirection.y;
-  this->windSpeed = windSpeed;
+  windDx_ = windDirection.x;
+  windDy_ = windDirection.y;
+  windSpeed_ = windSpeed;
+
+  initOceanData();
+}
+
+void OceanManager::updateWaveAmplitude(float waveAmplitude) {
+  waveAmplitude_ = waveAmplitude;
 
   initOceanData();
 }
 
 float OceanManager::phillipsSpectrum(glm::vec2 k) {
-  float L = windSpeed * windSpeed / g;
+  float L = windSpeed_ * windSpeed_ / g;
   float damping = 0.001f;
   float l = L * damping;
   float sqrK = dot(k, k);
-  glm::vec2 windDir{windDx, windDy};
+  glm::vec2 windDir{windDx_, windDy_};
   float cosK = dot(k, windDir);
   float phillips =
-    waveAmplitude * glm::exp(-1 / (sqrK * L * L)) / (sqrK * sqrK * sqrK) * (cosK * cosK);
+    waveAmplitude_ * glm::exp(-1 / (sqrK * L * L)) / (sqrK * sqrK * sqrK) * (cosK * cosK);
   if(cosK < 0) phillips *= 0.07f;
   return phillips * glm::exp(-sqrK * l * l);
 }

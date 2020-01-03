@@ -12,6 +12,7 @@ using namespace sim::graphics::material;
 
 auto main(int argc, const char **argv) -> int {
   Config config{};
+  config.numFrame = 3;
   config.sampleCount = 4;
   config.vsync = false;
   FeatureConfig featureConfig{FeatureConfig::Value::Tesselation};
@@ -22,7 +23,7 @@ auto main(int argc, const char **argv) -> int {
 
   auto &camera = mm.camera();
   camera.setLocation({40.f, 40.f, 40.f});
-//  mm.addLight(LightType ::Directional, {1, -1, 1});
+  mm.addLight(LightType ::Directional, {1, -1, 1});
 
   auto primitives =
     mm.newPrimitives(PrimitiveBuilder(mm).axis({}, 20.f, 0.1f, 0.5f, 50).newPrimitive());
@@ -61,36 +62,23 @@ auto main(int argc, const char **argv) -> int {
   auto instance = mm.newModelInstance(model, t);
 
   auto &tm = mm.terrainManager();
+  auto seaLevelRatio = 538.33f / 2625;
   tm.loadPatches(
     "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
-    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 40.f);
-
-  auto seaPrimitive =
-    mm.newPrimitive(PrimitiveBuilder(mm)
-                      .grid(10, 10, {0, 10, 0})
-                      .newPrimitive(PrimitiveTopology::Triangles, DynamicType::Dynamic));
-
-  auto seaMat = mm.newMaterial(MaterialType::eBRDF);
-  seaMat->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});
-  seaMat->setPbrFactor({0, 0.5, 0.3, 0});
-  auto seaMesh = mm.newMesh(seaPrimitive, seaMat);
-  auto seaNode = mm.newNode();
-  Node::addMesh(seaNode, seaMesh);
-  auto seaModel = mm.newModel({seaNode});
-  auto sea = mm.newModelInstance(seaModel);
-
-  mm.computeMesh("assets/private/shaders/sine-wave.comp.spv", seaPrimitive, 11, 11);
+    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 40.f);
 
   auto &ocean = mm.oceanManager();
-  auto field = ocean.newField();
+  auto field = ocean.newField(125.f, 128);
+  ocean.updateWind({0.8f, 0.6f}, 60.f);
+  ocean.updateWaveAmplitude(10.f);
 
-  field->setTransform({vec3{0, 10, 0}});
+  field->setTransform({vec3{0, 20 * seaLevelRatio, 0}, {100 / 128.f, 1, 100 / 128.f}});
 
   auto &sky = mm.skyManager();
   sky.enable();
   auto kPi = glm::pi<float>();
-  float sun_zenith_angle_radians_{0};
-  float sun_azimuth_angle_radians_{kPi / 2};
+  float sun_zenith_angle_radians_{kPi / 4};
+  float sun_azimuth_angle_radians_{kPi * 3 / 4};
   sky.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
   mm.debugInfo();

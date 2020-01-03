@@ -16,6 +16,7 @@ public:
   Ptr<ModelInstance> newField(float patchSize = 500.f, int N = 128);
 
   void updateWind(glm::vec2 windDirection, float windSpeed);
+  void updateWaveAmplitude(float waveAmplitude);
 
 private:
   void createDescriptorSets(vk::DescriptorPool descriptorPool);
@@ -47,7 +48,7 @@ private:
     int32_t dataOffset{};
     float patchSize{500.f};
     float choppyScale{-1.f};
-    float timeScale{5.f};
+    float timeScale{1.f};
     float time{0.f};
   } oceanConstant;
 
@@ -78,8 +79,8 @@ private:
   int32_t N{128};
   uint32_t lx{128}, ly{1};
 
-  float windDx{0.8f}, windDy{0.6f};
-  float windSpeed{60.f};
-  float waveAmplitude{10.f};
+  float windDx_{0.8f}, windDy_{0.6f};
+  float windSpeed_{60.f};
+  float waveAmplitude_{10.f};
 };
 }

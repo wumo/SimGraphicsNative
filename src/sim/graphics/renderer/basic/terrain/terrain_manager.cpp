@@ -1,4 +1,6 @@
 #include <sim/graphics/renderer/basic/basic_scene_manager.h>
+#include "terrain_manager.h"
+
 namespace sim::graphics::renderer::basic {
 using namespace glm;
 TerrainManager::TerrainManager(sim::graphics::renderer::basic::BasicSceneManager &mm)
@@ -8,7 +10,7 @@ void TerrainManager::loadPatches(
   const std::string &terrainFolder, const std::string &heightMapPrefix,
   const std::string &normalMapPrefix, const std::string &albedoMapPrefix,
   uint32_t patchNumX, uint32_t patchNumY, const AABB &aabb, uint32_t numVertexX,
-  uint32_t numVertexY, float seaLevelRatio, float tesselationLevel) {
+  uint32_t numVertexY, float tesselationLevel) {
 
   auto range = aabb.range();
 
@@ -26,7 +28,7 @@ void TerrainManager::loadPatches(
         terrainFolder, heightMap, normalMap, albedoMap,
         {_min + vec3{(patchNumY - 1 - ny) * unitX, _min.y, -nx * unitZ},
          _min + vec3{(patchNumY - ny) * unitX, _max.y, -(nx + 1) * unitZ}},
-        numVertexX, numVertexY, seaLevelRatio, tesselationLevel);
+        numVertexX, numVertexY, tesselationLevel);
     }
   }
 }
@@ -34,23 +36,8 @@ void TerrainManager::loadPatches(
 void TerrainManager::loadSingle(
   const std::string &terrainFolder, const std::string &heightMap,
   const std::string &normalMap, const std::string &albedoMap, const AABB &aabb,
-  uint32_t numVertexX, uint32_t numVertexY, float seaLevelRatio, float tesselationWidth) {
+  uint32_t numVertexX, uint32_t numVertexY, float tesselationWidth) {
   vec3 center = aabb.center();
-  float seaLevelHeight = clamp(seaLevelRatio, 0.f, 1.f) * aabb.range().y;
-  auto horizonPrimitive =
-    mm.newPrimitive(PrimitiveBuilder(mm)
-                      .rectangle(
-                        {center.x, aabb.min.y + seaLevelHeight, center.z},
-                        {0, 0, aabb.halfRange().z}, {aabb.halfRange().x, 0, 0})
-                      .newPrimitive());
-
-  auto horizonMaterial = mm.newMaterial(MaterialType::eTranslucent);
-  horizonMaterial->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});
-  auto horizonMesh = mm.newMesh(horizonPrimitive, horizonMaterial);
-  auto horizonNode = mm.newNode();
-  Node::addMesh(horizonNode, horizonMesh);
-  auto horizonModel = mm.newModel({horizonNode});
-  auto horizon = mm.newModelInstance(horizonModel);
 
   auto gridPrimitive = mm.newPrimitive(
     PrimitiveBuilder(mm)
@@ -75,5 +62,24 @@ void TerrainManager::loadSingle(
   gridMaterial->setColorTex(albedoTex);
   gridMaterial->setNormalTex(normalTex);
   gridMaterial->setHeightTex(heightTex);
+}
+
+void TerrainManager::staticSeaLevel(const AABB &aabb, float seaLevelRatio) {
+  vec3 center = aabb.center();
+  float seaLevelHeight = clamp(seaLevelRatio, 0.f, 1.f) * aabb.range().y;
+  auto horizonPrimitive =
+    mm.newPrimitive(PrimitiveBuilder(mm)
+                      .rectangle(
+                        {center.x, aabb.min.y + seaLevelHeight, center.z},
+                        {0, 0, aabb.halfRange().z}, {aabb.halfRange().x, 0, 0})
+                      .newPrimitive());
+
+  auto horizonMaterial = mm.newMaterial(MaterialType::eTranslucent);
+  horizonMaterial->setColorFactor({39 / 255.f, 93 / 255.f, 121 / 255.f, 0.5f});
+  auto horizonMesh = mm.newMesh(horizonPrimitive, horizonMaterial);
+  auto horizonNode = mm.newNode();
+  Node::addMesh(horizonNode, horizonMesh);
+  auto horizonModel = mm.newModel({horizonNode});
+  auto horizon = mm.newModelInstance(horizonModel);
 }
 }

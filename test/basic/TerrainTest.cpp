@@ -79,12 +79,12 @@ auto main(int argc, const char **argv) -> int {
   auto kPi = glm::pi<float>();
   float seasonAngle = kPi / 4;
   float sunAngle = 0;
-  float angularVelocity = kPi / 100;
+  float angularVelocity = kPi / 10;
   auto sunDirection = [&](float dt) {
     sunAngle += angularVelocity * dt;
-    if(sunAngle > kPi) sunAngle = 0;
+    if(sunAngle > 2 * kPi) sunAngle = 0;
 
-    return -vec3{cos(sunAngle), sin(sunAngle) * sin(seasonAngle),
+    return -vec3{cos(sunAngle), abs(sin(sunAngle) * sin(seasonAngle)),
                  -sin(sunAngle) * cos(seasonAngle)};
   };
   sky.setSunDirection(sunDirection(0));

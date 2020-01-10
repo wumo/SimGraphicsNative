@@ -47,9 +47,9 @@ void main() {
   if(material.type == MaterialType_None) normal = vec3(0);
   else if(material.type == MaterialType_Terrain) {
     normal = inNormal;
-    vec3 pos_dx = dFdx(inWorldPos);
-    vec3 pos_dy = dFdy(inWorldPos);
-    normal = normalize(cross(pos_dx, -pos_dy));
+    // vec3 pos_dx = dFdx(inWorldPos);
+    // vec3 pos_dy = dFdy(inWorldPos);
+    // normal = normalize(cross(pos_dx, -pos_dy));
   } else
     normal =
       material.normalTex >= 0 ?

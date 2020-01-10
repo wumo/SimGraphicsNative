@@ -3,13 +3,6 @@
 
 namespace sim::graphics::renderer::basic {
 
-namespace {
-constexpr double kPi = 3.1415926;
-constexpr double kSunAngularRadius = 0.00935 / 2.0;
-constexpr double kSunSolidAngle = kPi * kSunAngularRadius * kSunAngularRadius;
-constexpr double kLengthUnitInMeters = 1000.0;
-}
-
 SkyManager::SkyManager(BasicSceneManager &mm)
   : mm{mm}, device{mm.device()}, debugMarker(mm.debugMarker()) {
   skySetDef.init(device.getDevice());
@@ -19,16 +12,17 @@ void SkyManager::createDescriptorSets(vk::DescriptorPool descriptorPool) {
   skySet = skySetDef.createSet(descriptorPool);
 }
 
-void SkyManager::enable() {
-  if(_model.get() == nullptr) {
-    updateModel();
-    skySetDef.atmosphere(_model->atmosphereUBO().buffer());
-    skySetDef.sun(_model->sunUBO().buffer());
-    skySetDef.transmittance(_model->transmittanceTexture());
-    skySetDef.scattering(_model->scatteringTexture());
-    skySetDef.irradiance(_model->irradianceTexture());
-    skySetDef.update(skySet);
-  }
+void SkyManager::init(double kLengthUnitInMeters, double kSunAngularRadius) {
+  kSunAngularRadius_ = kSunAngularRadius;
+  kSunSolidAngle_ = glm::pi<double>() * kSunAngularRadius_ * kSunAngularRadius_;
+  kLengthUnitInMeters_ = kLengthUnitInMeters;
+  updateModel();
+  skySetDef.atmosphere(_model->atmosphereUBO().buffer());
+  skySetDef.sun(_model->sunUBO().buffer());
+  skySetDef.transmittance(_model->transmittanceTexture());
+  skySetDef.scattering(_model->scatteringTexture());
+  skySetDef.irradiance(_model->irradianceTexture());
+  skySetDef.update(skySet);
 }
 
 bool SkyManager::enabled() const { return _model.get() != nullptr; }
@@ -70,7 +64,6 @@ void SkyManager::updateModel() {
   constexpr double kMaxOzoneNumberDensity = 300.0 * kDobsonUnit / 15000.0;
   // Wavelength independent solar irradiance "spectrum" (not physically
   // realistic, but was used in the original implementation).
-  constexpr double kBottomRadius = 6360000.0;
   constexpr double kTopRadius = 6420000.0;
   constexpr double kRayleigh = 1.24062e-6;
   constexpr double kRayleighScaleHeight = 8000.0;
@@ -80,7 +73,7 @@ void SkyManager::updateModel() {
   constexpr double kMieSingleScatteringAlbedo = 0.9;
   constexpr double kMiePhaseFunctionG = 0.8;
   constexpr double kGroundAlbedo = 0.1;
-  const double max_sun_zenith_angle = 120.0 / 180.0 * kPi;
+  const double max_sun_zenith_angle = 120.0 / 180.0 * glm::pi<double>();
 
   DensityProfileLayer rayleigh_layer(0.0, 1.0, -1.0 / kRayleighScaleHeight, 0.0, 0.0);
   DensityProfileLayer mie_layer(0.0, 1.0, -1.0 / kMieScaleHeight, 0.0, 0.0);
@@ -115,10 +108,11 @@ void SkyManager::updateModel() {
   std::vector<DensityProfileLayer> rayleigh_density{rayleigh_layer};
   std::vector<DensityProfileLayer> mie_density{mie_layer};
   _model = u<SkyModel>(
-    device, debugMarker, wavelengths, solar_irradiance, kSunAngularRadius, kBottomRadius,
-    kTopRadius, rayleigh_density, rayleigh_scattering, mie_density, mie_scattering,
-    mie_extinction, kMiePhaseFunctionG, ozone_density, absorption_extinction,
-    ground_albedo, max_sun_zenith_angle, kLengthUnitInMeters, 15, 1e-5);
+    device, debugMarker, wavelengths, solar_irradiance, kSunAngularRadius_,
+    kBottomRadius_, kTopRadius, rayleigh_density, rayleigh_scattering, mie_density,
+    mie_scattering, mie_extinction, kMiePhaseFunctionG, ozone_density,
+    absorption_extinction, ground_albedo, max_sun_zenith_angle, kLengthUnitInMeters_, 15,
+    1e-5);
 
   auto tStart = std::chrono::high_resolution_clock::now();
 
@@ -129,8 +123,13 @@ void SkyManager::updateModel() {
   debugLog("Generating sky map took ", tDiff, " ms");
 }
 
-void SkyManager::setSunPosition(
-  float sun_zenith_angle_radians, float sun_azimuth_angle_radians) {
-  _model->updateSunPosition(sun_zenith_angle_radians, sun_azimuth_angle_radians);
+void SkyManager::setSunDirection(glm::vec3 sunDirection) {
+  _model->updateSunPosition(glm::normalize(-sunDirection));
 }
+void SkyManager::setEarthCenter(glm::vec3 earthCenter) {
+  _model->updateEarthCenter(earthCenter);
+}
+double SkyManager::earthRadius() const { return kBottomRadius_; }
+double SkyManager::sunAngularRadius() const { return kSunAngularRadius_; }
+double SkyManager::lengthUnitInMeters() const { return kLengthUnitInMeters_; }
 }

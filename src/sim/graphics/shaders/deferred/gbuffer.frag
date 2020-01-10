@@ -45,9 +45,12 @@ void main() {
 
   vec3 normal;
   if(material.type == MaterialType_None) normal = vec3(0);
-  else if(material.type == MaterialType_Terrain)
+  else if(material.type == MaterialType_Terrain) {
     normal = inNormal;
-  else
+    vec3 pos_dx = dFdx(inWorldPos);
+    vec3 pos_dy = dFdy(inWorldPos);
+    normal = normalize(cross(pos_dx, -pos_dy));
+  } else
     normal =
       material.normalTex >= 0 ?
         computeNormal(LINEARtoSRGB(texture(textures[material.normalTex], inUV0).rgb)) :

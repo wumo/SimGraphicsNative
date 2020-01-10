@@ -42,6 +42,8 @@ auto main(int argc, const char **argv) -> int {
       .boxLine(center, {halfRange.x, 0.f, 0.f}, {0.f, halfRange.y, 0.f}, halfRange.z)
       .newPrimitive(PrimitiveTopology::Lines)
       .axis({}, 2.f, 0.01f, 0.05f, 50)
+      .newPrimitive()
+      .sphere({1, 0, 0}, 0.5)
       .newPrimitive());
 
   sim::println(primitives[0]->aabb());
@@ -75,14 +77,36 @@ auto main(int argc, const char **argv) -> int {
   auto axisModel = mm.newModel({axisNode});
   auto axis = mm.newModelInstance(axisModel);
 
+  auto shpereMaterial = mm.newMaterial(MaterialType::eBRDF);
+  shpereMaterial->setColorFactor({0.f, 0.f, 1.f, 1.f});
+  shpereMaterial->setPbrFactor({0.f, 0.5f, 0.8f, 1.f});
+  auto shpereMesh = mm.newMesh(primitives[5], shpereMaterial);
+  auto shpereNode = mm.newNode();
+  Node::addMesh(shpereNode, shpereMesh);
+  auto shpereModel = mm.newModel({shpereNode});
+  auto shpere = mm.newModelInstance(shpereModel);
+
   //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   //  mm.useEnvironmentMap(envCube);
 
-  mm.useSky();
+  auto &sky = mm.skyManager();
+  sky.init(1);
+
   auto kPi = glm::pi<float>();
-  float sun_zenith_angle_radians_{-kPi / 2};
-  float sun_azimuth_angle_radians_{kPi / 2};
-  mm.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+
+  float seasonAngle = kPi / 4;
+  float sunAngle = 0;
+  float angularVelocity = kPi / 10;
+  auto sunDirection = [&](float dt) {
+    sunAngle += angularVelocity * dt;
+    if(sunAngle > kPi) sunAngle = 0;
+
+    return -vec3{cos(sunAngle), sin(sunAngle) * sin(seasonAngle),
+                 -sin(sunAngle) * cos(seasonAngle)};
+  };
+
+  sky.setSunDirection(sunDirection(1));
+  sky.setEarthCenter({0, -sky.earthRadius() / sky.lengthUnitInMeters() -100, 0});
 
   mm.debugInfo();
 
@@ -95,7 +119,8 @@ auto main(int argc, const char **argv) -> int {
     mFPSMeter.update(elapsedDuration);
     panningCamera.updateCamera(app.input);
     auto frameStats = sim::toString(
-      " ", int32_t(mFPSMeter.FPS()), " FPS (", mFPSMeter.FrameTime(), " ms)");
+      " ", int32_t(mFPSMeter.FPS()), " FPS (", mFPSMeter.FrameTime(),
+      " ms), camera pos:", glm::to_string(camera.location()));
     auto fullTitle = "Test  " + frameStats;
     app.setWindowTitle(fullTitle);
     if(rotate) {
@@ -113,10 +138,12 @@ auto main(int argc, const char **argv) -> int {
       pressed = false;
     }
 
-    sun_zenith_angle_radians_ += 1.f / 100 * elapsedDuration;
-    if(sun_zenith_angle_radians_ > kPi / 2) sun_zenith_angle_radians_ = -kPi / 2;
-    sun_azimuth_angle_radians_ += 1.f / 100 * elapsedDuration;
-    sun_azimuth_angle_radians_ = std::fmod(sun_azimuth_angle_radians_, 2 * kPi);
-    mm.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+    //    sky.setSunDirection(sunDirection(elapsedDuration));
+
+    //    sun_zenith_angle_radians_ += 1.f / 100 * elapsedDuration;
+    //    if(sun_zenith_angle_radians_ > kPi / 2) sun_zenith_angle_radians_ = -kPi / 2;
+    //    sun_azimuth_angle_radians_ += 1.f / 100 * elapsedDuration;
+    //    sun_azimuth_angle_radians_ = std::fmod(sun_azimuth_angle_radians_, 2 * kPi);
+    //    sky.setSunDirection(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
   });
 }

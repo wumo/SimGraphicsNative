@@ -85,11 +85,11 @@ auto main(int argc, const char **argv) -> int {
   mm.computeMesh("assets/private/shaders/sine-wave.comp.spv", seaPrimitive, 11, 11);
 
   auto &sky = mm.skyManager();
-  sky.enable();
+  sky.init();
   auto kPi = glm::pi<float>();
   float sun_zenith_angle_radians_{0};
   float sun_azimuth_angle_radians_{kPi / 2};
-  sky.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+  sky.setSunDirection(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
   mm.debugInfo();
 

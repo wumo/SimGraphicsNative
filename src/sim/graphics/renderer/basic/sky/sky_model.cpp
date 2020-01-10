@@ -98,6 +98,36 @@ void ConvertSpectrumToLinearSrgb(
        (XYZ_TO_SRGB[6] * x + XYZ_TO_SRGB[7] * y + XYZ_TO_SRGB[8] * z) * dlambda;
 }
 
+glm::mat4 luminanceFromRadiance(double dlambda, const glm::vec3 &lambdas) {
+  auto coeff = [dlambda](double lambda, int component) {
+    double x = CieColorMatchingFunctionTableValue(lambda, 1);
+    double y = CieColorMatchingFunctionTableValue(lambda, 2);
+    double z = CieColorMatchingFunctionTableValue(lambda, 3);
+    return static_cast<float>(
+      (XYZ_TO_SRGB[component * 3] * x + XYZ_TO_SRGB[component * 3 + 1] * y +
+       XYZ_TO_SRGB[component * 3 + 2] * z) *
+      dlambda);
+  };
+  glm::mat4 luminance_from_radiance{coeff(lambdas[0], 0),
+                                    coeff(lambdas[1], 0),
+                                    coeff(lambdas[2], 0),
+                                    0.0,
+                                    coeff(lambdas[0], 1),
+                                    coeff(lambdas[1], 1),
+                                    coeff(lambdas[2], 1),
+                                    0.0,
+                                    coeff(lambdas[0], 2),
+                                    coeff(lambdas[1], 2),
+                                    coeff(lambdas[2], 2),
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    0.0};
+  luminance_from_radiance = glm::transpose(luminance_from_radiance);
+  return luminance_from_radiance;
+}
+
 using imageUsage = vk::ImageUsageFlagBits;
 using imageCreate = vk::ImageCreateFlagBits;
 using address = vk::SamplerAddressMode;
@@ -201,7 +231,9 @@ SkyModel::SkyModel(
   float exposure_scale)
   : device{device},
     debugMarker{debugMarker},
-    num_precomputed_wavelengths_(num_precomputed_wavelengths) {
+    num_precomputed_wavelengths_(num_precomputed_wavelengths),
+    bottom_radius{bottom_radius},
+    length_unit_in_meters{length_unit_in_meters} {
   double sky_k_r, sky_k_g, sky_k_b;
   sky_k_r = sky_k_g = sky_k_b = MAX_LUMINOUS_EFFICACY;
 
@@ -288,10 +320,10 @@ SkyModel::SkyModel(
   auto ptr = _sunUBO->ptr<SunUniform>();
 
   ptr->white_point = {white_point_r, white_point_g, white_point_b, 0};
-  ptr->earth_center = {0, -bottom_radius / length_unit_in_meters, 0, 0};
+  updateEarthCenter({0, -bottom_radius / length_unit_in_meters, 0});
   ptr->sun_size = {glm::tan(sun_angular_radius), glm::cos(sun_angular_radius)};
   ptr->exposure = exposure_ * exposure_scale;
-  updateSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+  updateSunPosition(sunDirection_);
 
   transmittance_texture_ = newTexture2D(
     device, TRANSMITTANCE_TEXTURE_WIDTH, TRANSMITTANCE_TEXTURE_HEIGHT,
@@ -419,35 +451,10 @@ void SkyModel::compute(uint32_t num_scattering_orders) {
     glm::vec3 lambdas{_kLambdaMin + (3 * i + 0.5) * dlambda,
                       _kLambdaMin + (3 * i + 1.5) * dlambda,
                       _kLambdaMin + (3 * i + 2.5) * dlambda};
-    auto coeff = [dlambda](double lambda, int component) {
-      double x = CieColorMatchingFunctionTableValue(lambda, 1);
-      double y = CieColorMatchingFunctionTableValue(lambda, 2);
-      double z = CieColorMatchingFunctionTableValue(lambda, 3);
-      return static_cast<float>(
-        (XYZ_TO_SRGB[component * 3] * x + XYZ_TO_SRGB[component * 3 + 1] * y +
-         XYZ_TO_SRGB[component * 3 + 2] * z) *
-        dlambda);
-    };
-    glm::mat4 luminance_from_radiance{coeff(lambdas[0], 0),
-                                      coeff(lambdas[1], 0),
-                                      coeff(lambdas[2], 0),
-                                      0.0,
-                                      coeff(lambdas[0], 1),
-                                      coeff(lambdas[1], 1),
-                                      coeff(lambdas[2], 1),
-                                      0.0,
-                                      coeff(lambdas[0], 2),
-                                      coeff(lambdas[1], 2),
-                                      coeff(lambdas[2], 2),
-                                      0.0,
-                                      0.0,
-                                      0.0,
-                                      0.0,
-                                      0.0};
-    luminance_from_radiance = glm::transpose(luminance_from_radiance);
+
+    glm::mat4 luminance_from_radiance = luminanceFromRadiance(dlambda, lambdas);
     device.computeImmediately([&](vk::CommandBuffer cb) {
-      precompute(
-        cb, lambdas, luminance_from_radiance, i > 0 /* blend */, num_scattering_orders);
+      precompute(cb, lambdas, luminance_from_radiance, i > 0, num_scattering_orders);
     });
   }
 
@@ -479,15 +486,12 @@ void SkyModel::precompute(
 HostUniformBuffer &SkyModel::atmosphereUBO() { return *_atmosphereUBO; }
 HostUniformBuffer &SkyModel::sunUBO() { return *_sunUBO; }
 
-void SkyModel::updateSunPosition(
-  float sun_zenith_angle_radians, float sun_azimuth_angle_radians) {
-  sun_azimuth_angle_radians_ = sun_azimuth_angle_radians;
-  sun_zenith_angle_radians_ = sun_zenith_angle_radians;
-
-  _sunUBO->ptr<SunUniform>()->sun_direction = {
-    glm::cos(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_),
-    glm::cos(sun_zenith_angle_radians_),
-    glm::sin(sun_azimuth_angle_radians_) * glm::sin(sun_zenith_angle_radians_), 0};
+void SkyModel::updateSunPosition(glm::vec3 sunDirection) {
+  _sunUBO->ptr<SunUniform>()->sun_direction = {sunDirection, 0};
+}
+void SkyModel::updateEarthCenter(glm::vec3 earthCenter) {
+  _sunUBO->ptr<SunUniform>()->earth_center = {earthCenter,
+                                              bottom_radius / length_unit_in_meters};
 }
 Texture &SkyModel::transmittanceTexture() { return *transmittance_texture_; }
 Texture &SkyModel::scatteringTexture() { return *scattering_texture_; }

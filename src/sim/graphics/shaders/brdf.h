@@ -196,13 +196,18 @@ vec3 getIBLContribution(MaterialInfo materialInfo, vec3 n, vec3 v) {
 #endif
 
 #ifdef USE_SKY
-vec3 getSkyContribution(MaterialInfo materialInfo, vec3 postion, vec3 n, vec3 v) {
+vec3 getSkyContribution(
+  MaterialInfo materialInfo, vec3 postion, vec3 n, vec3 cam_location) {
   vec3 sky_irradiance;
   vec3 sun_irradiance =
-    GetSunAndSkyIrradiance(postion - earth_center, n, sun_direction, sky_irradiance);
+    GetSunAndSkyIrradiance(postion - earth_center.xyz, n, sun_direction.xyz, sky_irradiance);
   vec3 radiance =
     materialInfo.diffuseColor * (1.0 / PI) * (sun_irradiance + sky_irradiance);
-  return vec3(1.0) - exp(-radiance / white_point * exposure);
+  // vec3 transmittance;
+  // vec3 in_scatter = GetSkyRadianceToPoint(
+  //   cam_location - earth_center.xyz, postion - earth_center.xyz, 0, sun_direction.xyz, transmittance);
+  // radiance = radiance * transmittance + in_scatter;
+  return vec3(1.0) - exp(-radiance / white_point.rgb * exposure);
 }
 #endif
 
@@ -246,7 +251,8 @@ vec3 shadeBRDF(
 #endif
 
 #ifdef USE_SKY
-  if(useIBL > 0.5) color += getSkyContribution(materialInfo, postion, normal, view);
+  if(useIBL > 0.5)
+    color += getSkyContribution(materialInfo, postion, normal, cam_location);
 #endif
 
   color = color * ao;

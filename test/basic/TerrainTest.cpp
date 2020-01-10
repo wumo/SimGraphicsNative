@@ -74,11 +74,21 @@ auto main(int argc, const char **argv) -> int {
   //  mm.useEnvironmentMap(envCube);
 
   auto &sky = mm.skyManager();
-  sky.enable();
+  sky.init(1);
+
   auto kPi = glm::pi<float>();
-  float sun_zenith_angle_radians_{0};
-  float sun_azimuth_angle_radians_{kPi / 2};
-  sky.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+  float seasonAngle = kPi / 4;
+  float sunAngle = 0;
+  float angularVelocity = kPi / 100;
+  auto sunDirection = [&](float dt) {
+    sunAngle += angularVelocity * dt;
+    if(sunAngle > kPi) sunAngle = 0;
+
+    return -vec3{cos(sunAngle), sin(sunAngle) * sin(seasonAngle),
+                 -sin(sunAngle) * cos(seasonAngle)};
+  };
+  sky.setSunDirection(sunDirection(0));
+  sky.setEarthCenter({0, -sky.earthRadius() / sky.lengthUnitInMeters() - 100, 0});
 
   mm.debugInfo();
 
@@ -90,7 +100,8 @@ auto main(int argc, const char **argv) -> int {
     mFPSMeter.update(elapsedDuration);
     panningCamera.updateCamera(app.input);
     auto frameStats = sim::toString(
-      " ", int32_t(mFPSMeter.FPS()), " FPS (", mFPSMeter.FrameTime(), " ms)");
+      " ", int32_t(mFPSMeter.FPS()), " FPS (", mFPSMeter.FrameTime(),
+      " ms), camera pos:", glm::to_string(camera.location()));
     auto fullTitle = "Test  " + frameStats;
     app.setWindowTitle(fullTitle);
     if(app.input.keyPressed[KeyW]) pressed = true;
@@ -98,5 +109,6 @@ auto main(int argc, const char **argv) -> int {
       mm.setWireframe(!mm.wireframe());
       pressed = false;
     }
+    sky.setSunDirection(sunDirection(elapsedDuration));
   });
 }

@@ -96,7 +96,8 @@ public:
 
   HostUniformBuffer &atmosphereUBO();
   HostUniformBuffer &sunUBO();
-  void updateSunPosition(float sun_zenith_angle_radians, float sun_azimuth_angle_radians);
+  void updateSunPosition(glm::vec3 sunDirection);
+  void updateEarthCenter(glm::vec3 earthCenter);
   Texture &transmittanceTexture();
   Texture &scatteringTexture();
   Texture &irradianceTexture();
@@ -125,7 +126,6 @@ private:
   void createMultipleScatteringSets();
   void recordMultipleScatteringCMD(
     vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance);
-
   void compute(uint32_t num_scattering_orders);
   void precompute(
     vk::CommandBuffer cb, const glm::vec3 &lambdas,
@@ -150,8 +150,9 @@ private:
   uPtr<HostUniformBuffer> _sunUBO;
 
   bool do_white_balance_{true};
-  float sun_zenith_angle_radians_{1.3};
-  float sun_azimuth_angle_radians_{2.9};
+  double bottom_radius;
+  float length_unit_in_meters;
+  glm::vec3 sunDirection_{0, 1, 0};
   float exposure_{10.0};
 
   std::function<AtmosphereParameters(const glm::vec3 &)> calcAtmosphereParams;

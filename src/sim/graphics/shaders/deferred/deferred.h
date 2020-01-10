@@ -44,9 +44,9 @@ layout(set = 2, binding = 2) uniform sampler2D samplerBRDFLUT;
 #ifdef USE_SKY
   #define SKY_SET 3
 layout(set = SKY_SET, binding = 1) uniform SunUniform {
-  vec3 white_point;
-  vec3 earth_center;
-  vec3 sun_direction;
+  vec4 white_point;
+  vec4 earth_center;
+  vec4 sun_direction;
   vec2 sun_size;
   float exposure;
 };
@@ -99,16 +99,46 @@ void main() {
 #ifdef USE_SKY
     vec3 view_direction = view_ray(cam);
 
+    vec3 p = cam.eye.xyz - earth_center.xyz;
+    float p_dot_v = dot(p, view_direction);
+    float p_dot_p = dot(p, p);
+    float ray_earth_center_squared_distance = p_dot_p - p_dot_v * p_dot_v;
+    float distance_to_intersection =
+      -p_dot_v -
+      sqrt(earth_center.w * earth_center.w - ray_earth_center_squared_distance);
+
+    float ground_alpha = 0.0;
+    vec3 ground_radiance = vec3(0.0);
+    if(distance_to_intersection > 0.0) {
+      vec3 point = cam.eye.xyz + view_direction * distance_to_intersection;
+      vec3 normal = normalize(point - earth_center.xyz);
+
+      // Compute the radiance reflected by the ground.
+      vec3 sky_irradiance;
+      vec3 sun_irradiance = GetSunAndSkyIrradiance(
+        point - earth_center.xyz, normal, sun_direction.xyz, sky_irradiance);
+      const vec3 kGroundAlbedo = vec3(0.0, 0.0, 0.04);
+      ground_radiance = kGroundAlbedo * (1.0 / PI) * (sun_irradiance + sky_irradiance);
+
+      vec3 transmittance;
+      vec3 in_scatter = GetSkyRadianceToPoint(
+        p, point - earth_center.xyz, 0, sun_direction.xyz, transmittance);
+      ground_radiance = ground_radiance * transmittance + in_scatter;
+      ground_alpha = 1.0;
+    }
+
     vec3 transmittance;
-    vec3 radiance = GetSkyRadiance(
-      cam.eye.xyz - earth_center, view_direction, 0, sun_direction, transmittance);
+    vec3 radiance =
+      GetSkyRadiance(p, view_direction, 0, sun_direction.xyz, transmittance);
+
+    radiance = mix(radiance, ground_radiance, ground_alpha);
 
     // If the view ray intersects the Sun, add the Sun radiance.
-    if(dot(view_direction, sun_direction) > sun_size.y) {
+    if(dot(view_direction, sun_direction.xyz) > sun_size.y) {
       radiance = radiance + transmittance * GetSolarRadiance();
     }
 
-    color = LINEARtoSRGB(vec3(1.0) - exp(-radiance / white_point * exposure));
+    color = LINEARtoSRGB(vec3(1.0) - exp(-radiance / white_point.rgb * exposure));
 #endif
     outColor.rgb = color;
   } else {
@@ -124,9 +154,9 @@ void main() {
 
     // outColor.rgb = vec3(perceptualRoughness);
     // outColor.rgb = vec3(metallic);
-//     outColor.rgb = normal;
+    //     outColor.rgb = normal;
     // outColor.rgb = LINEARtoSRGB(baseColor.rgb);
-//     outColor.rgb = vec3(ao);
+    //     outColor.rgb = vec3(ao);
     // outColor.rgb = LINEARtoSRGB(emissive);
     // outColor.rgb = vec3(f0);
     //  outColor = toneMap(vec4(color, 1.0), lighting.exposure);

@@ -75,11 +75,11 @@ auto main(int argc, const char **argv) -> int {
   field->setTransform({vec3{0, 20 * seaLevelRatio, 0}, {100 / 128.f, 1, 100 / 128.f}});
 
   auto &sky = mm.skyManager();
-  sky.enable();
+  sky.init();
   auto kPi = glm::pi<float>();
   float sun_zenith_angle_radians_{kPi / 4};
   float sun_azimuth_angle_radians_{kPi * 3 / 4};
-  sky.setSunPosition(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+  sky.setSunDirection(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
 
   mm.debugInfo();
 

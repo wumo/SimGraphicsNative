@@ -75,11 +75,21 @@ auto main(int argc, const char **argv) -> int {
   field->setTransform({vec3{0, 20 * seaLevelRatio, 0}, {100 / 128.f, 1, 100 / 128.f}});
 
   auto &sky = mm.skyManager();
-  sky.init();
+  sky.init(1);
+
   auto kPi = glm::pi<float>();
-  float sun_zenith_angle_radians_{kPi / 4};
-  float sun_azimuth_angle_radians_{kPi * 3 / 4};
-  sky.setSunDirection(sun_zenith_angle_radians_, sun_azimuth_angle_radians_);
+  float seasonAngle = kPi / 4;
+  float sunAngle = 0;
+  float angularVelocity = kPi / 20;
+  auto sunDirection = [&](float dt) {
+    sunAngle += angularVelocity * dt;
+    if(sunAngle > kPi) sunAngle = 0;
+
+    return -vec3{cos(sunAngle), sin(sunAngle) * sin(seasonAngle),
+                 -sin(sunAngle) * cos(seasonAngle)};
+  };
+  sky.setSunDirection(sunDirection(0));
+  sky.setEarthCenter({0, -sky.earthRadius() / sky.lengthUnitInMeters() - 100, 0});
 
   mm.debugInfo();
 
@@ -99,5 +109,6 @@ auto main(int argc, const char **argv) -> int {
       mm.setWireframe(!mm.wireframe());
       pressed = false;
     }
+    sky.setSunDirection(sunDirection(elapsedDuration));
   });
 }

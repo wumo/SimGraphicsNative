@@ -51,7 +51,7 @@ TextureImageCube TextureImageCube::loadFromFile(
 TextureImageCube::TextureImageCube(
   Device &device, uint32_t width, uint32_t height, uint32_t mipLevels, vk::Format format)
   : Texture{device.allocator(), info(width, height, mipLevels, format)} {
-  createImageView(
+  setImageView(
     device.getDevice(), vk::ImageViewType::eCube, vk::ImageAspectFlagBits::eColor);
 }
 

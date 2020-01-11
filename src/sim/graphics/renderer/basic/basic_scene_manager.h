@@ -20,6 +20,7 @@
 #include "terrain/terrain_manager.h"
 #include "sim/graphics/renderer/basic/sky/sky_manager.h"
 #include "ocean/ocean_manager.h"
+#include "shadow/shadow_manager.h"
 #include "model/dynamic/dynamic_mesh_manager.h"
 
 namespace sim::graphics::renderer::basic {
@@ -94,6 +95,8 @@ public:
   TerrainManager &terrainManager();
   OceanManager &oceanManager();
 
+  ShadowManager &shadowManager();
+  
   Ptr<Primitive> primitive(uint32_t index);
   Ptr<Material> material(uint32_t index);
   Ptr<Model> model(uint32_t index);
@@ -107,8 +110,6 @@ public:
   const Config &config() const;
   const ModelConfig &modelConfig() const;
 
-  
-  
 private:
   friend class Material;
   friend class Node;
@@ -146,6 +147,12 @@ private:
   vk::Device vkDevice;
   const Config &config_;
   const ModelConfig &modelConfig_;
+
+  uPtr<DynamicMeshManager> dynamicMeshManager_;
+  uPtr<TerrainManager> terrainManager_;
+  uPtr<SkyManager> skyManager_;
+  uPtr<OceanManager> oceanManager_;
+  uPtr<ShadowManager> shadowManager_;
 
   struct {
     uPtr<DeviceVertexBuffer<Vertex::Position>> position;
@@ -203,11 +210,6 @@ private:
   struct {
     bool wireframe{false};
   } RenderPass;
-
-  uPtr<DynamicMeshManager> dynamicMeshManager_;
-  uPtr<TerrainManager> terrainManager_;
-  uPtr<SkyManager> skyManager_;
-  uPtr<OceanManager> oceanManager_;
 
   struct BasicSetDef: DescriptorSetDef {
     __uniform__(

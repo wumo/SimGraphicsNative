@@ -7,9 +7,9 @@ SamplerMaker::SamplerMaker() {
   state.info.magFilter = vk::Filter::eLinear;
   state.info.minFilter = vk::Filter::eLinear;
 
-  state.info.addressModeU = vk::SamplerAddressMode::eRepeat;
-  state.info.addressModeV = vk::SamplerAddressMode::eRepeat;
-  state.info.addressModeW = vk::SamplerAddressMode::eRepeat;
+  state.info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+  state.info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+  state.info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
 
   state.info.mipmapMode = vk::SamplerMipmapMode::eLinear;
   state.info.mipLodBias = 0.0f;

@@ -65,6 +65,7 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
   terrainManager_ = u<TerrainManager>(*this);
   skyManager_ = u<SkyManager>(*this);
   oceanManager_ = u<OceanManager>(*this);
+  shadowManager_ = u<ShadowManager>(*this);
 
   {
     basicSetDef.textures.descriptorCount() = uint32_t(modelConfig_.maxNumTexture);
@@ -191,6 +192,7 @@ DynamicMeshManager &BasicSceneManager::dynamicMeshManager() {
 SkyManager &BasicSceneManager::skyManager() { return *skyManager_; }
 TerrainManager &BasicSceneManager::terrainManager() { return *terrainManager_; }
 OceanManager &BasicSceneManager::oceanManager() { return *oceanManager_; }
+ShadowManager &BasicSceneManager::shadowManager() { return *shadowManager_; }
 
 Ptr<Primitive> BasicSceneManager::newPrimitive(
   const Vertex::Position *positions, uint32_t numPositions, const Vertex::Normal *normals,

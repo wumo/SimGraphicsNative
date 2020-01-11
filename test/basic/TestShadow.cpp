@@ -14,15 +14,18 @@ auto main(int argc, const char **argv) -> int {
   Config config{};
   config.sampleCount = 4;
   config.vsync = false;
+  config.width = 1400;
+  config.height = 1000;
+
   BasicRenderer app{config, {}, {}, {true, false}};
 
   auto &mm = app.sceneManager();
 
   auto &camera = mm.camera();
-  camera.setLocation({2.f, 2.f, 2.f});
+  camera.setLocation({3.f, 3.f, 3.f});
   //  mm.addLight(LightType ::Directional, {-1, -1, -1});
 
-  std::string name = "DamagedHelmet";
+  std::string name = "Buggy";
   auto path = "assets/private/gltf/" + name + "/glTF/" + name + ".gltf";
   //  std::string path = "assets/private/models/DamagedHelmet.glb";
   //  std::string path="assets/private/models/s9_mini_drone/scene.gltf";
@@ -37,13 +40,17 @@ auto main(int argc, const char **argv) -> int {
   //  t.translation = -center;
   auto instance = mm.newModelInstance(model, t);
 
+  auto height = range.y * scale / 2;
+
   auto primitives = mm.newPrimitives(
     PrimitiveBuilder(mm)
       .boxLine(center, {halfRange.x, 0.f, 0.f}, {0.f, halfRange.y, 0.f}, halfRange.z)
       .newPrimitive(PrimitiveTopology::Lines)
       .axis({}, 2.f, 0.01f, 0.05f, 50)
       .newPrimitive()
-      .sphere({1, 0, 0}, 0.5)
+      .sphere({1, 0, 0}, height)
+      .newPrimitive()
+      .rectangle({0, -height, 0}, {0, 0, 10}, {10, 0, 0})
       .newPrimitive());
 
   sim::println(primitives[0]->aabb());
@@ -86,8 +93,14 @@ auto main(int argc, const char **argv) -> int {
   auto shpereModel = mm.newModel({shpereNode});
   auto shpere = mm.newModelInstance(shpereModel);
 
-  //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
-  //  mm.useEnvironmentMap(envCube);
+  auto planeMaterial = mm.newMaterial(MaterialType::eBRDF);
+  planeMaterial->setColorFactor({0.5f, 0.5f, 0.5f, 1.f});
+  planeMaterial->setPbrFactor({0.f, 1.f, 0.5f, 1.f});
+  auto planeMesh = mm.newMesh(primitives[6], planeMaterial);
+  auto planeNode = mm.newNode();
+  Node::addMesh(planeNode, planeMesh);
+  auto planeModel = mm.newModel({planeNode});
+  auto plane = mm.newModelInstance(planeModel);
 
   auto &sky = mm.skyManager();
   sky.init(1);
@@ -105,8 +118,12 @@ auto main(int argc, const char **argv) -> int {
                  -sin(sunAngle) * cos(seasonAngle)};
   };
 
-  sky.setSunDirection(sunDirection(1));
-  sky.setEarthCenter({0, -sky.earthRadius() / sky.lengthUnitInMeters() -100, 0});
+  //  sky.setSunDirection(sunDirection(1));
+  sky.setSunDirection({-1, -1, 1});
+  sky.setEarthCenter({0, -sky.earthRadius() / sky.lengthUnitInMeters() - 100, 0});
+
+  auto &shadow = mm.shadowManager();
+  shadow.init();
 
   mm.debugInfo();
 

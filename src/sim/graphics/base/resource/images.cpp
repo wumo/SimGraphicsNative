@@ -61,7 +61,7 @@ Texture::Texture(
   }
 }
 
-void Texture::createImageView(
+void Texture::setImageView(
   const vk::Device &device, vk::ImageViewType viewType,
   const vk::ImageAspectFlags &aspectMask) {
   vk::ImageViewCreateInfo viewCreateInfo{
@@ -75,9 +75,18 @@ void Texture::createImageView(
   _imageView = device.createImageViewUnique(viewCreateInfo);
 }
 
-void Texture::createImageView(
-  const vk::Device &device, const vk::ImageViewCreateInfo &info) {
-  _imageView = device.createImageViewUnique(info);
+vk::UniqueImageView Texture::createImageView(
+  const vk::Device &device, vk::ImageViewType viewType,
+  const vk::ImageAspectFlags &aspectMask, uint32_t baseArrayLayer, uint32_t layerCount) {
+  vk::ImageViewCreateInfo viewCreateInfo{
+    {},
+    vmaImage->image,
+    viewType,
+    _info.format,
+    {vk::ComponentSwizzle::eR, vk::ComponentSwizzle::eG, vk::ComponentSwizzle::eB,
+     vk::ComponentSwizzle::eA},
+    {aspectMask, 0, _info.mipLevels, baseArrayLayer, layerCount}};
+  return device.createImageViewUnique(viewCreateInfo);
 }
 
 void Texture::setSampler(vk::UniqueSampler &&sampler) { _sampler = std::move(sampler); }

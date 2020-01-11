@@ -168,7 +168,7 @@ uPtr<Texture> newTexture2D(
       queueFamilyIndexCount,
       queueFamilyIndices},
     VMA_MEMORY_USAGE_GPU_ONLY, vk::MemoryPropertyFlags{}, name);
-  texture->createImageView(
+  texture->setImageView(
     device.getDevice(), vk::ImageViewType::e2D, vk::ImageAspectFlagBits::eColor);
   SamplerMaker maker{};
   maker.addressModeU(vk::SamplerAddressMode::eClampToEdge)
@@ -205,7 +205,7 @@ uPtr<Texture> newTexture3D(
       queueFamilyIndexCount,
       queueFamilyIndices},
     VMA_MEMORY_USAGE_GPU_ONLY, vk::MemoryPropertyFlags{}, name);
-  texture->createImageView(
+  texture->setImageView(
     device.getDevice(), vk::ImageViewType::e3D, vk::ImageAspectFlagBits::eColor);
   SamplerMaker maker{};
   maker.addressModeU(vk::SamplerAddressMode::eClampToEdge)

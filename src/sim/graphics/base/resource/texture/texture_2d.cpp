@@ -77,7 +77,7 @@ Texture2D::Texture2D(
   Device &device, uint32_t width, uint32_t height, vk::Format format, bool useMipmap,
   bool attachment)
   : Texture{device.allocator(), info(width, height, useMipmap, format, attachment)} {
-  createImageView(
+  setImageView(
     device.getDevice(), vk::ImageViewType::e2D, vk::ImageAspectFlagBits::eColor);
 }
 

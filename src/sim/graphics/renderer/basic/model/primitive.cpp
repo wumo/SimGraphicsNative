@@ -16,8 +16,8 @@ Primitive::Primitive(
     _topology{topology},
     _type{_type},
     ubo{mm.allocatePrimitiveUBO()} {
-  *ubo.ptr = {_index,   _position, _normal,           _uv,       _joint0,
-              _weight0, _aabb,     _tesselationLevel, _topology, _type};
+  *ubo.ptr = {_index, _position, _normal,           _uv,       _joint0, _weight0,
+              _aabb,  lod_,      _tesselationLevel, _topology, _type};
 }
 const Range &Primitive::index() const { return _index; }
 const Range &Primitive::position() const { return _position; }
@@ -30,6 +30,11 @@ const AABB &Primitive::aabb() const { return _aabb; }
 void Primitive::setAabb(const AABB &aabb) {
   _aabb = aabb;
   ubo.ptr->_aabb = _aabb;
+}
+bool Primitive::lod() const { return lod_; }
+void Primitive::setLod(bool lod) {
+  lod_ = lod;
+  ubo.ptr->lod_ = lod_;
 }
 float Primitive::tesselationLevel() const { return _tesselationLevel; }
 void Primitive::setTesselationLevel(float tesselationLevel) {

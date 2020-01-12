@@ -18,6 +18,7 @@ public:
 
 private:
   void createShadowMap();
+  void createConversionTechs(vk::Format format);
 
 private:
   BasicSceneManager &mm;
@@ -25,15 +26,15 @@ private:
   DebugMarker &debugMarker;
 
   struct ShadowSettings {
-    bool SnapCascades = true;
-    bool StabilizeExtents = true;
-    bool EqualizeExtents = true;
-    bool SearchBestCascade = true;
-    bool FilterAcrossCascades = true;
-    int Resolution = 2048;
-    float PartitioningFactor = 0.95f;
-    vk::Format Format = vk::Format::eD16Unorm;
-    ShadowMode iShadowMode{ShadowMode::PCF};
+    bool snapCascades = true;
+    bool stabilizeExtents = true;
+    bool equalizeExtents = true;
+    bool searchBestCascade = true;
+    bool filterAcrossCascades = true;
+    int resolution = 2048;
+    float partitioningFactor = 0.95f;
+    vk::Format format = vk::Format::eD16Unorm;
+    ShadowMode shadowMode{ShadowMode::PCF};
 
     bool Is32BitFilterableFmt = true;
   } ShadowSettings;
@@ -74,14 +75,33 @@ private:
     glm::mat4 WorldToLightProjSpace;
   };
 
+  using shader = vk::ShaderStageFlagBits;
+  struct ShadowConversionsDescriptorSet: DescriptorSetDef {
+    __uniform__(ubo, shader::eFragment);
+    __sampler__(shadowMap, shader::eFragment);
+  } shadowSetDef;
+
+  struct ShadowMapLayoutDef: PipelineLayoutDef {
+    __set__(set, ShadowConversionsDescriptorSet);
+  } shadowLayoutDef;
+
   LightAttribs lightAttribs;
   uPtr<HostUniformBuffer> lightAttribsUBO_;
 
-  uPtr<Texture> shadowMap, filterableShadowMap, intermediateMap;
-
+  uPtr<Texture> shadowMap;
   std::vector<vk::UniqueImageView> shadowMapDSVs;
+  uPtr<Texture> filterableShadowMap;
+  std::vector<vk::UniqueImageView> filterableShadowMapRTVs;
+  uPtr<Texture> intermediateMap;
 
-  vk::DescriptorSet shadowSet;
-  vk::UniquePipeline shadowPipeline;
+  uPtr<HostUniformBuffer> conversionAttribsUBO;
+  std::vector<CascadeTransforms> cascadeTransforms;
+
+  struct ShadowConversionTechnique {
+    vk::UniquePipeline pipeline;
+    vk::DescriptorSet set;
+  };
+  std::array<ShadowConversionTechnique, uint32_t(ShadowMode::EVSM4) + 1> conversionTech;
+  ShadowConversionTechnique blurVertTech;
 };
 }

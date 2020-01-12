@@ -26,6 +26,7 @@ public:
   struct alignas(sizeof(glm::vec4)) UBO {
     Range _index, _position, _normal, _uv, _joint0, _weight0;
     AABB _aabb;
+    vk::Bool32 lod_{false};
     float _tesselationLevel{64.0f};
     PrimitiveTopology _topology{PrimitiveTopology::Triangles};
     DynamicType _type{DynamicType::Static};
@@ -53,6 +54,8 @@ public:
   void setAabb(const AABB &aabb);
   float tesselationLevel() const;
   void setTesselationLevel(float tesselationLevel);
+  bool lod() const;
+  void setLod(bool lod);
   PrimitiveTopology topology() const;
   DynamicType type() const;
 
@@ -61,6 +64,7 @@ private:
 
   Range _index, _position, _normal, _uv, _joint0, _weight0;
   AABB _aabb;
+  bool lod_{false};
   float _tesselationLevel{64.0f};
   PrimitiveTopology _topology{PrimitiveTopology::Triangles};
   DynamicType _type{DynamicType::Static};

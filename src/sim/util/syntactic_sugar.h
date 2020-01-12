@@ -135,6 +135,11 @@ void _errorIf(bool p, Args &&... desc) {
   }
 }
 
+template<typename E>
+constexpr typename std::underlying_type<E>::type value(E e) noexcept {
+  return static_cast<typename std::underlying_type<E>::type>(e);
+}
+
 //inline void check(bool p, std::string &msg) {
 //  if(!p)
 //    std::cerr << msg << boost::stacktrace::stacktrace() << std::endl;

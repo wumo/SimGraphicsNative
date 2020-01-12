@@ -64,7 +64,7 @@ auto main(int argc, const char **argv) -> int {
   auto &tm = mm.terrainManager();
   tm.loadSingle(
     "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
-    {{-100, 0, 100}, {1'00, 20, -100}}, 10, 10, 40.f);
+    {{-100, 0, 100}, {1'00, 20, -100}}, 10, 10, 40.f, false);
   //  tm.loadPatches(
   //    "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
   //    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 40.f);
@@ -83,9 +83,9 @@ auto main(int argc, const char **argv) -> int {
   float angularVelocity = kPi / 20;
   auto sunDirection = [&](float dt) {
     sunAngle += angularVelocity * dt;
-    if(sunAngle > kPi) sunAngle = 0;
+    if(sunAngle > 2 * kPi) sunAngle = 0;
 
-    return -vec3{cos(sunAngle), sin(sunAngle) * sin(seasonAngle),
+    return -vec3{cos(sunAngle), abs(sin(sunAngle) * sin(seasonAngle)),
                  -sin(sunAngle) * cos(seasonAngle)};
   };
   sky.setSunDirection(sunDirection(0));

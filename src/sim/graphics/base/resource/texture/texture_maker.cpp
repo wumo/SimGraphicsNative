@@ -19,7 +19,7 @@ uPtr<Texture> depthStencilUnique(
                                             sampleCount,
                                             vk::ImageTiling::eOptimal,
                                             imageUsage::eDepthStencilAttachment});
-  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
+  texture->setImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
   return texture;
 }
 uPtr<Texture> colorInputAttachmentUnique(
@@ -36,7 +36,7 @@ uPtr<Texture> colorInputAttachmentUnique(
                         sampleCount,
                         vk::ImageTiling::eOptimal,
                         imageUsage::eColorAttachment | imageUsage::eInputAttachment});
-  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
+  texture->setImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
   return texture;
 }
 uPtr<Texture> storageAttachmentUnique(
@@ -54,7 +54,7 @@ uPtr<Texture> storageAttachmentUnique(
                         vk::ImageTiling::eOptimal,
                         imageUsage::eColorAttachment | imageUsage::eSampled |
                           imageUsage::eStorage | imageUsage::eTransferSrc});
-  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
+  texture->setImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eColor);
   return texture;
 }
 
@@ -89,7 +89,7 @@ uPtr<Texture> depthStencilInputAttachmentUnique(
                                             vk::ImageTiling::eOptimal,
                                             imageUsage::eDepthStencilAttachment |
                                               imageUsage::eInputAttachment});
-  texture->createImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
+  texture->setImageView(device.getDevice(), vk::ImageViewType::e2D, aspect::eDepth);
   return texture;
 }
 }

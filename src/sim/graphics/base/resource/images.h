@@ -27,12 +27,12 @@ public:
 public:
   __only_move__(Texture);
   Texture(
-    const VmaAllocator &allocator, const vk::ImageCreateInfo& info,
+    const VmaAllocator &allocator, const vk::ImageCreateInfo &info,
     VmaMemoryUsage memoryUsage = VMA_MEMORY_USAGE_GPU_ONLY,
-    const vk::MemoryPropertyFlags &flags = {}, const std::string& name = "");
+    const vk::MemoryPropertyFlags &flags = {}, const std::string &name = "");
   Texture(
     const VmaAllocator &allocator, vk::ImageCreateInfo info,
-    VmaAllocationCreateInfo allocInfo, const std::string& name = "");
+    VmaAllocationCreateInfo allocInfo, const std::string &name = "");
 
   void setLayout(
     const vk::CommandBuffer &cb, vk::ImageLayout oldLayout, vk::ImageLayout newLayout,
@@ -83,10 +83,13 @@ public:
     vk::ImageLayout newLayout, vk::AccessFlags dstAccess,
     vk::PipelineStageFlagBits dstStage);
   void setSampler(vk::UniqueSampler &&sampler);
-  void createImageView(
+  void setImageView(
     const vk::Device &device, vk::ImageViewType viewType,
-    const vk::ImageAspectFlags& aspectMask);
-  void createImageView(const vk::Device &device, const vk::ImageViewCreateInfo& info);
+    const vk::ImageAspectFlags &aspectMask);
+  vk::UniqueImageView createImageView(
+    const vk::Device &device, vk::ImageViewType viewType,
+    const vk::ImageAspectFlags &aspectMask, uint32_t baseArrayLayer_ = 0,
+    uint32_t layerCount_ = 0);
 
   void clear(
     const vk::CommandBuffer &cb, const std::array<float, 4> &color = {1, 1, 1, 1});

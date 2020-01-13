@@ -10,7 +10,7 @@ void TerrainManager::loadPatches(
   const std::string &terrainFolder, const std::string &heightMapPrefix,
   const std::string &normalMapPrefix, const std::string &albedoMapPrefix,
   uint32_t patchNumX, uint32_t patchNumY, const AABB &aabb, uint32_t numVertexX,
-  uint32_t numVertexY, float tesselationLevel) {
+  uint32_t numVertexY, float tesselationLevel, bool lod) {
 
   auto range = aabb.range();
 
@@ -28,7 +28,7 @@ void TerrainManager::loadPatches(
         terrainFolder, heightMap, normalMap, albedoMap,
         {_min + vec3{(patchNumY - 1 - ny) * unitX, _min.y, -nx * unitZ},
          _min + vec3{(patchNumY - ny) * unitX, _max.y, -(nx + 1) * unitZ}},
-        numVertexX, numVertexY, tesselationLevel);
+        numVertexX, numVertexY, tesselationLevel, lod);
     }
   }
 }
@@ -36,7 +36,7 @@ void TerrainManager::loadPatches(
 void TerrainManager::loadSingle(
   const std::string &terrainFolder, const std::string &heightMap,
   const std::string &normalMap, const std::string &albedoMap, const AABB &aabb,
-  uint32_t numVertexX, uint32_t numVertexY, float tesselationWidth) {
+  uint32_t numVertexX, uint32_t numVertexY, float tesselationWidth, bool lod) {
   vec3 center = aabb.center();
 
   auto gridPrimitive = mm.newPrimitive(
@@ -46,7 +46,9 @@ void TerrainManager::loadSingle(
         aabb.range().z / numVertexX, aabb.range().x / numVertexX)
       .newPrimitive(PrimitiveTopology::Patches));
   gridPrimitive->setAabb(aabb);
-  gridPrimitive->setTesselationLevel(tesselationWidth);
+  gridPrimitive->setLod(lod);
+  gridPrimitive->setTesselationLevel(
+    lod ? glm::clamp(tesselationWidth, 1.f, 64.f) : tesselationWidth);
 
   auto gridMaterial = mm.newMaterial(MaterialType::eTerrain);
   auto gridMesh = mm.newMesh(gridPrimitive, gridMaterial);

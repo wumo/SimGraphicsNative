@@ -154,7 +154,8 @@ void main() {
 
     // outColor.rgb = vec3(perceptualRoughness);
     // outColor.rgb = vec3(metallic);
-    //     outColor.rgb = normal;
+//        outColor.rgb = (normal + 1) / 2;
+//        outColor.rgb = normal;
     // outColor.rgb = LINEARtoSRGB(baseColor.rgb);
     //     outColor.rgb = vec3(ao);
     // outColor.rgb = LINEARtoSRGB(emissive);

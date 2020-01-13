@@ -39,6 +39,7 @@ struct LightInstanceUBO {
 struct PrimitiveUBO {
   uvec2 index, position, normal, uv, joint0, weight0;
   vec4 min, max;
+  int lod;
   float tesselationLevel;
   uint topology;
   uint type;

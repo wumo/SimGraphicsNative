@@ -5,11 +5,12 @@
 layout(location = 0) in vec2 inUV0[];
 layout(location = 1) in float inMinHeight[];
 layout(location = 2) in float inHeightRange[];
-layout(location = 3) in float inTessLevel[];
-layout(location = 4) in flat uint inMaterialID[];
-layout(location = 5) in flat uint inHeightTex[];
-layout(location = 6) in flat uint inNormalTex[];
-layout(location = 7) in mat4 inModel[];
+layout(location = 3) in int inTessLod[];
+layout(location = 4) in float inTessLevel[];
+layout(location = 5) in flat uint inMaterialID[];
+layout(location = 6) in flat uint inHeightTex[];
+layout(location = 7) in flat uint inNormalTex[];
+layout(location = 8) in mat4 inModel[];
 
 layout(vertices = 4) out;
 layout(location = 0) out vec2 outUV0[4];
@@ -81,15 +82,21 @@ void main() {
                    frustumCheck(p3);
 
     if(visible) {
-      gl_TessLevelOuter[0] =
-        calcTessLevel(p3, p0, inUV0[3], inUV0[0], tessWidth, modelView);
-      gl_TessLevelOuter[1] =
-        calcTessLevel(p0, p1, inUV0[0], inUV0[1], tessWidth, modelView);
-      gl_TessLevelOuter[2] =
-        calcTessLevel(p1, p2, inUV0[1], inUV0[2], tessWidth, modelView);
-      gl_TessLevelOuter[3] =
-        calcTessLevel(p2, p3, inUV0[2], inUV0[3], tessWidth, modelView);
-
+      if(inTessLod[0] != 0) {
+        gl_TessLevelOuter[0] =
+          calcTessLevel(p3, p0, inUV0[3], inUV0[0], tessWidth, modelView);
+        gl_TessLevelOuter[1] =
+          calcTessLevel(p0, p1, inUV0[0], inUV0[1], tessWidth, modelView);
+        gl_TessLevelOuter[2] =
+          calcTessLevel(p1, p2, inUV0[1], inUV0[2], tessWidth, modelView);
+        gl_TessLevelOuter[3] =
+          calcTessLevel(p2, p3, inUV0[2], inUV0[3], tessWidth, modelView);
+      } else {
+        gl_TessLevelOuter[0] = tessWidth;
+        gl_TessLevelOuter[1] = tessWidth;
+        gl_TessLevelOuter[2] = tessWidth;
+        gl_TessLevelOuter[3] = tessWidth;
+      }
       gl_TessLevelInner[0] = mix(gl_TessLevelOuter[0], gl_TessLevelOuter[3], 0.5);
       gl_TessLevelInner[1] = mix(gl_TessLevelOuter[2], gl_TessLevelOuter[1], 0.5);
     } else {

@@ -36,7 +36,11 @@ void main() {
   pos = model * pos;
   outWorldPos = pos.xyz / pos.w;
 
-  vec3 normal = texture(textures[data.normalTex], outUV0).rgb;
+  vec3 znormal = texture(textures[data.normalTex], outUV0).xyz * 2 - 1;
+  vec3 normal;
+  normal.y = znormal.z;
+  normal.x = -znormal.y;
+  normal.z = -znormal.x;
   outNormal = normalize(transpose(inverse(mat3(model))) * normal);
 
   gl_Position = cam.projView * vec4(outWorldPos, 1.0);

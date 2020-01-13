@@ -21,6 +21,7 @@ auto main(int argc, const char **argv) -> int {
   auto &mm = app.sceneManager();
 
   auto &camera = mm.camera();
+  camera.changeZFar(1e10);
   camera.setLocation({40.f, 40.f, 40.f});
   //  mm.addLight(LightType ::Directional, {-1, -1, -1});
 
@@ -61,14 +62,14 @@ auto main(int argc, const char **argv) -> int {
   auto instance = mm.newModelInstance(model, t);
 
   auto &tm = mm.terrainManager();
-  //  tm.loadSingle(
-  //    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
-  //    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 538.33f / 2625, 64.f);
-  tm.loadPatches(
-    "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
-    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 40.f);
+  tm.loadSingle(
+    "assets/private/terrain/TreasureIsland", "Height.png", "Normal.png", "Albedo.png",
+    {{-100, 0, 100}, {1'00, 20, -100}}, 10, 10, 40.f, false);
+  //  tm.loadPatches(
+  //    "assets/private/terrain/TreasureIsland", "Height", "Normal", "Albedo", 8, 8,
+  //    {{-50, 0, 50}, {50, 20, -50}}, 10, 10, 40.f);
 
-  tm.staticSeaLevel({{-50, 0, 50}, {50, 20, -50}}, 538.33f / 2625);
+  tm.staticSeaLevel({{-100, 0, 100}, {1'00, 20, -100}}, 450.f / 2000);
 
   //  auto envCube = mm.newCubeTexture("assets/private/environments/noga_2k.ktx");
   //  mm.useEnvironmentMap(envCube);
@@ -79,7 +80,7 @@ auto main(int argc, const char **argv) -> int {
   auto kPi = glm::pi<float>();
   float seasonAngle = kPi / 4;
   float sunAngle = 0;
-  float angularVelocity = kPi / 10;
+  float angularVelocity = kPi / 20;
   auto sunDirection = [&](float dt) {
     sunAngle += angularVelocity * dt;
     if(sunAngle > 2 * kPi) sunAngle = 0;

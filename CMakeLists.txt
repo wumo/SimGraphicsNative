@@ -88,6 +88,7 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/model/transform.cpp
   src/sim/graphics/renderer/basic/model/vertex.cpp
   
+  src/sim/graphics/renderer/basic/builder/model_builder.cpp
   src/sim/graphics/renderer/basic/model/dynamic/dynamic_mesh_manager.cpp
   
   src/sim/graphics/renderer/basic/terrain/terrain_manager.cpp
@@ -120,6 +121,8 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/renderpasses/opaque_pass.cpp
   src/sim/graphics/renderer/basic/renderpasses/translucent_pass.cpp
   src/sim/graphics/renderer/basic/renderpasses/terrain_pass.cpp
+  
+  src/sim/graphics/renderer/basic/shadow/shadow_manager.cpp
   )
 
 set(basicRendererHeaders
@@ -144,6 +147,7 @@ set(basicRendererHeaders
   src/sim/graphics/renderer/basic/model/node.h
   src/sim/graphics/renderer/basic/model/model_instance.h
   src/sim/graphics/renderer/basic/model/dynamic/dynamic_mesh_manager.h
+  src/sim/graphics/renderer/basic/builder/model_builder.h
   
   src/sim/graphics/renderer/basic/terrain/terrain_manager.h
   src/sim/graphics/renderer/basic/loader/gltf_loader.h
@@ -157,6 +161,8 @@ set(basicRendererHeaders
   src/sim/graphics/renderer/basic/sky/sky_model.h
   src/sim/graphics/renderer/basic/sky/constants.h
   src/sim/graphics/renderer/basic/renderpasses/infinite_plane.h
+  src/sim/graphics/renderer/basic/shadow/shadow_manager.h
+  src/sim/graphics/renderer/basic/model/shadow.h
   )
 
 list(APPEND headers ${basicRendererHeaders})

@@ -1,6 +1,11 @@
 #pragma once
 
 #include "glm_common.h"
+#ifdef _WIN32
+  #ifndef NOMINMAX
+    #define NOMINMAX
+  #endif
+#endif
 #define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1
 #include <vulkan/vulkan.hpp>
 #include "sim/util/syntactic_sugar.h"

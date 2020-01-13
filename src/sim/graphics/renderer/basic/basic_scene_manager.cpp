@@ -82,6 +82,7 @@ BasicSceneManager::BasicSceneManager(BasicRenderer &renderer)
     basicLayout.deferred(deferredSetDef);
     basicLayout.ibl(iblSetDef);
     basicLayout.sky(skyManager_->skySetDef);
+    basicLayout.shadow(shadowManager_->shadowSetDef);
     basicLayout.init(vkDevice);
 
     Sets.descriptorPool = DescriptorPoolMaker()

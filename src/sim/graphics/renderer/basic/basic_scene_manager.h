@@ -96,7 +96,7 @@ public:
   OceanManager &oceanManager();
 
   ShadowManager &shadowManager();
-  
+
   Ptr<Primitive> primitive(uint32_t index);
   Ptr<Material> material(uint32_t index);
   Ptr<Model> model(uint32_t index);
@@ -248,6 +248,7 @@ private:
     __set__(deferred, DeferredSetDef);
     __set__(ibl, IBLSetDef);
     __set__(sky, SkyManager::SkySetDef);
+    __set__(shadow, ShadowManager::ShadowMapDescriptorSet);
   } basicLayout;
 
   struct ComputeSetDef: DescriptorSetDef {

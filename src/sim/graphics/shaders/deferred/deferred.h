@@ -31,6 +31,7 @@ layout(set = 0, binding = 7, std430) readonly buffer LightsBuffer {
 
 #define LIGHTS_NUM lighting.numLights
 #define LIGHTS_BUFFER lights
+
 #ifdef USE_IBL
 layout(set = 2, binding = 0) uniform samplerCube samplerIrradiance;
 layout(set = 2, binding = 1) uniform samplerCube prefilteredMap;
@@ -41,6 +42,7 @@ layout(set = 2, binding = 2) uniform sampler2D samplerBRDFLUT;
   #define USE_TEX_LOD
   #define USE_HDR
 #endif
+
 #ifdef USE_SKY
   #define SKY_SET 3
 layout(set = SKY_SET, binding = 1) uniform SunUniform {
@@ -66,6 +68,16 @@ layout(set = SKY_SET, binding = 4) uniform sampler2D irradiance_texture;
   #endif
 
 #endif
+
+#ifdef USE_SHADOW
+  #define SHADOW_SET 4
+  #include "../shadow/shadow.h"
+layout(set = SHADOW_SET, binding = 0) uniform sampler2DArray shadowMap;
+layout(set = SHADOW_SET, binding = 1) uniform LightAttribsUBO {
+  LightAttribs lightAttribs;
+};
+#endif
+
 #include "../brdf.h"
 
 vec3 view_ray(CameraUBO cam) {
@@ -149,13 +161,13 @@ void main() {
     }
 
     vec3 color = shadeBRDF(
-      postion, normal, diffuseColor, ao, specularColor, perceptualRoughness, emissive,
-      useIBL, cam.eye.xyz);
+      postion, normalize(normal), diffuseColor, ao, specularColor, perceptualRoughness,
+      emissive, useIBL, cam.eye.xyz);
 
     // outColor.rgb = vec3(perceptualRoughness);
     // outColor.rgb = vec3(metallic);
-//        outColor.rgb = (normal + 1) / 2;
-//        outColor.rgb = normal;
+    //        outColor.rgb = (normal + 1) / 2;
+    //        outColor.rgb = normal;
     // outColor.rgb = LINEARtoSRGB(baseColor.rgb);
     //     outColor.rgb = vec3(ao);
     // outColor.rgb = LINEARtoSRGB(emissive);

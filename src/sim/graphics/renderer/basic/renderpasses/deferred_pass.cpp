@@ -4,8 +4,8 @@
 #include "sim/graphics/compiledShaders/deferred/deferred_ms_frag.h"
 #include "sim/graphics/compiledShaders/deferred/deferred_ibl_frag.h"
 #include "sim/graphics/compiledShaders/deferred/deferred_ibl_ms_frag.h"
-#include "sim/graphics/compiledShaders/deferred/deferred_sky_frag.h"
-#include "sim/graphics/compiledShaders/deferred/deferred_sky_ms_frag.h"
+#include "sim/graphics/compiledShaders/sky/deferred_sky_frag.h"
+#include "sim/graphics/compiledShaders/sky/deferred_sky_ms_frag.h"
 
 namespace sim::graphics::renderer::basic {
 using shader = vk::ShaderStageFlagBits;

@@ -16,7 +16,9 @@ using aspect = vk::ImageAspectFlagBits;
 using imageUsage = vk::ImageUsageFlagBits;
 
 ShadowManager::ShadowManager(BasicSceneManager &mm)
-  : mm(mm), device{mm.device()}, debugMarker(mm.debugMarker()) {}
+  : mm(mm), device{mm.device()}, debugMarker(mm.debugMarker()) {
+  shadowSetDef.init(device.getDevice());
+}
 
 void ShadowManager::init() {
   lightAttribs.shadowAttribs.iNumCascades = 4;
@@ -151,9 +153,7 @@ void ShadowManager::createShadowMap() {
 void ShadowManager::createConversionTechs(vk::Format format) {
   vk::DeviceSize size = 64;
   conversionAttribsUBO = u<HostUniformBuffer>(device.allocator(), size);
-  
-  shadowSetDef.init(device.getDevice());
-  
+
   shadowLayoutDef.init(device.getDevice());
   for(auto mode = value(ShadowMode::VSM); mode <= value(ShadowMode::EVSM4); ++mode) {
     auto &tech = conversionTech[mode];
@@ -202,7 +202,7 @@ void ShadowManager::createConversionTechs(vk::Format format) {
 
       pipelineMaker.shader(shader::eVertex, quad_vert, __ArraySize__(quad_vert));
 
-//      tech.pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout, *renderPass);
+      //      tech.pipeline = pipelineMaker.createUnique(nullptr, *pipelineLayout, *renderPass);
     }
   }
 }

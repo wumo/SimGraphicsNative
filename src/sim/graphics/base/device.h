@@ -16,7 +16,7 @@ class VulkanBase;
 class Device {
 public:
   static void executeImmediately(
-    const vk::Device &device, const vk::CommandPool cmdPool, const vk::Queue queue,
+    const vk::Device &device, vk::CommandPool cmdPool, vk::Queue queue,
     const std::function<void(vk::CommandBuffer cb)> &func,
     uint64_t timeout = std::numeric_limits<uint64_t>::max());
 

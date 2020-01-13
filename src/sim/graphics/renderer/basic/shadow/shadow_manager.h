@@ -21,6 +21,7 @@ private:
   void createConversionTechs(vk::Format format);
 
 private:
+  friend class BasicSceneManager;
   BasicSceneManager &mm;
   Device &device;
   DebugMarker &debugMarker;
@@ -76,13 +77,13 @@ private:
   };
 
   using shader = vk::ShaderStageFlagBits;
-  struct ShadowConversionsDescriptorSet: DescriptorSetDef {
-    __uniform__(ubo, shader::eFragment);
+  struct ShadowMapDescriptorSet: DescriptorSetDef {
     __sampler__(shadowMap, shader::eFragment);
+    __uniform__(lightAttribs, shader::eFragment);
   } shadowSetDef;
 
   struct ShadowMapLayoutDef: PipelineLayoutDef {
-    __set__(set, ShadowConversionsDescriptorSet);
+    __set__(set, ShadowMapDescriptorSet);
   } shadowLayoutDef;
 
   LightAttribs lightAttribs;
@@ -103,5 +104,7 @@ private:
   };
   std::array<ShadowConversionTechnique, uint32_t(ShadowMode::EVSM4) + 1> conversionTech;
   ShadowConversionTechnique blurVertTech;
+
+  vk::UniquePipeline meshShadowPipeline;
 };
 }

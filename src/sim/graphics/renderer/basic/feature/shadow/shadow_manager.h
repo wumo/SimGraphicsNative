@@ -5,7 +5,7 @@
 #include "sim/graphics/base/resource/buffers.h"
 #include "sim/graphics/base/pipeline/pipeline.h"
 #include "sim/graphics/base/pipeline/descriptors.h"
-#include "../model/shadow.h"
+#include "sim/graphics/renderer/basic/model/shadow.h"
 
 namespace sim::graphics::renderer::basic {
 class BasicSceneManager;

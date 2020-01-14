@@ -1,5 +1,5 @@
 #include "ocean_manager.h"
-#include "../basic_scene_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 #include "sim/graphics/compiledShaders/ocean/wave_fft_ping_comp.h"
 #include "sim/graphics/compiledShaders/ocean/wave_fft_pong_comp.h"
 

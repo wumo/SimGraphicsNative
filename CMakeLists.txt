@@ -71,6 +71,10 @@ set(headers
   )
 
 set(basicRendererSrc
+  src/sim/graphics/renderer/basic/feature/gbuffer/gbuffer_pass.cpp
+  src/sim/graphics/renderer/basic/feature/deferred/deferred_pass.cpp
+  src/sim/graphics/renderer/basic/framegraph/render_pass_builder.cpp
+  src/sim/graphics/renderer/basic/framegraph/frame_graph_builder.cpp
   src/sim/graphics/renderer/basic/basic_scene_manager.cpp
   src/sim/graphics/renderer/basic/basic_renderer.cpp
   src/sim/graphics/renderer/basic/builder/primitive_builder.cpp
@@ -91,7 +95,7 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/builder/model_builder.cpp
   src/sim/graphics/renderer/basic/model/dynamic/dynamic_mesh_manager.cpp
   
-  src/sim/graphics/renderer/basic/terrain/terrain_manager.cpp
+  src/sim/graphics/renderer/basic/feature/terrain/terrain_manager.cpp
   
   src/sim/graphics/renderer/basic/loader/gltf_loader.cpp
   
@@ -104,17 +108,17 @@ set(basicRendererSrc
   
   src/sim/graphics/renderer/basic/framegraph/render_pass.cpp
   
-  src/sim/graphics/renderer/basic/sky/sky_manager.cpp
-  src/sim/graphics/renderer/basic/sky/sky_model.cpp
-  src/sim/graphics/renderer/basic/sky/compute_transmittance.cpp
-  src/sim/graphics/renderer/basic/sky/compute_direct_irradiance.cpp
-  src/sim/graphics/renderer/basic/sky/compute_indirect_irradiance.cpp
-  src/sim/graphics/renderer/basic/sky/compute_multiple_scattering.cpp
-  src/sim/graphics/renderer/basic/sky/compute_scattering_density.cpp
-  src/sim/graphics/renderer/basic/sky/compute_single_scattering.cpp
+  src/sim/graphics/renderer/basic/feature/sky/sky_manager.cpp
+  src/sim/graphics/renderer/basic/feature/sky/sky_model.cpp
+  src/sim/graphics/renderer/basic/feature/sky/compute_transmittance.cpp
+  src/sim/graphics/renderer/basic/feature/sky/compute_direct_irradiance.cpp
+  src/sim/graphics/renderer/basic/feature/sky/compute_indirect_irradiance.cpp
+  src/sim/graphics/renderer/basic/feature/sky/compute_multiple_scattering.cpp
+  src/sim/graphics/renderer/basic/feature/sky/compute_scattering_density.cpp
+  src/sim/graphics/renderer/basic/feature/sky/compute_single_scattering.cpp
   
-  src/sim/graphics/renderer/basic/ocean/ocean_render_pass.cpp
-  src/sim/graphics/renderer/basic/ocean/ocean_manager.cpp
+  src/sim/graphics/renderer/basic/feature/ocean/ocean_render_pass.cpp
+  src/sim/graphics/renderer/basic/feature/ocean/ocean_manager.cpp
   
   src/sim/graphics/renderer/basic/renderpasses/infinite_plane.cpp
   src/sim/graphics/renderer/basic/renderpasses/deferred_pass.cpp
@@ -122,10 +126,14 @@ set(basicRendererSrc
   src/sim/graphics/renderer/basic/renderpasses/translucent_pass.cpp
   src/sim/graphics/renderer/basic/renderpasses/terrain_pass.cpp
   
-  src/sim/graphics/renderer/basic/shadow/shadow_manager.cpp
+  src/sim/graphics/renderer/basic/feature/shadow/shadow_manager.cpp
   )
 
 set(basicRendererHeaders
+  src/sim/graphics/renderer/basic/feature/gbuffer/gbuffer_pass.h
+  src/sim/graphics/renderer/basic/feature/deferred/deferred_pass.h
+  src/sim/graphics/renderer/basic/framegraph/render_pass_builder.h
+  src/sim/graphics/renderer/basic/framegraph/frame_graph_builder.h
   src/sim/graphics/renderer/basic/basic_scene_manager.h
   src/sim/graphics/renderer/basic/basic_renderer.h
   src/sim/graphics/renderer/basic/model_config.h
@@ -149,19 +157,19 @@ set(basicRendererHeaders
   src/sim/graphics/renderer/basic/model/dynamic/dynamic_mesh_manager.h
   src/sim/graphics/renderer/basic/builder/model_builder.h
   
-  src/sim/graphics/renderer/basic/terrain/terrain_manager.h
+  src/sim/graphics/renderer/basic/feature/terrain/terrain_manager.h
   src/sim/graphics/renderer/basic/loader/gltf_loader.h
   src/sim/graphics/renderer/basic/util/panning_camera.h
   src/sim/graphics/renderer/basic/ibl/envmap_generator.h
   src/sim/graphics/renderer/basic/framegraph/frame_graph.h
   src/sim/graphics/renderer/basic/framegraph/render_pass.h
-  src/sim/graphics/renderer/basic/ocean/ocean_manager.h
-  src/sim/graphics/renderer/basic/ocean/ocean_render_pass.h
-  src/sim/graphics/renderer/basic/sky/sky_manager.h
-  src/sim/graphics/renderer/basic/sky/sky_model.h
-  src/sim/graphics/renderer/basic/sky/constants.h
+  src/sim/graphics/renderer/basic/feature/ocean/ocean_manager.h
+  src/sim/graphics/renderer/basic/feature/ocean/ocean_render_pass.h
+  src/sim/graphics/renderer/basic/feature/sky/sky_manager.h
+  src/sim/graphics/renderer/basic/feature/sky/sky_model.h
+  src/sim/graphics/renderer/basic/feature/sky/constants.h
   src/sim/graphics/renderer/basic/renderpasses/infinite_plane.h
-  src/sim/graphics/renderer/basic/shadow/shadow_manager.h
+  src/sim/graphics/renderer/basic/feature/shadow/shadow_manager.h
   src/sim/graphics/renderer/basic/model/shadow.h
   )
 

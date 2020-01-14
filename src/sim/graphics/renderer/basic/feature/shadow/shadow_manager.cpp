@@ -1,5 +1,5 @@
 #include "shadow_manager.h"
-#include "../basic_scene_manager.h"
+#include "sim/graphics/renderer/basic/basic_scene_manager.h"
 #include "sim/graphics/base/pipeline/render_pass.h"
 #include "sim/graphics/compiledShaders/quad_vert.h"
 

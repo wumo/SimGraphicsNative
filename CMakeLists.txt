@@ -73,7 +73,6 @@ set(headers
 set(basicRendererSrc
   src/sim/graphics/renderer/basic/feature/gbuffer/gbuffer_pass.cpp
   src/sim/graphics/renderer/basic/feature/deferred/deferred_pass.cpp
-  src/sim/graphics/renderer/basic/framegraph/render_pass_builder.cpp
   src/sim/graphics/renderer/basic/framegraph/frame_graph_builder.cpp
   src/sim/graphics/renderer/basic/basic_scene_manager.cpp
   src/sim/graphics/renderer/basic/basic_renderer.cpp
@@ -132,7 +131,6 @@ set(basicRendererSrc
 set(basicRendererHeaders
   src/sim/graphics/renderer/basic/feature/gbuffer/gbuffer_pass.h
   src/sim/graphics/renderer/basic/feature/deferred/deferred_pass.h
-  src/sim/graphics/renderer/basic/framegraph/render_pass_builder.h
   src/sim/graphics/renderer/basic/framegraph/frame_graph_builder.h
   src/sim/graphics/renderer/basic/basic_scene_manager.h
   src/sim/graphics/renderer/basic/basic_renderer.h

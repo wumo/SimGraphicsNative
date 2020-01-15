@@ -1,13 +1,12 @@
 #pragma once
 #include "sim/graphics/base/vkcommon.h"
 #include "frame_graph_builder.h"
-#include "render_pass_builder.h"
 
 namespace sim::graphics::renderer::basic {
 class RenderPass {
 
 public:
-  explicit RenderPass(RenderPassBuilder &builder);
+  explicit RenderPass(FrameGraphBuilder &builder);
 
   virtual void compile();
 

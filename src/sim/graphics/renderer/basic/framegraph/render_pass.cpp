@@ -1,6 +1,6 @@
 #include "render_pass.h"
 namespace sim::graphics::renderer::basic {
-RenderPass::RenderPass(RenderPassBuilder &builder) {}
+RenderPass::RenderPass(FrameGraphBuilder &builder) {}
 
 void RenderPass::compile() {}
 

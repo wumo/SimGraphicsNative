@@ -24,12 +24,12 @@ class Primitive {
 public:
   //ref in shaders
   struct alignas(sizeof(glm::vec4)) UBO {
-    Range _index, _position, _normal, _uv, _joint0, _weight0;
-    AABB _aabb;
+    Range index_, position_, normal_, uv_, joint0_, weight0_;
+    AABB aabb_;
     vk::Bool32 lod_{false};
-    float _tesselationLevel{64.0f};
-    PrimitiveTopology _topology{PrimitiveTopology::Triangles};
-    DynamicType _type{DynamicType::Static};
+    float tesselationLevel_{64.0f};
+    PrimitiveTopology topology_{PrimitiveTopology::Triangles};
+    DynamicType type_{DynamicType::Static};
   };
 
 public:
@@ -43,7 +43,7 @@ public:
   Primitive(
     BasicSceneManager &mm, const Range &index, const Range &position, const Range &normal,
     const Range &uv, const AABB &aabb, const PrimitiveTopology &topology,
-    const DynamicType &_type = DynamicType::Static);
+    const DynamicType &type = DynamicType::Static);
   const Range &index() const;
   const Range &position() const;
   const Range &normal() const;
@@ -62,12 +62,12 @@ public:
 private:
   BasicSceneManager &mm;
 
-  Range _index, _position, _normal, _uv, _joint0, _weight0;
-  AABB _aabb;
+  Range index_, position_, normal_, uv_, joint0_, weight0_;
+  AABB aabb_;
   bool lod_{false};
-  float _tesselationLevel{64.0f};
-  PrimitiveTopology _topology{PrimitiveTopology::Triangles};
-  DynamicType _type{DynamicType::Static};
+  float tesselationLevel_{64.0f};
+  PrimitiveTopology topology_{PrimitiveTopology::Triangles};
+  DynamicType type_{DynamicType::Static};
 
   Allocation<UBO> ubo;
 };

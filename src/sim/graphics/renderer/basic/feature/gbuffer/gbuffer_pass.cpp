@@ -38,37 +38,36 @@ GBufferPass::GBufferPass(FrameGraphBuilder &builder): RenderPass(builder) {
     access::eMemoryRead, access::eColorAttachmentWrite);
 
   set_ = builder.createDescriptorSet(setDef);
-  
 }
 
 void GBufferPass::compile() {
   GraphicsPipelineMaker pipelineMaker{vkDevice, extent.width, extent.height};
   pipelineMaker.subpass(Subpasses.gBuffer)
-               .vertexBinding(0, sizeof(Vertex::Position))
-               .vertexAttribute(0, 0, f::eR32G32B32Sfloat, 0)
-               .vertexBinding(1, sizeof(Vertex::Normal))
-               .vertexAttribute(1, 1, f::eR32G32B32Sfloat, 0)
-               .vertexBinding(2, sizeof(Vertex::UV))
-               .vertexAttribute(2, 2, f::eR32G32Sfloat, 0)
-               .topology(vk::PrimitiveTopology::eTriangleList)
-               .polygonMode(vk::PolygonMode::eFill)
-               .cullMode(vk::CullModeFlagBits::eBack)
-               .frontFace(vk::FrontFace::eCounterClockwise)
-               .depthTestEnable(true)
-               .depthWriteEnable(true)
-               .depthCompareOp(vk::CompareOp::eLessOrEqual)
-               .dynamicState(vk::DynamicState::eViewport)
-               .dynamicState(vk::DynamicState::eScissor)
-               .rasterizationSamples(sampleCount)
-               .sampleShadingEnable(enableSampleShading)
-               .minSampleShading(minSampleShading);
-  
+    .vertexBinding(0, sizeof(Vertex::Position))
+    .vertexAttribute(0, 0, f::eR32G32B32Sfloat, 0)
+    .vertexBinding(1, sizeof(Vertex::Normal))
+    .vertexAttribute(1, 1, f::eR32G32B32Sfloat, 0)
+    .vertexBinding(2, sizeof(Vertex::UV))
+    .vertexAttribute(2, 2, f::eR32G32Sfloat, 0)
+    .topology(vk::PrimitiveTopology::eTriangleList)
+    .polygonMode(vk::PolygonMode::eFill)
+    .cullMode(vk::CullModeFlagBits::eBack)
+    .frontFace(vk::FrontFace::eCounterClockwise)
+    .depthTestEnable(true)
+    .depthWriteEnable(true)
+    .depthCompareOp(vk::CompareOp::eLessOrEqual)
+    .dynamicState(vk::DynamicState::eViewport)
+    .dynamicState(vk::DynamicState::eScissor)
+    .rasterizationSamples(sampleCount)
+    .sampleShadingEnable(enableSampleShading)
+    .minSampleShading(minSampleShading);
+
   pipelineMaker.blendColorAttachment(false);
   pipelineMaker.blendColorAttachment(false);
   pipelineMaker.blendColorAttachment(false);
   pipelineMaker.blendColorAttachment(false);
   pipelineMaker.blendColorAttachment(false);
-  
+
   pipelineMaker.shader(shader::eVertex, basic_vert, __ArraySize__(basic_vert));
   SpecializationMaker sp;
   auto spInfo = sp.entry(modelConfig.maxNumTexture).create();

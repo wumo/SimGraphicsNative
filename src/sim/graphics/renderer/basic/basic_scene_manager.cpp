@@ -231,12 +231,12 @@ auto BasicSceneManager::newPrimitives(const PrimitiveBuilder &primitiveBuilder)
   std::vector<Ptr<Primitive>> primitives;
   for(auto &primitive: primitiveBuilder.primitives()) {
     primitives.push_back(newPrimitive(
-      primitiveBuilder.positions().data() + primitive._position.offset,
-      primitive._position.size,
-      primitiveBuilder.normals().data() + primitive._normal.offset,
-      primitive._normal.size, primitiveBuilder.uvs().data() + primitive._uv.offset,
-      primitive._uv.size, primitiveBuilder.indices().data() + primitive._index.offset,
-      primitive._index.size, primitive._aabb, primitive._topology, primitive._type));
+      primitiveBuilder.positions().data() + primitive.position_.offset,
+      primitive.position_.size,
+      primitiveBuilder.normals().data() + primitive.normal_.offset,
+      primitive.normal_.size, primitiveBuilder.uvs().data() + primitive.uv_.offset,
+      primitive.uv_.size, primitiveBuilder.indices().data() + primitive.index_.offset,
+      primitive.index_.size, primitive.aabb_, primitive.topology_, primitive.type_));
   }
   return primitives;
 }

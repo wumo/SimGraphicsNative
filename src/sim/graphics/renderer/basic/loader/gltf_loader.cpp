@@ -22,7 +22,7 @@ Ptr<Model> GLTFLoader::load(const std::string &file) {
 
   std::vector<Ptr<Node>> nodes;
   const auto &_scene = model.scenes[std::max(model.defaultScene, 0)];
-  _nodes.resize(model.nodes.size());
+  nodes_.resize(model.nodes.size());
   for(int i: _scene.nodes)
     nodes.push_back(loadNode(i, model));
 
@@ -34,7 +34,7 @@ SamplerAddressMode _getVkWrapMode(int32_t wrapMode) {
   switch(wrapMode) {
     case 10497: return SamplerAddressMode::SamplerAddressModeeRepeat;
     case 33071: return SamplerAddressMode::SamplerAddressModeeClampToEdge;
-    case 33648: return SamplerAddressMode ::SamplerAddressModeeMirroredRepeat;
+    case 33648: return SamplerAddressMode::SamplerAddressModeeMirroredRepeat;
     default:
       error("not supported SamplerAddressMode", wrapMode);
       return SamplerAddressMode ::SamplerAddressModeeMirroredRepeat;
@@ -90,7 +90,7 @@ void GLTFLoader::loadMaterials(const tinygltf::Model &model) {
     float alphaCutoff{0.f};
     if(contains(mat.additionalValues, "alphaMode")) {
       auto alphaMode = mat.additionalValues.at("alphaMode").string_value;
-      if(alphaMode != "OPAQUE") type = MaterialType ::eTranslucent;
+      if(alphaMode != "OPAQUE") type = MaterialType::eTranslucent;
       if(alphaMode == "MASK") {
         alphaCutoff = 0.5f;
         if(contains(mat.additionalValues, "alphaCutoff"))
@@ -98,7 +98,7 @@ void GLTFLoader::loadMaterials(const tinygltf::Model &model) {
       }
     }
     if(contains(mat.extensions, "KHR_materials_pbrSpecularGlossiness"))
-      type = MaterialType ::eBRDFSG;
+      type = MaterialType::eBRDFSG;
     auto material = mm.newMaterial(type);
 
     material->setAlphaCutoff(alphaCutoff);
@@ -190,7 +190,7 @@ Ptr<Node> GLTFLoader::loadNode(int thisID, const tinygltf::Model &model) {
                                              make_quat(node.rotation.data());
   }
   auto _node = mm.newNode(t, node.name);
-  _nodes[thisID] = _node;
+  nodes_[thisID] = _node;
 
   if(node.mesh > -1) {
     auto &mesh = model.meshes[node.mesh];
@@ -401,7 +401,7 @@ void GLTFLoader::loadAnimations(const tinygltf::Model &model) {
       else
         error("Not supported");
       _channel.samplerIdx = channel.sampler;
-      _channel.node = _nodes[channel.target_node];
+      _channel.node = nodes_[channel.target_node];
       _animation.channels.push_back(_channel);
     }
 

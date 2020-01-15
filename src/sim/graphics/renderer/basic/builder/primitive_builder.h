@@ -127,11 +127,11 @@ private:
 
 private:
   BasicSceneManager &mm;
-  std::vector<Vertex::Position> _positions;
-  std::vector<Vertex::Normal> _normals;
-  std::vector<Vertex::UV> _uvs;
-  std::vector<uint32_t> _indices;
+  std::vector<Vertex::Position> positions_;
+  std::vector<Vertex::Normal> normals_;
+  std::vector<Vertex::UV> uvs_;
+  std::vector<uint32_t> indices_;
   AABB aabb;
-  std::vector<Primitive::UBO> _primitives;
+  std::vector<Primitive::UBO> primitives_;
 };
 }

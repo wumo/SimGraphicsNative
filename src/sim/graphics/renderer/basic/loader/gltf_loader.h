@@ -29,7 +29,7 @@ private:
   std::vector<Vertex::UV> uvs;
   std::vector<Vertex::Joint> joint0s;
   std::vector<Vertex::Weight> weight0s;
-  std::vector<Ptr<Node>> _nodes;
+  std::vector<Ptr<Node>> nodes_;
   std::vector<Animation> animations;
 
   std::vector<SamplerDef> samplerDefs;

@@ -6,41 +6,41 @@ namespace sim::graphics::renderer::basic {
 Primitive::Primitive(
   BasicSceneManager &mm, const Range &index, const Range &position, const Range &normal,
   const Range &uv, const AABB &aabb, const PrimitiveTopology &topology,
-  const DynamicType &_type)
+  const DynamicType &type)
   : mm{mm},
-    _index(index),
-    _position(position),
-    _normal{normal},
-    _uv{uv},
-    _aabb{aabb},
-    _topology{topology},
-    _type{_type},
+    index_(index),
+    position_(position),
+    normal_{normal},
+    uv_{uv},
+    aabb_{aabb},
+    topology_{topology},
+    type_{type},
     ubo{mm.allocatePrimitiveUBO()} {
-  *ubo.ptr = {_index, _position, _normal,           _uv,       _joint0, _weight0,
-              _aabb,  lod_,      _tesselationLevel, _topology, _type};
+  *ubo.ptr = {index_, position_, normal_,           uv_,       joint0_, weight0_,
+              aabb_,  lod_,      tesselationLevel_, topology_, type};
 }
-const Range &Primitive::index() const { return _index; }
-const Range &Primitive::position() const { return _position; }
-const Range &Primitive::normal() const { return _normal; }
-const Range &Primitive::uv() const { return _uv; }
-const Range &Primitive::joint0() const { return _joint0; }
-const Range &Primitive::weight0() const { return _weight0; }
-PrimitiveTopology Primitive::topology() const { return _topology; }
-const AABB &Primitive::aabb() const { return _aabb; }
+const Range &Primitive::index() const { return index_; }
+const Range &Primitive::position() const { return position_; }
+const Range &Primitive::normal() const { return normal_; }
+const Range &Primitive::uv() const { return uv_; }
+const Range &Primitive::joint0() const { return joint0_; }
+const Range &Primitive::weight0() const { return weight0_; }
+PrimitiveTopology Primitive::topology() const { return topology_; }
+const AABB &Primitive::aabb() const { return aabb_; }
 void Primitive::setAabb(const AABB &aabb) {
-  _aabb = aabb;
-  ubo.ptr->_aabb = _aabb;
+  aabb_ = aabb;
+  ubo.ptr->aabb_ = aabb_;
 }
 bool Primitive::lod() const { return lod_; }
 void Primitive::setLod(bool lod) {
   lod_ = lod;
   ubo.ptr->lod_ = lod_;
 }
-float Primitive::tesselationLevel() const { return _tesselationLevel; }
+float Primitive::tesselationLevel() const { return tesselationLevel_; }
 void Primitive::setTesselationLevel(float tesselationLevel) {
-  _tesselationLevel = tesselationLevel;
-  ubo.ptr->_tesselationLevel = _tesselationLevel;
+  tesselationLevel_ = tesselationLevel;
+  ubo.ptr->tesselationLevel_ = tesselationLevel_;
 }
-DynamicType Primitive::type() const { return _type; }
+DynamicType Primitive::type() const { return type_; }
 
 }

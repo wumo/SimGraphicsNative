@@ -6,7 +6,7 @@ class SimGraphicsNativeConan(ConanFile):
   settings = "os", "compiler", "build_type", "arch"
   requires = (
     "vulkan_headers/1.1.130@wumo/stable",
-    "vma/master@wumo/stable",
+    "vma/2.3.0@wumo/stable",
     "glfw/3.3@bincrafters/stable",
     "glm/0.9.9.6",
     "par_lib/master@wumo/stable",

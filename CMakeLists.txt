@@ -18,7 +18,6 @@ option(BUILD_SHARED "Build shared lib" ON)
 
 set(sources
   src/sim/graphics/base/device.cpp
-  src/sim/graphics/base/device.h
   
   src/sim/graphics/base/swapchain.cpp
   

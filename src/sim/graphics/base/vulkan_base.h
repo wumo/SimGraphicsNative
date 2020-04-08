@@ -8,7 +8,6 @@
 #include "device.h"
 #include "input.h"
 #include "swapchain.h"
-#include <glm/common.hpp>
 
 namespace sim ::graphics {
 class CallFrameUpdater {

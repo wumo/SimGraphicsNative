@@ -1,5 +1,4 @@
 #include "vulkan_base.h"
-#include "sim/util/syntactic_sugar.h"
 #include "imgui.h"
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE;

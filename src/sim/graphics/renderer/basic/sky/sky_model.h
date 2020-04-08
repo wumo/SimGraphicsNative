@@ -128,8 +128,7 @@ private:
     vk::CommandBuffer cb, const glm::mat4 &luminance_from_radiance);
   void compute(uint32_t num_scattering_orders);
   void precompute(
-    vk::CommandBuffer cb, const glm::vec3 &lambdas,
-    const glm::mat4 &luminance_from_radiance, bool cumulate,
+    const glm::vec3 &lambdas, const glm::mat4 &luminance_from_radiance, bool cumulate,
     unsigned int num_scattering_orders);
 
 private:

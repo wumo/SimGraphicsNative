@@ -108,22 +108,23 @@ glm::mat4 luminanceFromRadiance(double dlambda, const glm::vec3 &lambdas) {
        XYZ_TO_SRGB[component * 3 + 2] * z) *
       dlambda);
   };
-  glm::mat4 luminance_from_radiance{coeff(lambdas[0], 0),
-                                    coeff(lambdas[1], 0),
-                                    coeff(lambdas[2], 0),
-                                    0.0,
-                                    coeff(lambdas[0], 1),
-                                    coeff(lambdas[1], 1),
-                                    coeff(lambdas[2], 1),
-                                    0.0,
-                                    coeff(lambdas[0], 2),
-                                    coeff(lambdas[1], 2),
-                                    coeff(lambdas[2], 2),
-                                    0.0,
-                                    0.0,
-                                    0.0,
-                                    0.0,
-                                    0.0};
+  glm::mat4 luminance_from_radiance{
+    coeff(lambdas[0], 0),
+    coeff(lambdas[1], 0),
+    coeff(lambdas[2], 0),
+    0.0,
+    coeff(lambdas[0], 1),
+    coeff(lambdas[1], 1),
+    coeff(lambdas[2], 1),
+    0.0,
+    coeff(lambdas[0], 2),
+    coeff(lambdas[1], 2),
+    coeff(lambdas[2], 2),
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0};
   luminance_from_radiance = glm::transpose(luminance_from_radiance);
   return luminance_from_radiance;
 }
@@ -265,10 +266,10 @@ SkyModel::SkyModel(
     };
 
   auto density_layer = [length_unit_in_meters](const DensityProfileLayer &layer) {
-    return DensityProfileLayer{layer.width / length_unit_in_meters, layer.exp_term,
-                               layer.exp_scale * length_unit_in_meters,
-                               layer.linear_term * length_unit_in_meters,
-                               layer.constant_term};
+    return DensityProfileLayer{
+      layer.width / length_unit_in_meters, layer.exp_term,
+      layer.exp_scale * length_unit_in_meters, layer.linear_term * length_unit_in_meters,
+      layer.constant_term};
   };
 
   auto density_profile = [density_layer](std::vector<DensityProfileLayer> layers) {
@@ -448,14 +449,15 @@ void SkyModel::compute(uint32_t num_scattering_orders) {
   double dlambda = (_kLambdaMax - _kLambdaMin) / (3 * num_iterations);
 
   for(int i = 0; i < num_iterations; ++i) {
-    glm::vec3 lambdas{_kLambdaMin + (3 * i + 0.5) * dlambda,
-                      _kLambdaMin + (3 * i + 1.5) * dlambda,
-                      _kLambdaMin + (3 * i + 2.5) * dlambda};
+    glm::vec3 lambdas{
+      _kLambdaMin + (3 * i + 0.5) * dlambda, _kLambdaMin + (3 * i + 1.5) * dlambda,
+      _kLambdaMin + (3 * i + 2.5) * dlambda};
 
     glm::mat4 luminance_from_radiance = luminanceFromRadiance(dlambda, lambdas);
-    device.computeImmediately([&](vk::CommandBuffer cb) {
-      precompute(cb, lambdas, luminance_from_radiance, i > 0, num_scattering_orders);
-    });
+    precompute(lambdas, luminance_from_radiance, i > 0, num_scattering_orders);
+    //    device.computeImmediately([&](vk::CommandBuffer cb) {
+    //
+    //    });
   }
 
   _atmosphereUBO->ptr<AtmosphereUniform>()->atmosphere =
@@ -465,21 +467,27 @@ void SkyModel::compute(uint32_t num_scattering_orders) {
 }
 
 void SkyModel::precompute(
-  vk::CommandBuffer cb, const glm::vec3 &lambdas,
-  const glm::mat4 &luminance_from_radiance, bool cumulate,
+  const glm::vec3 &lambdas, const glm::mat4 &luminance_from_radiance, bool cumulate,
   unsigned int num_scattering_orders) {
   auto _cumulate = vk::Bool32(cumulate);
   _atmosphereUBO->ptr<AtmosphereUniform>()->atmosphere = calcAtmosphereParams(lambdas);
-
-  recordTransmittanceCMD(cb);
-  recordDirectIrradianceCMD(cb, _cumulate);
-  recordSingleScatteringCMD(cb, luminance_from_radiance, _cumulate);
+  device.computeImmediately([&](vk::CommandBuffer cb) { recordTransmittanceCMD(cb); });
+  device.computeImmediately(
+    [&](vk::CommandBuffer cb) { recordDirectIrradianceCMD(cb, _cumulate); });
+  device.computeImmediately([&](vk::CommandBuffer cb) {
+    recordSingleScatteringCMD(cb, luminance_from_radiance, _cumulate);
+  });
 
   for(auto scatteringOrder = 2; scatteringOrder <= num_scattering_orders;
       ++scatteringOrder) {
-    recordScatteringDensityCMD(cb, scatteringOrder);
-    recordIndirectIrradianceCMD(cb, luminance_from_radiance, scatteringOrder - 1);
-    recordMultipleScatteringCMD(cb, luminance_from_radiance);
+    device.computeImmediately(
+      [&](vk::CommandBuffer cb) { recordScatteringDensityCMD(cb, scatteringOrder); });
+    device.computeImmediately([&](vk::CommandBuffer cb) {
+      recordIndirectIrradianceCMD(cb, luminance_from_radiance, scatteringOrder - 1);
+    });
+    device.computeImmediately([&](vk::CommandBuffer cb) {
+      recordMultipleScatteringCMD(cb, luminance_from_radiance);
+    });
   }
 }
 
@@ -490,8 +498,8 @@ void SkyModel::updateSunPosition(glm::vec3 sunDirection) {
   _sunUBO->ptr<SunUniform>()->sun_direction = {sunDirection, 0};
 }
 void SkyModel::updateEarthCenter(glm::vec3 earthCenter) {
-  _sunUBO->ptr<SunUniform>()->earth_center = {earthCenter,
-                                              bottom_radius / length_unit_in_meters};
+  _sunUBO->ptr<SunUniform>()->earth_center = {
+    earthCenter, bottom_radius / length_unit_in_meters};
 }
 Texture &SkyModel::transmittanceTexture() { return *transmittance_texture_; }
 Texture &SkyModel::scatteringTexture() { return *scattering_texture_; }

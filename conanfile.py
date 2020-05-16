@@ -7,13 +7,13 @@ class SimGraphicsNativeConan(ConanFile):
   requires = (
     "vulkan_headers/1.1.130@wumo/stable",
     "vma/2.3.0@wumo/stable",
-    "glfw/3.3@bincrafters/stable",
+    "glfw/3.3.2@bincrafters/stable",
     "glm/0.9.9.6",
     "par_lib/master@wumo/stable",
     "tinygltf_lib/2.2.0@wumo/stable",
     "tinyobjloader/2.0.0-rc1@wumo/stable",
     "fmt/5.3.0@bincrafters/stable",
-    "glslang/7.13.3496@wumo/stable",
+    "glslang/8.13.3743@wumo/stable",
     "imgui/1.73@wumo/stable",
     "gli/master@wumo/stable"
   )

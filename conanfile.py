@@ -12,7 +12,7 @@ class SimGraphicsNativeConan(ConanFile):
     "par_lib/master@wumo/stable",
     "tinygltf_lib/2.2.0@wumo/stable",
     "tinyobjloader/2.0.0-rc1@wumo/stable",
-    "fmt/5.3.0@bincrafters/stable",
+    "fmt/6.2.1",
     "glslang/8.13.3743@wumo/stable",
     "imgui/1.73@wumo/stable",
     "gli/master@wumo/stable"
